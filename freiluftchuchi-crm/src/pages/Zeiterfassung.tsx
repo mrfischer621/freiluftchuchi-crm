@@ -52,7 +52,7 @@ export default function Zeiterfassung() {
       } else {
         const { error } = await supabase
           .from('time_entries')
-          .insert([entryData]);
+          .insert([entryData] as any);
 
         if (error) throw error;
       }

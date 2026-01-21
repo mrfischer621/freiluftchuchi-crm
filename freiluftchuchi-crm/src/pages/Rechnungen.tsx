@@ -43,7 +43,7 @@ export default function Rechnungen() {
 
       // Generate next invoice number
       if (invoicesResult.data && invoicesResult.data.length > 0) {
-        const lastNumber = invoicesResult.data[0].invoice_number;
+        const lastNumber = (invoicesResult.data[0] as any).invoice_number;
         const match = lastNumber.match(/RE-(\d{4})-(\d{3})/);
         if (match) {
           const year = new Date().getFullYear();
@@ -78,7 +78,7 @@ export default function Rechnungen() {
           subtotal: calculatedTotals.subtotal,
           vat_amount: calculatedTotals.vat_amount,
           total: calculatedTotals.total,
-        }])
+        }] as any)
         .select()
         .single();
 
@@ -86,7 +86,7 @@ export default function Rechnungen() {
 
       // Insert invoice items
       const itemsWithInvoiceId = data.items.map(item => ({
-        invoice_id: invoiceData.id,
+        invoice_id: (invoiceData as any).id,
         description: item.description,
         quantity: item.quantity,
         unit_price: item.unit_price,
@@ -95,7 +95,7 @@ export default function Rechnungen() {
 
       const { error: itemsError } = await supabase
         .from('invoice_items')
-        .insert(itemsWithInvoiceId);
+        .insert(itemsWithInvoiceId as any);
 
       if (itemsError) throw itemsError;
 

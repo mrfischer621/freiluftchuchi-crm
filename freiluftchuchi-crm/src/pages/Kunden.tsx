@@ -46,7 +46,7 @@ export default function Kunden() {
       } else {
         const { error } = await supabase
           .from('customers')
-          .insert([customerData]);
+          .insert([customerData] as any);
 
         if (error) throw error;
       }

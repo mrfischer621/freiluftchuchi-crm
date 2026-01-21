@@ -5,6 +5,7 @@ import Kunden from './pages/Kunden';
 import Projekte from './pages/Projekte';
 import Zeiterfassung from './pages/Zeiterfassung';
 import Rechnungen from './pages/Rechnungen';
+import Buchungen from './pages/Buchungen';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="projekte" element={<Projekte />} />
           <Route path="zeiterfassung" element={<Zeiterfassung />} />
           <Route path="rechnungen" element={<Rechnungen />} />
+          <Route path="buchungen" element={<Buchungen />} />
         </Route>
       </Routes>
     </BrowserRouter>

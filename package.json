@@ -2,6 +2,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.91.0",
     "jspdf": "^4.0.0",
-    "jspdf-autotable": "^5.0.7"
+    "jspdf-autotable": "^5.0.7",
+    "swissqrbill": "^4.2.1"
   }
 }

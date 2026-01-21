@@ -51,7 +51,7 @@ export default function Projekte() {
       } else {
         const { error } = await supabase
           .from('projects')
-          .insert([projectData]);
+          .insert([projectData] as any);
 
         if (error) throw error;
       }

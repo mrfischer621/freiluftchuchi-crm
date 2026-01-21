@@ -4,7 +4,8 @@ import {
   Users,
   Briefcase,
   Clock,
-  FileText
+  FileText,
+  Receipt
 } from 'lucide-react';
 
 const navItems = [
@@ -13,6 +14,7 @@ const navItems = [
   { name: 'Projekte', path: '/projekte', icon: Briefcase },
   { name: 'Zeiterfassung', path: '/zeiterfassung', icon: Clock },
   { name: 'Rechnungen', path: '/rechnungen', icon: FileText },
+  { name: 'Buchungen', path: '/buchungen', icon: Receipt },
 ];
 
 export default function Sidebar() {

@@ -1,5 +1,5 @@
 import { Download, Trash2 } from 'lucide-react';
-import type { Invoice, InvoiceItem, Customer } from '../lib/supabase';
+import type { Invoice, Customer } from '../lib/supabase';
 
 type InvoiceTableProps = {
   invoices: Invoice[];
