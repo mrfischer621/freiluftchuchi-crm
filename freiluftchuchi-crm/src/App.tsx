@@ -10,12 +10,27 @@ import Auswertungen from './pages/Auswertungen';
 import Jahresabschluss from './pages/Jahresabschluss';
 import Produkte from './pages/Produkte';
 import Settings from './pages/Settings';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Layout />}>
+        {/* Public routes */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Protected routes */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<Dashboard />} />
           <Route path="kunden" element={<Kunden />} />
           <Route path="projekte" element={<Projekte />} />

@@ -20,7 +20,10 @@
       "Bash(ssh-keygen:*)",
       "Bash(git remote set-url:*)",
       "Bash(npm run build:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(git rm:*)",
+      "Bash(find:*)",
+      "Bash(npm audit:*)"
     ]
   }
 }

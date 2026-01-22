@@ -66,6 +66,89 @@ const FONTS = {
 };
 
 // ============================================================================
+// SECURITY & SANITIZATION FUNCTIONS
+// ============================================================================
+
+/**
+ * Sanitize text for Swiss QR Bill compliance.
+ *
+ * This function ensures that ALL user inputs meet the strict Swiss QR Standard requirements:
+ * - Removes control characters (including newlines, tabs, etc.)
+ * - Strips characters outside the Latin-1 subset (emojis, special Unicode, etc.)
+ * - Collapses multiple spaces and trims whitespace
+ * - Prevents XSS and QR payload corruption
+ *
+ * Swiss QR Standard allowed character ranges:
+ * - 0x20-0x7E: Basic ASCII printable characters
+ * - 0xA0-0xFF: Extended Latin-1 characters (umlauts, accents, etc.)
+ *
+ * @param text - Raw user input that may contain dangerous or invalid characters
+ * @returns Sanitized string safe for QR code and PDF rendering
+ */
+export function sanitizeForQR(text: string): string {
+  if (!text) return '';
+
+  let sanitized = text;
+
+  // Step 1: Remove ALL control characters (0x00-0x1F and 0x7F-0x9F)
+  // This includes: \n, \r, \t, and other invisible characters
+  sanitized = sanitized.replace(/[\x00-\x1F\x7F-\x9F]/g, ' ');
+
+  // Step 2: Strip characters NOT in Latin-1 subset
+  // Replace emojis, special Unicode, and other non-Latin-1 chars with space
+  sanitized = sanitized
+    .split('')
+    .map((char) => {
+      const code = char.charCodeAt(0);
+      // Allow only: 0x20-0x7E (ASCII printable) and 0xA0-0xFF (Latin-1 extended)
+      if ((code >= 0x20 && code <= 0x7E) || (code >= 0xA0 && code <= 0xFF)) {
+        return char;
+      }
+      return ' ';
+    })
+    .join('');
+
+  // Step 3: Collapse multiple spaces into one
+  sanitized = sanitized.replace(/\s+/g, ' ');
+
+  // Step 4: Trim leading and trailing whitespace
+  sanitized = sanitized.trim();
+
+  return sanitized;
+}
+
+/**
+ * Sanitize text for general PDF rendering.
+ * Less strict than QR sanitization, but still prevents rendering glitches.
+ *
+ * @param text - Raw text for PDF display
+ * @returns Sanitized text safe for PDF rendering
+ */
+function sanitizeForPDF(text: string): string {
+  if (!text) return '';
+
+  let sanitized = text;
+
+  // Remove control characters except newlines and tabs
+  // (jsPDF can handle these for multiline text)
+  sanitized = sanitized.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F-\x9F]/g, '');
+
+  // Remove emojis and characters outside Latin-1
+  sanitized = sanitized
+    .split('')
+    .map((char) => {
+      const code = char.charCodeAt(0);
+      if ((code >= 0x20 && code <= 0x7E) || (code >= 0xA0 && code <= 0xFF) || code === 0x0A || code === 0x09) {
+        return char;
+      }
+      return '';
+    })
+    .join('');
+
+  return sanitized.trim();
+}
+
+// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
@@ -225,13 +308,13 @@ function drawReceiptSection(
   doc.setFont('helvetica', FONTS.CONTENT.style);
   doc.setFontSize(FONTS.CONTENT.size);
   const iban = company.qr_iban || company.iban || '';
-  doc.text(SwissQRBill.formatIBAN(iban), x, y);
+  doc.text(SwissQRBill.formatIBAN(sanitizeForPDF(iban)), x, y);
   y += 3;
-  doc.text(company.name, x, y);
+  doc.text(sanitizeForPDF(company.name), x, y);
   y += 3;
-  doc.text(formatAddress(company.street, company.house_number), x, y);
+  doc.text(sanitizeForPDF(formatAddress(company.street, company.house_number)), x, y);
   y += 3;
-  doc.text(`${company.zip_code} ${company.city}`, x, y);
+  doc.text(sanitizeForPDF(`${company.zip_code} ${company.city}`), x, y);
   y += 7;
 
   // Reference (only display if we have a QR reference)
@@ -257,14 +340,14 @@ function drawReceiptSection(
 
   doc.setFont('helvetica', FONTS.CONTENT.style);
   doc.setFontSize(FONTS.CONTENT.size);
-  doc.text(customer.name, x, y);
+  doc.text(sanitizeForPDF(customer.name), x, y);
   y += 3;
   if (customer.street) {
-    doc.text(formatAddress(customer.street, customer.house_number), x, y);
+    doc.text(sanitizeForPDF(formatAddress(customer.street, customer.house_number)), x, y);
     y += 3;
   }
   if (customer.zip_code && customer.city) {
-    doc.text(`${customer.zip_code} ${customer.city}`, x, y);
+    doc.text(sanitizeForPDF(`${customer.zip_code} ${customer.city}`), x, y);
     y += 3;
   }
 
@@ -342,13 +425,13 @@ async function drawPaymentSection(
   doc.setFont('helvetica', FONTS.CONTENT.style);
   doc.setFontSize(FONTS.CONTENT.size);
   const iban = company.qr_iban || company.iban || '';
-  doc.text(SwissQRBill.formatIBAN(iban), infoX, infoY);
+  doc.text(SwissQRBill.formatIBAN(sanitizeForPDF(iban)), infoX, infoY);
   infoY += 3;
-  doc.text(company.name, infoX, infoY);
+  doc.text(sanitizeForPDF(company.name), infoX, infoY);
   infoY += 3;
-  doc.text(formatAddress(company.street, company.house_number), infoX, infoY);
+  doc.text(sanitizeForPDF(formatAddress(company.street, company.house_number)), infoX, infoY);
   infoY += 3;
-  doc.text(`${company.zip_code} ${company.city}`, infoX, infoY);
+  doc.text(sanitizeForPDF(`${company.zip_code} ${company.city}`), infoX, infoY);
   infoY += 7;
 
   // Reference (only display if we have a QR reference)
@@ -373,7 +456,7 @@ async function drawPaymentSection(
 
   doc.setFont('helvetica', FONTS.CONTENT.style);
   doc.setFontSize(FONTS.CONTENT.size);
-  doc.text(`Rechnung ${invoice.invoice_number}`, infoX, infoY);
+  doc.text(sanitizeForPDF(`Rechnung ${invoice.invoice_number}`), infoX, infoY);
   infoY += 3;
   doc.text(`Datum: ${formatDate(invoice.issue_date)}`, infoX, infoY);
   if (invoice.due_date) {
@@ -390,14 +473,14 @@ async function drawPaymentSection(
 
   doc.setFont('helvetica', FONTS.CONTENT.style);
   doc.setFontSize(FONTS.CONTENT.size);
-  doc.text(customer.name, infoX, infoY);
+  doc.text(sanitizeForPDF(customer.name), infoX, infoY);
   infoY += 3;
   if (customer.street) {
-    doc.text(formatAddress(customer.street, customer.house_number), infoX, infoY);
+    doc.text(sanitizeForPDF(formatAddress(customer.street, customer.house_number)), infoX, infoY);
     infoY += 3;
   }
   if (customer.zip_code && customer.city) {
-    doc.text(`${customer.zip_code} ${customer.city}`, infoX, infoY);
+    doc.text(sanitizeForPDF(`${customer.zip_code} ${customer.city}`), infoX, infoY);
   }
 }
 
@@ -416,15 +499,15 @@ function drawInvoiceHeader(
   // Company logo placeholder or name
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
-  doc.text(company.name, 20, y);
+  doc.text(sanitizeForPDF(company.name), 20, y);
   y += 6;
 
   // Company address
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.text(formatAddress(company.street, company.house_number), 20, y);
+  doc.text(sanitizeForPDF(formatAddress(company.street, company.house_number)), 20, y);
   y += 4;
-  doc.text(`${company.zip_code} ${company.city}`, 20, y);
+  doc.text(sanitizeForPDF(`${company.zip_code} ${company.city}`), 20, y);
   y += 8;
 
   // Invoice title
@@ -439,21 +522,21 @@ function drawInvoiceHeader(
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.text(customer.name, customerX, customerY);
+  doc.text(sanitizeForPDF(customer.name), customerX, customerY);
   customerY += 5;
 
   if (customer.contact_person) {
-    doc.text(customer.contact_person, customerX, customerY);
+    doc.text(sanitizeForPDF(customer.contact_person), customerX, customerY);
     customerY += 5;
   }
 
   if (customer.street) {
-    doc.text(formatAddress(customer.street, customer.house_number), customerX, customerY);
+    doc.text(sanitizeForPDF(formatAddress(customer.street, customer.house_number)), customerX, customerY);
     customerY += 5;
   }
 
   if (customer.zip_code && customer.city) {
-    doc.text(`${customer.zip_code} ${customer.city}`, customerX, customerY);
+    doc.text(sanitizeForPDF(`${customer.zip_code} ${customer.city}`), customerX, customerY);
     customerY += 5;
   }
 
@@ -465,7 +548,7 @@ function drawInvoiceHeader(
     : rawCountry.substring(0, 2).toUpperCase();
 
   if (customerCountry !== 'CH') {
-    doc.text(getCountryName(customerCountry), customerX, customerY);
+    doc.text(sanitizeForPDF(getCountryName(customerCountry)), customerX, customerY);
     customerY += 5;
   }
 
@@ -475,7 +558,7 @@ function drawInvoiceHeader(
   doc.setFontSize(10);
   doc.text('Rechnungsnummer:', 20, y);
   doc.setFont('helvetica', 'normal');
-  doc.text(invoice.invoice_number, 70, y);
+  doc.text(sanitizeForPDF(invoice.invoice_number), 70, y);
   y += 6;
 
   doc.setFont('helvetica', 'bold');
@@ -496,7 +579,7 @@ function drawInvoiceHeader(
     doc.setFont('helvetica', 'bold');
     doc.text('UID:', 20, y);
     doc.setFont('helvetica', 'normal');
-    doc.text(company.uid_number, 70, y);
+    doc.text(sanitizeForPDF(company.uid_number), 70, y);
     y += 6;
   }
 }
@@ -528,8 +611,8 @@ function drawInvoiceItems(
   doc.setFontSize(9);
 
   items.forEach((item) => {
-    // Handle long descriptions
-    const description = item.description || '';
+    // Handle long descriptions - sanitize to prevent rendering glitches
+    const description = sanitizeForPDF(item.description || '');
     const lines = doc.splitTextToSize(description, 95);
 
     lines.forEach((line: string, index: number) => {
@@ -654,32 +737,37 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<Blob> {
     ? 'CH'
     : rawCountryQR.substring(0, 2).toUpperCase();
 
+  // ========================================================================
+  // SECURITY: Sanitize ALL user inputs before creating QR Bill
+  // ========================================================================
+  // This ensures no matter what garbage data is in the database,
+  // the QR code payload remains valid and compliant with Swiss standards.
   const qrBill = new SwissQRBill({
     creditor: {
-      account: account,
+      account: sanitizeForQR(account), // Sanitize IBAN
       address: {
-        name: company.name,
-        street: company.street,
-        houseNumber: company.house_number || undefined,
-        postalCode: company.zip_code,
-        city: company.city,
-        country: 'CH',
+        name: sanitizeForQR(company.name),
+        street: sanitizeForQR(company.street),
+        houseNumber: company.house_number ? sanitizeForQR(company.house_number) : undefined,
+        postalCode: sanitizeForQR(company.zip_code),
+        city: sanitizeForQR(company.city),
+        country: 'CH', // Always Switzerland for creditor
       },
     },
     debtor: {
       address: {
-        name: customer.name,
-        street: customer.street,
-        houseNumber: customer.house_number || undefined,
-        postalCode: customer.zip_code,
-        city: customer.city,
-        country: qrCountry,
+        name: sanitizeForQR(customer.name),
+        street: sanitizeForQR(customer.street),
+        houseNumber: customer.house_number ? sanitizeForQR(customer.house_number) : undefined,
+        postalCode: sanitizeForQR(customer.zip_code),
+        city: sanitizeForQR(customer.city),
+        country: qrCountry, // Sanitized country code
       },
     },
-    amount: invoice.total,
+    amount: invoice.total, // Number, no sanitization needed
     currency: 'CHF',
-    reference: qrReference, // Only set if QR-IBAN
-    message: `Rechnung ${invoice.invoice_number}`,
+    reference: qrReference, // Already validated by SwissQRBill.generateQRReference()
+    message: sanitizeForQR(`Rechnung ${invoice.invoice_number}`), // Sanitize message
   });
 
   // Generate QR code as data URL
