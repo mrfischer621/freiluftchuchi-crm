@@ -26,7 +26,6 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
   useEffect(() => {
     if (!transaction && !transactionNumber) {
       // Auto-generate transaction number
-      const now = new Date();
       const prefix = activeTab === 'einnahme' ? 'E' : 'A';
       const number = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
       setTransactionNumber(`${prefix}${number}`);

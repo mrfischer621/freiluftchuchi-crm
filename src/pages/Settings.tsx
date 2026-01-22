@@ -37,7 +37,6 @@ export default function Settings() {
     vat_number: '',
     vat_registered: false,
   });
-  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Invoice, Expense, Customer, Transaction } from '../lib/supabase';
+import type { Invoice, Customer } from '../lib/supabase';
 import { AlertCircle } from 'lucide-react';
 import FinancialChart from '../components/FinancialChart';
 import { useCompany } from '../context/CompanyContext';

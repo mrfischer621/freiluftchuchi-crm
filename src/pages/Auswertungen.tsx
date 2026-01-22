@@ -250,7 +250,7 @@ export default function Auswertungen() {
                 border: '1px solid #e5e7eb',
                 borderRadius: '8px',
               }}
-              formatter={(value: number) => formatCHF(value)}
+              formatter={(value: number | undefined) => value !== undefined ? formatCHF(value) : ''}
             />
             <Legend />
             <Line
@@ -318,7 +318,7 @@ export default function Auswertungen() {
                     border: '1px solid #e5e7eb',
                     borderRadius: '8px',
                   }}
-                  formatter={(value: number) => formatCHF(value)}
+                  formatter={(value: number | undefined) => value !== undefined ? formatCHF(value) : ''}
                 />
                 <Bar dataKey="amount" fill={COLORS.primary}>
                   {byCustomer.slice(0, 10).map((entry, index) => (
@@ -348,10 +348,10 @@ export default function Auswertungen() {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={(entry) => `${entry.category}: ${formatCHF(entry.amount)}`}
+                  label={(entry: any) => `${entry.category}: ${formatCHF(entry.amount)}`}
                   labelLine={false}
                 >
-                  {byCategory.slice(0, 8).map((entry, index) => (
+                  {byCategory.slice(0, 8).map((_entry, index) => (
                     <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
                 </Pie>
@@ -361,7 +361,7 @@ export default function Auswertungen() {
                     border: '1px solid #e5e7eb',
                     borderRadius: '8px',
                   }}
-                  formatter={(value: number) => formatCHF(value)}
+                  formatter={(value: number | undefined) => value !== undefined ? formatCHF(value) : ''}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -396,7 +396,7 @@ export default function Auswertungen() {
                     border: '1px solid #e5e7eb',
                     borderRadius: '8px',
                   }}
-                  formatter={(value: number) => formatCHF(value)}
+                  formatter={(value: number | undefined) => value !== undefined ? formatCHF(value) : ''}
                 />
                 <Bar dataKey="amount" fill={COLORS.primary} />
               </BarChart>

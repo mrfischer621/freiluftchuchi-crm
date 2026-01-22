@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Filter } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import type { Transaction, Customer, Project, Invoice } from '../lib/supabase';
+import type { Transaction, Customer, Project } from '../lib/supabase';
 import TransactionForm from '../components/TransactionForm';
 import TransactionTable from '../components/TransactionTable';
 import { useCompany } from '../context/CompanyContext';

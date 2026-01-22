@@ -214,9 +214,9 @@ function drawScissors(doc: jsPDF, x: number, y: number): void {
 function drawSeparatorLine(doc: jsPDF, y: number): void {
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.2);
-  doc.setLineDash([2, 2], 0);
+  (doc as any).setLineDash([2, 2], 0);
   doc.line(0, y, LAYOUT.PAGE_WIDTH, y);
-  doc.setLineDash([], 0); // Reset to solid line
+  (doc as any).setLineDash([], 0); // Reset to solid line
 
   // Add scissors at left and center
   drawScissors(doc, 3, y + 1);
@@ -287,7 +287,7 @@ function drawReceiptSection(
   doc: jsPDF,
   company: Company,
   customer: Customer,
-  invoice: Invoice,
+  _invoice: Invoice,
   qrReference?: string
 ): void {
   const x = LAYOUT.RECEIPT_X;

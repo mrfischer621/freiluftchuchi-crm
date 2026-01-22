@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Project, Customer } from '../lib/supabase';
+import { useCompany } from '../context/CompanyContext';
 
 type ProjectFormProps = {
   onSubmit: (project: Omit<Project, 'id' | 'created_at'>) => Promise<void>;
@@ -15,6 +16,7 @@ const statusOptions: Array<{ value: Project['status']; label: string }> = [
 ];
 
 export default function ProjectForm({ onSubmit, editingProject, onCancelEdit, customers }: ProjectFormProps) {
+  const { selectedCompany } = useCompany();
   const [name, setName] = useState('');
   const [customerId, setCustomerId] = useState('');
   const [description, setDescription] = useState('');
@@ -48,6 +50,7 @@ export default function ProjectForm({ onSubmit, editingProject, onCancelEdit, cu
 
     try {
       await onSubmit({
+        company_id: selectedCompany!.id,
         name,
         customer_id: customerId,
         description: description || null,

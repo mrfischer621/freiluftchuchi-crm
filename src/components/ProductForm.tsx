@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Product } from '../lib/supabase';
+import { useCompany } from '../context/CompanyContext';
 
 interface ProductFormProps {
   onSubmit: (data: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
@@ -8,6 +9,7 @@ interface ProductFormProps {
 }
 
 export default function ProductForm({ onSubmit, editingProduct, onCancel }: ProductFormProps) {
+  const { selectedCompany } = useCompany();
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -60,6 +62,7 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
     setIsSubmitting(true);
     try {
       await onSubmit({
+        company_id: selectedCompany!.id,
         name: formData.name.trim(),
         price: parseFloat(formData.price),
         unit: formData.unit.trim(),

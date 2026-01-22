@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { TimeEntry, Project } from '../lib/supabase';
+import { useCompany } from '../context/CompanyContext';
 
 type TimeEntryFormProps = {
   onSubmit: (entry: Omit<TimeEntry, 'id' | 'created_at'>) => Promise<void>;
@@ -9,6 +10,7 @@ type TimeEntryFormProps = {
 };
 
 export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, projects }: TimeEntryFormProps) {
+  const { selectedCompany } = useCompany();
   const [projectId, setProjectId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [hours, setHours] = useState('');
@@ -48,6 +50,7 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
 
     try {
       await onSubmit({
+        company_id: selectedCompany!.id,
         project_id: projectId,
         date,
         hours: parseFloat(hours),

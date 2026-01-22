@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Plus, Package } from 'lucide-react';
+import { Trash2, Plus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Invoice, InvoiceItem, Customer, Project, Product } from '../lib/supabase';
 import { useCompany } from '../context/CompanyContext';
@@ -30,7 +30,6 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => {
     setInvoiceNumber(nextInvoiceNumber);
@@ -53,7 +52,6 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
     if (!selectedCompany) return;
 
     try {
-      setLoadingProducts(true);
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -65,8 +63,6 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
       setProducts(data || []);
     } catch (error) {
       console.error('Error fetching products:', error);
-    } finally {
-      setLoadingProducts(false);
     }
   };
 
@@ -130,6 +126,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
 
       const invoiceData: InvoiceFormData = {
         invoice: {
+          company_id: selectedCompany!.id,
           invoice_number: invoiceNumber,
           customer_id: customerId,
           project_id: projectId || null,
@@ -137,6 +134,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
           due_date: dueDate || null,
           vat_rate: parseFloat(vatRate),
           status,
+          paid_at: null,
         },
         items: items
           .filter(item => item.description && item.unit_price)

@@ -45,7 +45,6 @@ export interface TagBreakdown {
  * @returns DateRange object with from and to dates
  */
 export function getPresetRange(preset: string): DateRange {
-  const today = new Date();
   const from = new Date();
   const to = new Date();
 

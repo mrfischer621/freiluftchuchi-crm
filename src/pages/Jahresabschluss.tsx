@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useYearEnd } from '../hooks/useYearEnd';
 import type { Asset, PrivateShare, YearEndClosingData } from '../lib/supabase';
 
