@@ -4,5 +4,8 @@
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",
     "swissqrbill": "^4.2.1"
+  },
+  "devDependencies": {
+    "vite": "^7.3.1"
   }
 }
