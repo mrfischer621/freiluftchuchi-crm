@@ -4,16 +4,39 @@ export interface Company {
   id: string;
   name: string;
   logo_url: string | null;
+  street: string | null;
+  house_number: string | null;
+  zip_code: string | null;
+  city: string | null;
+  iban: string | null;
+  qr_iban: string | null;
+  uid_number: string | null;
+  bank_name: string | null;
+  vat_number: string | null;
+  vat_registered: boolean;
   created_at: string;
 }
 
 export interface Customer {
   id: string;
   company_id: string;
+  // Tab: General
   name: string;
+  contact_person: string | null;
   email: string | null;
+  hourly_rate: number | null;
+  // Tab: Address (structured for Swiss QR-Bills)
+  street: string | null;
+  house_number: string | null;
+  zip_code: string | null;
+  city: string | null;
+  country: string | null;
+  alternate_billing_address: string | null;
+  // Tab: More
+  co: string | null;
+  department: string | null;
   phone: string | null;
-  address: string | null;
+  website: string | null;
   created_at: string;
 }
 
@@ -106,6 +129,38 @@ export interface Product {
   updated_at: string;
 }
 
+// Year-End Closing Types
+export interface Asset {
+  name: string;
+  value: number;
+  depreciation_rate: number;
+  amount: number;
+}
+
+export interface PrivateShare {
+  category: string;
+  percentage: number;
+  amount: number;
+}
+
+export interface YearEndClosingData {
+  assets: Asset[];
+  private_shares: PrivateShare[];
+  social_security_provision: number;
+}
+
+export interface YearEndClosing {
+  id: string;
+  company_id: string;
+  year: number;
+  status: 'draft' | 'locked';
+  data: YearEndClosingData;
+  final_profit: number;
+  locked_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -153,6 +208,11 @@ export interface Database {
         Row: Product;
         Insert: Omit<Product, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Product, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      year_end_closings: {
+        Row: YearEndClosing;
+        Insert: Omit<YearEndClosing, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<YearEndClosing, 'id' | 'created_at' | 'updated_at'>>;
       };
     };
   };

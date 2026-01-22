@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import type { Invoice, InvoiceItem, Customer, Project } from '../lib/supabase';
 import InvoiceForm from '../components/InvoiceForm';
 import InvoiceTable from '../components/InvoiceTable';
-import { generateInvoicePDF } from '../utils/pdfGenerator';
+import { downloadInvoicePDF } from '../utils/pdfGenerator';
 import { useCompany } from '../context/CompanyContext';
 
 type InvoiceFormData = {
@@ -154,6 +154,12 @@ export default function Rechnungen() {
 
   const handleDownloadPDF = async (invoice: Invoice) => {
     try {
+      // Validate company data
+      if (!selectedCompany) {
+        alert('Keine Firma ausgewählt');
+        return;
+      }
+
       // Fetch invoice items
       const { data: items, error: itemsError } = await supabase
         .from('invoice_items')
@@ -169,11 +175,16 @@ export default function Rechnungen() {
         return;
       }
 
-      // Generate PDF
-      await generateInvoicePDF(invoice, items || [], customer);
+      // Generate and download PDF
+      await downloadInvoicePDF({
+        invoice,
+        items: items || [],
+        customer,
+        company: selectedCompany,
+      });
     } catch (err) {
       console.error('Error generating PDF:', err);
-      alert('Fehler beim Erstellen des PDFs.');
+      alert(`Fehler beim Erstellen des PDFs: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`);
     }
   };
 

@@ -29,19 +29,19 @@ export default function CustomerTable({ customers, onEdit, onDelete }: CustomerT
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Name
+                Firma
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Kontaktperson
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 E-Mail
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Ort
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Telefon
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Adresse
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Erstellt am
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Aktionen
@@ -49,47 +49,47 @@ export default function CustomerTable({ customers, onEdit, onDelete }: CustomerT
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {customers.map((customer) => (
-              <tr key={customer.id} className="hover:bg-gray-50 transition">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{customer.name}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-600">{customer.email || '-'}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-600">{customer.phone || '-'}</div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-gray-600 max-w-xs truncate">
-                    {customer.address || '-'}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-600">
-                    {new Date(customer.created_at).toLocaleDateString('de-CH')}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right">
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => onEdit(customer)}
-                      className="p-2 text-freiluft hover:bg-teal-50 rounded-lg transition"
-                      title="Bearbeiten"
-                    >
-                      <Pencil size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(customer.id, customer.name)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                      title="Löschen"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {customers.map((customer) => {
+              const location = [customer.zip_code, customer.city].filter(Boolean).join(' ') || '-';
+
+              return (
+                <tr key={customer.id} className="hover:bg-gray-50 transition">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{customer.name}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-600">{customer.contact_person || '-'}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-600">{customer.email || '-'}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-600">{location}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-600">{customer.phone || '-'}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => onEdit(customer)}
+                        className="p-2 text-freiluft hover:bg-teal-50 rounded-lg transition"
+                        title="Bearbeiten"
+                      >
+                        <Pencil size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(customer.id, customer.name)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                        title="Löschen"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

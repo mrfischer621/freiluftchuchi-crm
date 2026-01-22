@@ -8,6 +8,9 @@ import {
   Clock,
   FileText,
   Receipt,
+  BarChart,
+  CalendarCheck,
+  Settings,
   ChevronDown,
   Check
 } from 'lucide-react';
@@ -21,6 +24,9 @@ const navItems = [
   { name: 'Zeiterfassung', path: '/zeiterfassung', icon: Clock },
   { name: 'Rechnungen', path: '/rechnungen', icon: FileText },
   { name: 'Buchungen', path: '/buchungen', icon: Receipt },
+  { name: 'Auswertungen', path: '/auswertungen', icon: BarChart },
+  { name: 'Jahresabschluss', path: '/jahresabschluss', icon: CalendarCheck },
+  { name: 'Einstellungen', path: '/settings', icon: Settings },
 ];
 
 export default function Sidebar() {

@@ -6,7 +6,10 @@ import Projekte from './pages/Projekte';
 import Zeiterfassung from './pages/Zeiterfassung';
 import Rechnungen from './pages/Rechnungen';
 import Buchungen from './pages/Buchungen';
+import Auswertungen from './pages/Auswertungen';
+import Jahresabschluss from './pages/Jahresabschluss';
 import Produkte from './pages/Produkte';
+import Settings from './pages/Settings';
 
 function App() {
   return (
@@ -20,6 +23,9 @@ function App() {
           <Route path="zeiterfassung" element={<Zeiterfassung />} />
           <Route path="rechnungen" element={<Rechnungen />} />
           <Route path="buchungen" element={<Buchungen />} />
+          <Route path="auswertungen" element={<Auswertungen />} />
+          <Route path="jahresabschluss" element={<Jahresabschluss />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
     </BrowserRouter>
