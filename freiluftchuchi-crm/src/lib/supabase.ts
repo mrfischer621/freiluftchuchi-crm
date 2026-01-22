@@ -1,7 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
+export interface Company {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  created_at: string;
+}
+
 export interface Customer {
   id: string;
+  company_id: string;
   name: string;
   email: string | null;
   phone: string | null;
@@ -11,6 +19,7 @@ export interface Customer {
 
 export interface Project {
   id: string;
+  company_id: string;
   customer_id: string;
   name: string;
   description: string | null;
@@ -21,6 +30,7 @@ export interface Project {
 
 export interface TimeEntry {
   id: string;
+  company_id: string;
   project_id: string;
   date: string;
   hours: number;
@@ -32,6 +42,7 @@ export interface TimeEntry {
 
 export interface Invoice {
   id: string;
+  company_id: string;
   invoice_number: string;
   customer_id: string;
   project_id: string | null;
@@ -57,6 +68,7 @@ export interface InvoiceItem {
 
 export interface Transaction {
   id: string;
+  company_id: string;
   type: 'einnahme' | 'ausgabe';
   date: string;
   amount: number;
@@ -74,6 +86,7 @@ export interface Transaction {
 
 export interface Expense {
   id: string;
+  company_id: string;
   description: string;
   amount: number;
   date: string;
@@ -81,9 +94,26 @@ export interface Expense {
   created_at: string;
 }
 
+export interface Product {
+  id: string;
+  company_id: string;
+  name: string;
+  price: number;
+  unit: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
+      companies: {
+        Row: Company;
+        Insert: Omit<Company, 'id' | 'created_at'>;
+        Update: Partial<Omit<Company, 'id' | 'created_at'>>;
+      };
       customers: {
         Row: Customer;
         Insert: Omit<Customer, 'id' | 'created_at'>;
@@ -118,6 +148,11 @@ export interface Database {
         Row: Expense;
         Insert: Omit<Expense, 'id' | 'created_at'>;
         Update: Partial<Omit<Expense, 'id' | 'created_at'>>;
+      };
+      products: {
+        Row: Product;
+        Insert: Omit<Product, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Product, 'id' | 'created_at' | 'updated_at'>>;
       };
     };
   };

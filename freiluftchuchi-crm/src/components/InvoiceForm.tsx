@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Plus } from 'lucide-react';
-import type { Invoice, InvoiceItem, Customer, Project } from '../lib/supabase';
+import { Trash2, Plus, Package } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import type { Invoice, InvoiceItem, Customer, Project, Product } from '../lib/supabase';
+import { useCompany } from '../context/CompanyContext';
 
 type InvoiceFormData = {
   invoice: Omit<Invoice, 'id' | 'created_at' | 'subtotal' | 'vat_amount' | 'total'>;
@@ -15,6 +17,7 @@ type InvoiceFormProps = {
 };
 
 export default function InvoiceForm({ onSubmit, customers, projects, nextInvoiceNumber }: InvoiceFormProps) {
+  const { selectedCompany } = useCompany();
   const [customerId, setCustomerId] = useState('');
   const [projectId, setProjectId] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState(nextInvoiceNumber);
@@ -22,10 +25,12 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
   const [dueDate, setDueDate] = useState('');
   const [status, setStatus] = useState<Invoice['status']>('entwurf');
   const [vatRate, setVatRate] = useState('7.7');
-  const [items, setItems] = useState<Array<{ description: string; quantity: string; unit_price: string }>>([
+  const [items, setItems] = useState<Array<{ description: string; quantity: string; unit_price: string; product_id?: string }>>([
     { description: '', quantity: '1', unit_price: '' }
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => {
     setInvoiceNumber(nextInvoiceNumber);
@@ -37,6 +42,33 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
     due.setDate(due.getDate() + 30);
     setDueDate(due.toISOString().split('T')[0]);
   }, [issueDate]);
+
+  useEffect(() => {
+    if (selectedCompany) {
+      fetchProducts();
+    }
+  }, [selectedCompany]);
+
+  const fetchProducts = async () => {
+    if (!selectedCompany) return;
+
+    try {
+      setLoadingProducts(true);
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('company_id', selectedCompany.id)
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
 
   const customerProjects = customerId
     ? projects.filter((p) => p.customer_id === customerId)
@@ -67,6 +99,26 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
     setItems(newItems);
+  };
+
+  const handleProductSelect = (index: number, productId: string) => {
+    if (!productId) {
+      // Clear selection - set to free entry mode
+      handleItemChange(index, 'product_id', '');
+      return;
+    }
+
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      const newItems = [...items];
+      newItems[index] = {
+        ...newItems[index],
+        product_id: productId,
+        description: `${product.name} (${product.unit})`,
+        unit_price: product.price.toString(),
+      };
+      setItems(newItems);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -225,57 +277,109 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
             </button>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             {items.map((item, index) => (
-              <div key={index} className="grid grid-cols-12 gap-2 items-end">
-                <div className="col-span-5">
-                  <input
-                    type="text"
-                    value={item.description}
-                    onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                    placeholder="Beschreibung"
-                    required
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <input
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                    placeholder="Menge"
-                    step="0.01"
-                    min="0"
-                    required
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <input
-                    type="number"
-                    value={item.unit_price}
-                    onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
-                    placeholder="Einzelpreis"
-                    step="0.01"
-                    min="0"
-                    required
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-right">
-                    {((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)).toFixed(2)}
+              <div key={index} className="space-y-2">
+                <div className="grid grid-cols-12 gap-2 items-end">
+                  {/* Product Selector */}
+                  <div className="col-span-3">
+                    {index === 0 && (
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Produkt (optional)
+                      </label>
+                    )}
+                    <select
+                      value={item.product_id || ''}
+                      onChange={(e) => handleProductSelect(index, e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                    >
+                      <option value="">Freie Eingabe</option>
+                      {products.map((product) => (
+                        <option key={product.id} value={product.id}>
+                          {product.name} - CHF {product.price.toFixed(2)}/{product.unit}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Description */}
+                  <div className="col-span-4">
+                    {index === 0 && (
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Beschreibung
+                      </label>
+                    )}
+                    <input
+                      type="text"
+                      value={item.description}
+                      onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                      placeholder="Beschreibung"
+                      required
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                    />
+                  </div>
+
+                  {/* Quantity */}
+                  <div className="col-span-2">
+                    {index === 0 && (
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Menge
+                      </label>
+                    )}
+                    <input
+                      type="number"
+                      value={item.quantity}
+                      onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                      placeholder="Menge"
+                      step="0.01"
+                      min="0"
+                      required
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                    />
+                  </div>
+
+                  {/* Unit Price */}
+                  <div className="col-span-2">
+                    {index === 0 && (
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Einzelpreis
+                      </label>
+                    )}
+                    <input
+                      type="number"
+                      value={item.unit_price}
+                      onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
+                      placeholder="Preis"
+                      step="0.01"
+                      min="0"
+                      required
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                    />
+                  </div>
+
+                  {/* Delete Button */}
+                  <div className="col-span-1 flex justify-end">
+                    {index === 0 && (
+                      <div className="h-5 mb-1"></div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveItem(index)}
+                      disabled={items.length === 1}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
-                <div className="col-span-1 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveItem(index)}
-                    disabled={items.length === 1}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+
+                {/* Total for this line */}
+                <div className="flex justify-end pr-11">
+                  <div className="text-sm text-gray-600">
+                    Total: <span className="font-semibold text-gray-900">
+                      CHF {((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}

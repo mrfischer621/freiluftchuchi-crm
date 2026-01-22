@@ -1,0 +1,200 @@
+import { useState, useEffect } from 'react';
+import type { Product } from '../lib/supabase';
+
+interface ProductFormProps {
+  onSubmit: (data: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  editingProduct?: Product;
+  onCancel?: () => void;
+}
+
+export default function ProductForm({ onSubmit, editingProduct, onCancel }: ProductFormProps) {
+  const [formData, setFormData] = useState({
+    name: '',
+    price: '',
+    unit: 'Stück',
+    description: '',
+    is_active: true,
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (editingProduct) {
+      setFormData({
+        name: editingProduct.name,
+        price: editingProduct.price.toString(),
+        unit: editingProduct.unit,
+        description: editingProduct.description || '',
+        is_active: editingProduct.is_active,
+      });
+    }
+  }, [editingProduct]);
+
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name ist erforderlich';
+    }
+
+    const price = parseFloat(formData.price);
+    if (!formData.price || isNaN(price) || price < 0) {
+      newErrors.price = 'Bitte geben Sie einen gültigen Preis ein (≥ 0)';
+    }
+
+    if (!formData.unit.trim()) {
+      newErrors.unit = 'Einheit ist erforderlich';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validate()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        name: formData.name.trim(),
+        price: parseFloat(formData.price),
+        unit: formData.unit.trim(),
+        description: formData.description.trim() || null,
+        is_active: formData.is_active,
+      });
+
+      // Reset form if not editing
+      if (!editingProduct) {
+        setFormData({
+          name: '',
+          price: '',
+          unit: 'Stück',
+          description: '',
+          is_active: true,
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting product:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const unitOptions = ['Stück', 'Stunden', 'kg', 'Liter', 'm', 'm²', 'm³', 'Paket', 'Set'];
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm p-6 space-y-4">
+      <h2 className="text-xl font-semibold text-gray-900">
+        {editingProduct ? 'Produkt bearbeiten' : 'Neues Produkt'}
+      </h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Name */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Name <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent ${
+              errors.name ? 'border-red-500' : 'border-gray-300'
+            }`}
+            placeholder="Produktname"
+          />
+          {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+        </div>
+
+        {/* Price */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Preis (CHF) <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent ${
+              errors.price ? 'border-red-500' : 'border-gray-300'
+            }`}
+            placeholder="0.00"
+          />
+          {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price}</p>}
+        </div>
+
+        {/* Unit */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Einheit <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={formData.unit}
+            onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent ${
+              errors.unit ? 'border-red-500' : 'border-gray-300'
+            }`}
+          >
+            {unitOptions.map((unit) => (
+              <option key={unit} value={unit}>
+                {unit}
+              </option>
+            ))}
+          </select>
+          {errors.unit && <p className="text-red-500 text-sm mt-1">{errors.unit}</p>}
+        </div>
+
+        {/* Active Status */}
+        <div className="flex items-center pt-6">
+          <label className="flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.is_active}
+              onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+              className="w-4 h-4 text-freiluft border-gray-300 rounded focus:ring-freiluft"
+            />
+            <span className="ml-2 text-sm text-gray-700">Produkt aktiv</span>
+          </label>
+        </div>
+      </div>
+
+      {/* Description */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
+        <textarea
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          rows={3}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent"
+          placeholder="Optionale Produktbeschreibung"
+        />
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3">
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="px-6 py-2 bg-freiluft text-white rounded-lg hover:bg-opacity-90 transition disabled:opacity-50"
+        >
+          {isSubmitting ? 'Speichern...' : editingProduct ? 'Aktualisieren' : 'Hinzufügen'}
+        </button>
+        {editingProduct && onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+          >
+            Abbrechen
+          </button>
+        )}
+      </div>
+    </form>
+  );
+}

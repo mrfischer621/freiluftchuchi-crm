@@ -3,24 +3,40 @@ import { supabase } from '../lib/supabase';
 import type { Customer } from '../lib/supabase';
 import CustomerForm from '../components/CustomerForm';
 import CustomerTable from '../components/CustomerTable';
+import { useCompany } from '../context/CompanyContext';
 
 export default function Kunden() {
+  const { selectedCompany } = useCompany();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchCustomers();
-  }, []);
+    if (selectedCompany) {
+      fetchCustomers();
+    }
+  }, [selectedCompany]);
+
+  // Early return if no company selected
+  if (!selectedCompany) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-gray-500">Firma wird geladen...</p>
+      </div>
+    );
+  }
 
   const fetchCustomers = async () => {
+    if (!selectedCompany) return;
+
     try {
       setIsLoading(true);
       setError(null);
       const { data, error } = await supabase
         .from('customers')
         .select('*')
+        .eq('company_id', selectedCompany.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -34,6 +50,8 @@ export default function Kunden() {
   };
 
   const handleSubmit = async (customerData: Omit<Customer, 'id' | 'created_at'>) => {
+    if (!selectedCompany) return;
+
     try {
       if (editingCustomer) {
         const { error } = await supabase
@@ -46,7 +64,7 @@ export default function Kunden() {
       } else {
         const { error } = await supabase
           .from('customers')
-          .insert([customerData] as any);
+          .insert([{ ...customerData, company_id: selectedCompany.id }] as any);
 
         if (error) throw error;
       }

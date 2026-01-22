@@ -4,6 +4,7 @@ import type { Invoice, InvoiceItem, Customer, Project } from '../lib/supabase';
 import InvoiceForm from '../components/InvoiceForm';
 import InvoiceTable from '../components/InvoiceTable';
 import { generateInvoicePDF } from '../utils/pdfGenerator';
+import { useCompany } from '../context/CompanyContext';
 
 type InvoiceFormData = {
   invoice: Omit<Invoice, 'id' | 'created_at' | 'subtotal' | 'vat_amount' | 'total'>;
@@ -11,6 +12,7 @@ type InvoiceFormData = {
 };
 
 export default function Rechnungen() {
+  const { selectedCompany } = useCompany();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -19,18 +21,43 @@ export default function Rechnungen() {
   const [nextInvoiceNumber, setNextInvoiceNumber] = useState('RE-2025-001');
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (selectedCompany) {
+      fetchData();
+    }
+  }, [selectedCompany]);
+
+  // Early return if no company selected
+  if (!selectedCompany) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-gray-500">Firma wird geladen...</p>
+      </div>
+    );
+  }
 
   const fetchData = async () => {
+    if (!selectedCompany) return;
+
     try {
       setIsLoading(true);
       setError(null);
 
       const [invoicesResult, customersResult, projectsResult] = await Promise.all([
-        supabase.from('invoices').select('*').order('created_at', { ascending: false }),
-        supabase.from('customers').select('*').order('name', { ascending: true }),
-        supabase.from('projects').select('*').order('name', { ascending: true }),
+        supabase
+          .from('invoices')
+          .select('*')
+          .eq('company_id', selectedCompany.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('customers')
+          .select('*')
+          .eq('company_id', selectedCompany.id)
+          .order('name', { ascending: true }),
+        supabase
+          .from('projects')
+          .select('*')
+          .eq('company_id', selectedCompany.id)
+          .order('name', { ascending: true }),
       ]);
 
       if (invoicesResult.error) throw invoicesResult.error;
@@ -41,7 +68,7 @@ export default function Rechnungen() {
       setCustomers(customersResult.data || []);
       setProjects(projectsResult.data || []);
 
-      // Generate next invoice number
+      // Generate next invoice number (COMPANY-SPECIFIC)
       if (invoicesResult.data && invoicesResult.data.length > 0) {
         const lastNumber = (invoicesResult.data[0] as any).invoice_number;
         const match = lastNumber.match(/RE-(\d{4})-(\d{3})/);
@@ -69,12 +96,15 @@ export default function Rechnungen() {
     data: InvoiceFormData,
     calculatedTotals: { subtotal: number; vat_amount: number; total: number }
   ) => {
+    if (!selectedCompany) return;
+
     try {
-      // Insert invoice
+      // Insert invoice with company_id
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
         .insert([{
           ...data.invoice,
+          company_id: selectedCompany.id,
           subtotal: calculatedTotals.subtotal,
           vat_amount: calculatedTotals.vat_amount,
           total: calculatedTotals.total,

@@ -3,8 +3,10 @@ import { supabase } from '../lib/supabase';
 import type { TimeEntry, Project } from '../lib/supabase';
 import TimeEntryForm from '../components/TimeEntryForm';
 import TimeEntryTable from '../components/TimeEntryTable';
+import { useCompany } from '../context/CompanyContext';
 
 export default function Zeiterfassung() {
+  const { selectedCompany } = useCompany();
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
@@ -13,17 +15,38 @@ export default function Zeiterfassung() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (selectedCompany) {
+      fetchData();
+    }
+  }, [selectedCompany]);
+
+  // Early return if no company selected
+  if (!selectedCompany) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-gray-500">Firma wird geladen...</p>
+      </div>
+    );
+  }
 
   const fetchData = async () => {
+    if (!selectedCompany) return;
+
     try {
       setIsLoading(true);
       setError(null);
 
       const [entriesResult, projectsResult] = await Promise.all([
-        supabase.from('time_entries').select('*').order('date', { ascending: false }),
-        supabase.from('projects').select('*').order('name', { ascending: true }),
+        supabase
+          .from('time_entries')
+          .select('*')
+          .eq('company_id', selectedCompany.id)
+          .order('date', { ascending: false }),
+        supabase
+          .from('projects')
+          .select('*')
+          .eq('company_id', selectedCompany.id)
+          .order('name', { ascending: true }),
       ]);
 
       if (entriesResult.error) throw entriesResult.error;
@@ -40,6 +63,8 @@ export default function Zeiterfassung() {
   };
 
   const handleSubmit = async (entryData: Omit<TimeEntry, 'id' | 'created_at'>) => {
+    if (!selectedCompany) return;
+
     try {
       if (editingEntry) {
         const { error } = await supabase
@@ -52,7 +77,7 @@ export default function Zeiterfassung() {
       } else {
         const { error } = await supabase
           .from('time_entries')
-          .insert([entryData] as any);
+          .insert([{ ...entryData, company_id: selectedCompany.id }] as any);
 
         if (error) throw error;
       }

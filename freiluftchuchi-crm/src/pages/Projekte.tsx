@@ -3,8 +3,10 @@ import { supabase } from '../lib/supabase';
 import type { Project, Customer } from '../lib/supabase';
 import ProjectForm from '../components/ProjectForm';
 import ProjectTable from '../components/ProjectTable';
+import { useCompany } from '../context/CompanyContext';
 
 export default function Projekte() {
+  const { selectedCompany } = useCompany();
   const [projects, setProjects] = useState<Project[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -12,17 +14,38 @@ export default function Projekte() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (selectedCompany) {
+      fetchData();
+    }
+  }, [selectedCompany]);
+
+  // Early return if no company selected
+  if (!selectedCompany) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-gray-500">Firma wird geladen...</p>
+      </div>
+    );
+  }
 
   const fetchData = async () => {
+    if (!selectedCompany) return;
+
     try {
       setIsLoading(true);
       setError(null);
 
       const [projectsResult, customersResult] = await Promise.all([
-        supabase.from('projects').select('*').order('created_at', { ascending: false }),
-        supabase.from('customers').select('*').order('name', { ascending: true }),
+        supabase
+          .from('projects')
+          .select('*')
+          .eq('company_id', selectedCompany.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('customers')
+          .select('*')
+          .eq('company_id', selectedCompany.id)
+          .order('name', { ascending: true }),
       ]);
 
       if (projectsResult.error) throw projectsResult.error;
@@ -39,6 +62,8 @@ export default function Projekte() {
   };
 
   const handleSubmit = async (projectData: Omit<Project, 'id' | 'created_at'>) => {
+    if (!selectedCompany) return;
+
     try {
       if (editingProject) {
         const { error } = await supabase
@@ -51,7 +76,7 @@ export default function Projekte() {
       } else {
         const { error } = await supabase
           .from('projects')
-          .insert([projectData] as any);
+          .insert([{ ...projectData, company_id: selectedCompany.id }] as any);
 
         if (error) throw error;
       }

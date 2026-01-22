@@ -6,6 +6,7 @@ import Projekte from './pages/Projekte';
 import Zeiterfassung from './pages/Zeiterfassung';
 import Rechnungen from './pages/Rechnungen';
 import Buchungen from './pages/Buchungen';
+import Produkte from './pages/Produkte';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="kunden" element={<Kunden />} />
           <Route path="projekte" element={<Projekte />} />
+          <Route path="produkte" element={<Produkte />} />
           <Route path="zeiterfassung" element={<Zeiterfassung />} />
           <Route path="rechnungen" element={<Rechnungen />} />
           <Route path="buchungen" element={<Buchungen />} />

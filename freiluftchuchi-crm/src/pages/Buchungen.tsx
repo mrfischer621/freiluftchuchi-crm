@@ -4,8 +4,10 @@ import { supabase } from '../lib/supabase';
 import type { Transaction, Customer, Project, Invoice } from '../lib/supabase';
 import TransactionForm from '../components/TransactionForm';
 import TransactionTable from '../components/TransactionTable';
+import { useCompany } from '../context/CompanyContext';
 
 export default function Buchungen() {
+  const { selectedCompany } = useCompany();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -20,29 +22,35 @@ export default function Buchungen() {
   const [filterPeriod, setFilterPeriod] = useState<'30' | '90' | '365' | 'all'>('30');
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (selectedCompany) {
+      fetchData();
+    }
+  }, [selectedCompany]);
 
   useEffect(() => {
     applyFilters();
   }, [transactions, filterType, filterPeriod]);
 
   const fetchData = async () => {
+    if (!selectedCompany) return;
+
     try {
       setLoading(true);
 
-      // Fetch transactions
+      // Fetch transactions for this company
       const { data: transactionsData, error: transactionsError } = await supabase
         .from('transactions')
         .select('*')
+        .eq('company_id', selectedCompany.id)
         .order('date', { ascending: false });
 
       if (transactionsError) throw transactionsError;
 
-      // Fetch paid invoices and convert them to transaction format
+      // Fetch paid invoices for this company and convert them to transaction format
       const { data: paidInvoices, error: invoicesError } = await supabase
         .from('invoices')
         .select('*, customers(*)')
+        .eq('company_id', selectedCompany.id)
         .eq('status', 'bezahlt')
         .order('issue_date', { ascending: false });
 
@@ -51,6 +59,7 @@ export default function Buchungen() {
       // Convert paid invoices to transactions
       const invoiceTransactions: Transaction[] = (paidInvoices || []).map((invoice: any) => ({
         id: `invoice-${invoice.id}`,
+        company_id: selectedCompany.id,
         type: 'einnahme' as const,
         date: invoice.paid_at || invoice.issue_date,
         amount: invoice.total,
@@ -70,18 +79,20 @@ export default function Buchungen() {
       const allTransactions = [...(transactionsData || []), ...invoiceTransactions];
       allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-      // Fetch customers
+      // Fetch customers for this company
       const { data: customersData, error: customersError } = await supabase
         .from('customers')
         .select('*')
+        .eq('company_id', selectedCompany.id)
         .order('name');
 
       if (customersError) throw customersError;
 
-      // Fetch projects
+      // Fetch projects for this company
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
         .select('*')
+        .eq('company_id', selectedCompany.id)
         .order('name');
 
       if (projectsError) throw projectsError;
@@ -118,6 +129,8 @@ export default function Buchungen() {
   };
 
   const handleSubmit = async (data: Partial<Transaction>) => {
+    if (!selectedCompany) return;
+
     try {
       if (editingTransaction) {
         // Update
@@ -128,8 +141,10 @@ export default function Buchungen() {
 
         if (error) throw error;
       } else {
-        // Insert
-        const { error } = await supabase.from('transactions').insert([data]);
+        // Insert with company_id
+        const { error } = await supabase
+          .from('transactions')
+          .insert([{ ...data, company_id: selectedCompany.id }]);
 
         if (error) throw error;
       }
@@ -177,7 +192,7 @@ export default function Buchungen() {
     setShowForm(true);
   };
 
-  if (loading) {
+  if (!selectedCompany || loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-xl text-gray-600">Lädt...</div>

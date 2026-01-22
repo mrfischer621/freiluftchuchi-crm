@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import type { Invoice, Expense, Customer, Transaction } from '../lib/supabase';
 import { AlertCircle } from 'lucide-react';
 import FinancialChart from '../components/FinancialChart';
+import { useCompany } from '../context/CompanyContext';
 
 type TimeFilter = 7 | 30 | 90;
 
@@ -17,6 +18,7 @@ interface ChartData {
 }
 
 export default function Dashboard() {
+  const { selectedCompany } = useCompany();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>(30);
   const [revenue, setRevenue] = useState(0);
   const [expenses, setExpenses] = useState(0);
@@ -25,8 +27,19 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadFinancialData();
-  }, [timeFilter]);
+    if (selectedCompany) {
+      loadFinancialData();
+    }
+  }, [timeFilter, selectedCompany]);
+
+  // Early return if no company selected
+  if (!selectedCompany) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-gray-500">Firma wird geladen...</p>
+      </div>
+    );
+  }
 
   const loadFinancialData = async () => {
     try {
@@ -35,16 +48,18 @@ export default function Dashboard() {
       cutoffDate.setDate(cutoffDate.getDate() - timeFilter);
       const cutoffDateStr = cutoffDate.toISOString();
 
-      // Load ALL paid invoices (we'll filter client-side)
+      // Load ALL paid invoices for this company (we'll filter client-side)
       const { data: allPaidInvoices } = await supabase
         .from('invoices')
         .select('total, paid_at, issue_date')
+        .eq('company_id', selectedCompany.id)
         .eq('status', 'bezahlt');
 
-      // Load ALL expenses (we'll filter client-side)
+      // Load ALL expenses for this company (we'll filter client-side)
       const { data: allExpenseTransactions } = await supabase
         .from('transactions')
         .select('amount, date')
+        .eq('company_id', selectedCompany.id)
         .eq('type', 'ausgabe');
 
       // Generate chart data based on timeFilter
@@ -74,10 +89,11 @@ export default function Dashboard() {
       }, 0) || 0;
       setExpenses(totalExpenses);
 
-      // Load open invoices (status = 'versendet')
+      // Load open invoices (status = 'versendet') for this company
       const { data: openInvoicesData } = await supabase
         .from('invoices')
         .select('*, customers(*)')
+        .eq('company_id', selectedCompany.id)
         .eq('status', 'versendet')
         .order('due_date', { ascending: true });
 
