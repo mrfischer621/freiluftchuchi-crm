@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Filter } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import type { Transaction, Customer, Project } from '../lib/supabase';
+import type { Transaction, Customer, Project, Invoice } from '../lib/supabase';
 import TransactionForm from '../components/TransactionForm';
 import TransactionTable from '../components/TransactionTable';
 
@@ -39,6 +39,37 @@ export default function Buchungen() {
 
       if (transactionsError) throw transactionsError;
 
+      // Fetch paid invoices and convert them to transaction format
+      const { data: paidInvoices, error: invoicesError } = await supabase
+        .from('invoices')
+        .select('*, customers(*)')
+        .eq('status', 'bezahlt')
+        .order('issue_date', { ascending: false });
+
+      if (invoicesError) throw invoicesError;
+
+      // Convert paid invoices to transactions
+      const invoiceTransactions: Transaction[] = (paidInvoices || []).map((invoice: any) => ({
+        id: `invoice-${invoice.id}`,
+        type: 'einnahme' as const,
+        date: invoice.paid_at || invoice.issue_date,
+        amount: invoice.total,
+        description: `Rechnung ${invoice.invoice_number} - ${invoice.customers?.name || 'Unbekannt'}`,
+        category: 'Rechnung',
+        project_id: invoice.project_id,
+        customer_id: invoice.customer_id,
+        invoice_id: invoice.id,
+        document_url: null,
+        tags: null,
+        billable: true,
+        transaction_number: invoice.invoice_number,
+        created_at: invoice.created_at,
+      }));
+
+      // Combine transactions and invoice transactions
+      const allTransactions = [...(transactionsData || []), ...invoiceTransactions];
+      allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
       // Fetch customers
       const { data: customersData, error: customersError } = await supabase
         .from('customers')
@@ -55,7 +86,7 @@ export default function Buchungen() {
 
       if (projectsError) throw projectsError;
 
-      setTransactions(transactionsData || []);
+      setTransactions(allTransactions);
       setCustomers(customersData || []);
       setProjects(projectsData || []);
     } catch (err) {
@@ -113,12 +144,23 @@ export default function Buchungen() {
   };
 
   const handleEdit = (transaction: Transaction) => {
+    // Don't allow editing invoice-based transactions
+    if (transaction.id.startsWith('invoice-')) {
+      setError('Rechnungen können nicht als Buchung bearbeitet werden. Bitte bearbeiten Sie die Rechnung im Rechnungs-Modul.');
+      return;
+    }
     setEditingTransaction(transaction);
     setShowForm(true);
   };
 
   const handleDelete = async (id: string) => {
     try {
+      // Don't allow deleting invoice-based transactions
+      if (id.startsWith('invoice-')) {
+        setError('Rechnungen können nicht hier gelöscht werden. Bitte löschen Sie die Rechnung im Rechnungs-Modul.');
+        return;
+      }
+
       const { error } = await supabase.from('transactions').delete().eq('id', id);
 
       if (error) throw error;

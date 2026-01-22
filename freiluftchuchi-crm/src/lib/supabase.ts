@@ -42,6 +42,7 @@ export interface Invoice {
   vat_amount: number;
   total: number;
   status: 'entwurf' | 'versendet' | 'bezahlt' | 'überfällig';
+  paid_at: string | null;
   created_at: string;
 }
 
@@ -68,6 +69,15 @@ export interface Transaction {
   tags: string[] | null;
   billable: boolean;
   transaction_number: string | null;
+  created_at: string;
+}
+
+export interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+  date: string;
+  category: string | null;
   created_at: string;
 }
 
@@ -103,6 +113,11 @@ export interface Database {
         Row: Transaction;
         Insert: Omit<Transaction, 'id' | 'created_at'>;
         Update: Partial<Omit<Transaction, 'id' | 'created_at'>>;
+      };
+      expenses: {
+        Row: Expense;
+        Insert: Omit<Expense, 'id' | 'created_at'>;
+        Update: Partial<Omit<Expense, 'id' | 'created_at'>>;
       };
     };
   };
