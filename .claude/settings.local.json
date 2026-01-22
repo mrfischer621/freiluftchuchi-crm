@@ -23,7 +23,8 @@
       "Bash(git pull:*)",
       "Bash(git rm:*)",
       "Bash(find:*)",
-      "Bash(npm audit:*)"
+      "Bash(npm audit:*)",
+      "Bash(git config:*)"
     ]
   }
 }
