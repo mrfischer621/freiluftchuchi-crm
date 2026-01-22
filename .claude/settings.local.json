@@ -24,7 +24,8 @@
       "Bash(git rm:*)",
       "Bash(find:*)",
       "Bash(npm audit:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(npx vercel:*)"
     ]
   }
 }
