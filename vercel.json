@@ -1,9 +1,0 @@
-{
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "installCommand": "rm -rf node_modules/.vite && npm install",
-  "framework": "vite",
-  "github": {
-    "silent": true
-  }
-}
