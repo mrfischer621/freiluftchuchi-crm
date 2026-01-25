@@ -3,13 +3,16 @@ import { supabase } from '../lib/supabase';
 import type { TimeEntry, Project } from '../lib/supabase';
 import TimeEntryForm from '../components/TimeEntryForm';
 import TimeEntryTable from '../components/TimeEntryTable';
+import Modal from '../components/Modal';
 import { useCompany } from '../context/CompanyContext';
+import { Plus } from 'lucide-react';
 
 export default function Zeiterfassung() {
   const { selectedCompany } = useCompany();
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +76,6 @@ export default function Zeiterfassung() {
           .eq('id', editingEntry.id);
 
         if (error) throw error;
-        setEditingEntry(null);
       } else {
         const { error } = await supabase
           .from('time_entries')
@@ -82,6 +84,8 @@ export default function Zeiterfassung() {
         if (error) throw error;
       }
 
+      setIsModalOpen(false);
+      setEditingEntry(null);
       await fetchData();
     } catch (err) {
       console.error('Error saving time entry:', err);
@@ -91,10 +95,12 @@ export default function Zeiterfassung() {
 
   const handleEdit = (entry: TimeEntry) => {
     setEditingEntry(entry);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
+    if (!confirm('Möchten Sie diesen Zeiteintrag wirklich löschen?')) return;
+
     try {
       const { error } = await supabase
         .from('time_entries')
@@ -109,7 +115,13 @@ export default function Zeiterfassung() {
     }
   };
 
-  const handleCancelEdit = () => {
+  const handleAddNew = () => {
+    setEditingEntry(null);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
     setEditingEntry(null);
   };
 
@@ -119,29 +131,36 @@ export default function Zeiterfassung() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Zeiterfassung</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Zeiterfassung</h1>
+          <p className="text-gray-600 mt-1">Erfassen Sie Ihre Arbeitszeiten</p>
+        </div>
+        <button
+          onClick={handleAddNew}
+          className="flex items-center gap-2 px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition"
+        >
+          <Plus size={20} />
+          Neuer Zeiteintrag
+        </button>
       </div>
 
+      {/* Error Message */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {error}
         </div>
       )}
 
+      {/* Warning if no projects */}
       {projects.length === 0 && !isLoading && (
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
           Bitte erstellen Sie zuerst Projekte, bevor Sie Zeiteinträge erfassen.
         </div>
       )}
 
-      <TimeEntryForm
-        onSubmit={handleSubmit}
-        editingEntry={editingEntry}
-        onCancelEdit={handleCancelEdit}
-        projects={projects}
-      />
-
+      {/* Project Filter */}
       {entries.length > 0 && (
         <div className="bg-white rounded-lg shadow-sm p-4">
           <label htmlFor="projectFilter" className="block text-sm font-medium text-gray-700 mb-2">
@@ -163,6 +182,7 @@ export default function Zeiterfassung() {
         </div>
       )}
 
+      {/* Table */}
       {isLoading ? (
         <div className="bg-white rounded-lg shadow-sm p-6">
           <p className="text-gray-500 text-center">Lädt Zeiteinträge...</p>
@@ -175,6 +195,21 @@ export default function Zeiterfassung() {
           onDelete={handleDelete}
         />
       )}
+
+      {/* Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        title={editingEntry ? 'Zeiteintrag bearbeiten' : 'Neuer Zeiteintrag'}
+        size="lg"
+      >
+        <TimeEntryForm
+          onSubmit={handleSubmit}
+          editingEntry={editingEntry}
+          onCancelEdit={handleCloseModal}
+          projects={projects}
+        />
+      </Modal>
     </div>
   );
 }

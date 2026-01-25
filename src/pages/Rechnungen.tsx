@@ -3,8 +3,10 @@ import { supabase } from '../lib/supabase';
 import type { Invoice, InvoiceItem, Customer, Project } from '../lib/supabase';
 import InvoiceForm from '../components/InvoiceForm';
 import InvoiceTable from '../components/InvoiceTable';
+import Modal from '../components/Modal';
 import { downloadInvoicePDF } from '../utils/pdfGenerator';
 import { useCompany } from '../context/CompanyContext';
+import { Plus } from 'lucide-react';
 
 type InvoiceFormData = {
   invoice: Omit<Invoice, 'id' | 'created_at' | 'subtotal' | 'vat_amount' | 'total'>;
@@ -16,6 +18,7 @@ export default function Rechnungen() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nextInvoiceNumber, setNextInvoiceNumber] = useState('RE-2025-001');
@@ -129,6 +132,7 @@ export default function Rechnungen() {
 
       if (itemsError) throw itemsError;
 
+      setIsModalOpen(false);
       await fetchData();
     } catch (err) {
       console.error('Error saving invoice:', err);
@@ -137,6 +141,8 @@ export default function Rechnungen() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!confirm('Möchten Sie diese Rechnung wirklich löschen?')) return;
+
     try {
       // Delete invoice items first (cascade should handle this, but being explicit)
       await supabase.from('invoice_items').delete().eq('invoice_id', id);
@@ -150,6 +156,14 @@ export default function Rechnungen() {
       console.error('Error deleting invoice:', err);
       alert('Fehler beim Löschen der Rechnung.');
     }
+  };
+
+  const handleAddNew = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
   };
 
   const handleDownloadPDF = async (invoice: Invoice) => {
@@ -190,29 +204,36 @@ export default function Rechnungen() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Rechnungen</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Rechnungen</h1>
+          <p className="text-gray-600 mt-1">Erstellen und verwalten Sie Ihre Rechnungen</p>
+        </div>
+        <button
+          onClick={handleAddNew}
+          className="flex items-center gap-2 px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition"
+        >
+          <Plus size={20} />
+          Neue Rechnung
+        </button>
       </div>
 
+      {/* Error Message */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {error}
         </div>
       )}
 
+      {/* Warning if no customers */}
       {customers.length === 0 && !isLoading && (
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
           Bitte erstellen Sie zuerst Kunden, bevor Sie Rechnungen erstellen.
         </div>
       )}
 
-      <InvoiceForm
-        onSubmit={handleSubmit}
-        customers={customers}
-        projects={projects}
-        nextInvoiceNumber={nextInvoiceNumber}
-      />
-
+      {/* Table */}
       {isLoading ? (
         <div className="bg-white rounded-lg shadow-sm p-6">
           <p className="text-gray-500 text-center">Lädt Rechnungen...</p>
@@ -225,6 +246,21 @@ export default function Rechnungen() {
           onDownloadPDF={handleDownloadPDF}
         />
       )}
+
+      {/* Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        title="Neue Rechnung"
+        size="xl"
+      >
+        <InvoiceForm
+          onSubmit={handleSubmit}
+          customers={customers}
+          projects={projects}
+          nextInvoiceNumber={nextInvoiceNumber}
+        />
+      </Modal>
     </div>
   );
 }

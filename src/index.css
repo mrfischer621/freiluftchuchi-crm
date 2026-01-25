@@ -1,3 +1,268 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ==========================================
+   Swiss Modern Design System 2026
+   High Contrast • Clean • Bento-Grid Style
+   ========================================== */
+
+@layer base {
+  /* CSS Custom Properties */
+  :root {
+    /* Swiss Modern: Core Palette */
+    --sidebar-bg: #0f172a;
+    --sidebar-hover: #1e293b;
+    --sidebar-text: #94a3b8;
+    --sidebar-text-active: #ffffff;
+
+    --app-bg: #f8fafc;
+    --surface: #ffffff;
+    --surface-border: #e2e8f0;
+
+    --brand: #2563eb;
+    --brand-dark: #1d4ed8;
+
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-tertiary: #94a3b8;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-rest: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+    --shadow-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-elevated: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Dark Mode Variables */
+  .dark {
+    --app-bg: #0f172a;
+    --surface: #1e293b;
+    --surface-border: #334155;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-tertiary: #64748b;
+  }
+
+  /* Global Typography Settings */
+  html {
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-app-bg text-text-primary;
+  }
+
+  /* Heading Typography (Neo-Grotesk) */
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight font-semibold;
+  }
+
+  /* Focus Visible (Accessibility) */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-brand ring-offset-2;
+  }
+
+  /* Reduced Motion Preference */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* ==========================================
+     Swiss Modern: Card Component
+     ========================================== */
+  .card {
+    @apply bg-white border border-surface-border rounded-xl shadow-sm;
+    @apply transition-shadow duration-normal ease-swiss;
+  }
+
+  .card-hover:hover {
+    @apply shadow-hover;
+  }
+
+  .card-interactive {
+    @apply card cursor-pointer;
+    @apply hover:shadow-hover hover:border-slate-300;
+  }
+
+  /* ==========================================
+     Swiss Modern: Bento Grid
+     ========================================== */
+  .bento-grid {
+    @apply grid gap-bento;
+  }
+
+  .bento-grid-lg {
+    @apply grid gap-bento-lg;
+  }
+
+  /* ==========================================
+     Swiss Modern: Button Base
+     ========================================== */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2;
+    @apply px-4 py-2 rounded-button font-medium text-sm;
+    @apply transition-all duration-fast ease-swiss;
+    @apply focus-visible:ring-2 focus-visible:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply btn bg-brand text-white;
+    @apply hover:bg-brand-dark;
+    @apply focus-visible:ring-brand;
+  }
+
+  .btn-secondary {
+    @apply btn bg-white text-text-primary border border-surface-border;
+    @apply hover:bg-slate-50 hover:border-slate-300;
+    @apply focus-visible:ring-brand;
+  }
+
+  .btn-ghost {
+    @apply btn text-text-secondary;
+    @apply hover:bg-slate-100 hover:text-text-primary;
+    @apply focus-visible:ring-brand;
+  }
+
+  .btn-danger {
+    @apply btn bg-danger text-white;
+    @apply hover:bg-danger-dark;
+    @apply focus-visible:ring-danger;
+  }
+
+  /* ==========================================
+     Swiss Modern: Form Inputs
+     ========================================== */
+  .input {
+    @apply w-full px-3 py-2 rounded-input;
+    @apply bg-white border border-surface-border;
+    @apply text-text-primary placeholder:text-text-tertiary;
+    @apply transition-colors duration-fast ease-swiss;
+    @apply hover:border-slate-300;
+    @apply focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand;
+  }
+
+  .input-error {
+    @apply border-danger focus:border-danger focus:ring-danger;
+  }
+
+  /* ==========================================
+     Swiss Modern: KPI Card (Dashboard)
+     ========================================== */
+  .kpi-card {
+    @apply card p-6;
+    @apply hover:shadow-hover;
+  }
+
+  .kpi-label {
+    @apply text-sm font-medium text-text-secondary mb-1;
+  }
+
+  .kpi-value {
+    @apply text-3xl font-bold tracking-tight;
+  }
+
+  .kpi-positive {
+    @apply text-success;
+  }
+
+  .kpi-negative {
+    @apply text-danger;
+  }
+
+  .kpi-neutral {
+    @apply text-brand;
+  }
+
+  /* ==========================================
+     Swiss Modern: Table
+     ========================================== */
+  .table-container {
+    @apply overflow-x-auto;
+  }
+
+  .table {
+    @apply w-full;
+  }
+
+  .table th {
+    @apply text-left py-3 px-4 font-medium text-text-secondary text-sm;
+    @apply border-b border-surface-border;
+  }
+
+  .table td {
+    @apply py-3 px-4 text-text-primary;
+    @apply border-b border-surface-border;
+  }
+
+  .table tbody tr {
+    @apply transition-colors duration-fast;
+    @apply hover:bg-slate-50;
+  }
+
+  /* ==========================================
+     Swiss Modern: Badge / Status
+     ========================================== */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply badge bg-success-light text-success-dark;
+  }
+
+  .badge-warning {
+    @apply badge bg-warning-light text-warning-dark;
+  }
+
+  .badge-danger {
+    @apply badge bg-danger-light text-danger-dark;
+  }
+
+  .badge-neutral {
+    @apply badge bg-slate-100 text-slate-700;
+  }
+
+  /* ==========================================
+     Swiss Modern: Scrollbar Utilities
+     ========================================== */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+  }
+
+  .scrollbar-hidden {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+}

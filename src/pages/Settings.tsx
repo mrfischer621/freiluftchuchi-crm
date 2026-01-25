@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import type { PipelineStage } from '../lib/supabase';
 import { useCompany } from '../context/CompanyContext';
-import { Building2, Save, AlertCircle, CheckCircle } from 'lucide-react';
+import { Building2, Save, AlertCircle, CheckCircle, TrendingUp, Edit2, Check, X, Trash2, Plus } from 'lucide-react';
 
 interface FormData {
   name: string;
@@ -22,8 +23,13 @@ interface Toast {
   message: string;
 }
 
+type TabType = 'company' | 'pipeline';
+
 export default function Settings() {
   const { selectedCompany } = useCompany();
+  const [activeTab, setActiveTab] = useState<TabType>('company');
+
+  // Company settings state
   const [formData, setFormData] = useState<FormData>({
     name: '',
     street: '',
@@ -41,7 +47,14 @@ export default function Settings() {
   const [toast, setToast] = useState<Toast | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Load company data when selectedCompany changes
+  // Pipeline settings state
+  const [stages, setStages] = useState<PipelineStage[]>([]);
+  const [editingStageId, setEditingStageId] = useState<string | null>(null);
+  const [editStageName, setEditStageName] = useState('');
+  const [editStageColor, setEditStageColor] = useState('');
+  const [isLoadingStages, setIsLoadingStages] = useState(false);
+
+  // Load company data
   useEffect(() => {
     if (selectedCompany) {
       setFormData({
@@ -60,7 +73,14 @@ export default function Settings() {
     }
   }, [selectedCompany]);
 
-  // Auto-hide toast after 5 seconds
+  // Load pipeline stages when pipeline tab is active
+  useEffect(() => {
+    if (activeTab === 'pipeline' && selectedCompany) {
+      fetchStages();
+    }
+  }, [activeTab, selectedCompany]);
+
+  // Auto-hide toast
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => {
@@ -70,7 +90,6 @@ export default function Settings() {
     }
   }, [toast]);
 
-  // Early return if no company selected
   if (!selectedCompany) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -79,10 +98,30 @@ export default function Settings() {
     );
   }
 
+  const fetchStages = async () => {
+    if (!selectedCompany) return;
+
+    try {
+      setIsLoadingStages(true);
+      const { data, error } = await supabase
+        .from('pipeline_stages')
+        .select('*')
+        .eq('company_id', selectedCompany.id)
+        .order('position', { ascending: true });
+
+      if (error) throw error;
+      setStages(data || []);
+    } catch (err) {
+      console.error('Error fetching stages:', err);
+      showToast('error', 'Fehler beim Laden der Pipeline-Phasen.');
+    } finally {
+      setIsLoadingStages(false);
+    }
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    // Required fields
     if (!formData.name.trim()) {
       newErrors.name = 'Firmenname ist erforderlich';
     }
@@ -99,263 +138,323 @@ export default function Settings() {
       newErrors.city = 'Ort ist erforderlich';
     }
 
-    // IBAN validation
-    if (formData.iban && !formData.iban.toUpperCase().startsWith('CH')) {
-      newErrors.iban = 'IBAN muss mit "CH" beginnen (Schweizer IBAN)';
-    }
-
-    // QR-IBAN validation
-    if (formData.qr_iban && !formData.qr_iban.toUpperCase().startsWith('CH')) {
-      newErrors.qr_iban = 'QR-IBAN muss mit "CH" beginnen (Schweizer IBAN)';
-    }
-
-    // UID number format validation (optional but helpful)
-    if (formData.uid_number && !formData.uid_number.match(/^CHE-?\d{3}\.?\d{3}\.?\d{3}$/i)) {
-      newErrors.uid_number = 'UID-Format: CHE-XXX.XXX.XXX';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
-      setToast({
-        type: 'error',
-        message: 'Bitte korrigieren Sie die markierten Fehler',
-      });
+      showToast('error', 'Bitte füllen Sie alle Pflichtfelder aus.');
       return;
     }
 
     setIsSaving(true);
+
     try {
       const { error } = await supabase
         .from('companies')
-        .update({
-          name: formData.name.trim(),
-          street: formData.street.trim(),
-          house_number: formData.house_number.trim(),
-          zip_code: formData.zip_code.trim(),
-          city: formData.city.trim(),
-          iban: formData.iban.trim() || null,
-          qr_iban: formData.qr_iban.trim() || null,
-          uid_number: formData.uid_number.trim() || null,
-          bank_name: formData.bank_name.trim() || null,
-          vat_number: formData.vat_number.trim() || null,
-          vat_registered: formData.vat_registered,
-        })
+        .update(formData)
         .eq('id', selectedCompany.id);
 
       if (error) throw error;
 
-      setToast({
-        type: 'success',
-        message: 'Einstellungen erfolgreich gespeichert',
-      });
-
-      // Optionally reload the page to refresh company context
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      showToast('success', 'Einstellungen erfolgreich gespeichert!');
     } catch (err) {
-      console.error('Error updating company settings:', err);
-      setToast({
-        type: 'error',
-        message: 'Fehler beim Speichern der Einstellungen',
-      });
+      console.error('Error saving settings:', err);
+      showToast('error', 'Fehler beim Speichern der Einstellungen.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-    // Clear error for this field when user starts typing
-    if (errors[name]) {
+  const handleChange = (field: keyof FormData, value: string | boolean) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
-        delete newErrors[name];
+        delete newErrors[field];
         return newErrors;
       });
     }
   };
 
+  // Pipeline stage handlers
+  const handleEditStage = (stage: PipelineStage) => {
+    setEditingStageId(stage.id);
+    setEditStageName(stage.name);
+    setEditStageColor(stage.color);
+  };
+
+  const handleSaveStage = async (stageId: string) => {
+    if (!editStageName.trim()) {
+      showToast('error', 'Phasenname darf nicht leer sein.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('pipeline_stages')
+        .update({
+          name: editStageName.trim(),
+          color: editStageColor
+        })
+        .eq('id', stageId);
+
+      if (error) throw error;
+
+      setStages(stages.map(s =>
+        s.id === stageId
+          ? { ...s, name: editStageName.trim(), color: editStageColor }
+          : s
+      ));
+      setEditingStageId(null);
+      showToast('success', 'Phase erfolgreich aktualisiert.');
+    } catch (err) {
+      console.error('Error updating stage:', err);
+      showToast('error', 'Fehler beim Aktualisieren der Phase.');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingStageId(null);
+    setEditStageName('');
+    setEditStageColor('');
+  };
+
+  const handleDeleteStage = async (stage: PipelineStage) => {
+    // Check if stage has opportunities
+    const { data: opportunities, error: checkError } = await supabase
+      .from('opportunities')
+      .select('id')
+      .eq('stage_id', stage.id)
+      .limit(1);
+
+    if (checkError) {
+      showToast('error', 'Fehler beim Prüfen der Phase.');
+      return;
+    }
+
+    if (opportunities && opportunities.length > 0) {
+      showToast('error', 'Diese Phase enthält noch Deals. Bitte verschieben Sie diese zuerst.');
+      return;
+    }
+
+    if (!confirm(`Möchten Sie die Phase "${stage.name}" wirklich löschen?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('pipeline_stages')
+        .delete()
+        .eq('id', stage.id);
+
+      if (error) throw error;
+
+      await fetchStages();
+      showToast('success', 'Phase erfolgreich gelöscht.');
+    } catch (err) {
+      console.error('Error deleting stage:', err);
+      showToast('error', 'Fehler beim Löschen der Phase.');
+    }
+  };
+
+  const handleAddStage = async () => {
+    const stageName = prompt('Name der neuen Phase:');
+    if (!stageName || !stageName.trim()) return;
+
+    try {
+      const maxPosition = stages.length > 0 ? Math.max(...stages.map(s => s.position)) : -1;
+
+      const { error } = await supabase
+        .from('pipeline_stages')
+        .insert([{
+          company_id: selectedCompany.id,
+          name: stageName.trim(),
+          position: maxPosition + 1,
+          color: '#6B7280',
+        }] as any);
+
+      if (error) throw error;
+
+      await fetchStages();
+      showToast('success', 'Phase erfolgreich hinzugefügt.');
+    } catch (err) {
+      console.error('Error adding stage:', err);
+      showToast('error', 'Fehler beim Hinzufügen der Phase.');
+    }
+  };
+
+  const tabs = [
+    { id: 'company' as TabType, label: 'Unternehmenseinstellungen', icon: Building2 },
+    { id: 'pipeline' as TabType, label: 'Sales Pipeline', icon: TrendingUp },
+  ];
+
+  const colorOptions = [
+    { value: '#6B7280', label: 'Grau' },
+    { value: '#3B82F6', label: 'Blau' },
+    { value: '#8B5CF6', label: 'Lila' },
+    { value: '#F59E0B', label: 'Gelb' },
+    { value: '#EF4444', label: 'Rot' },
+    { value: '#10B981', label: 'Grün' },
+    { value: '#EC4899', label: 'Pink' },
+    { value: '#14B8A6', label: 'Türkis' },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Building2 size={32} className="text-freiluft" />
-          <h1 className="text-3xl font-bold text-gray-900">Firmeneinstellungen</h1>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Einstellungen</h1>
+        <p className="text-gray-600 mt-1">Verwalten Sie Ihre Firmen- und System-Einstellungen</p>
       </div>
 
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-6 py-4 rounded-lg shadow-lg ${
+          className={`flex items-center gap-3 p-4 rounded-lg ${
             toast.type === 'success'
-              ? 'bg-green-50 border border-green-200 text-green-800'
-              : 'bg-red-50 border border-red-200 text-red-800'
+              ? 'bg-green-50 border border-green-200'
+              : 'bg-red-50 border border-red-200'
           }`}
         >
           {toast.type === 'success' ? (
-            <CheckCircle size={20} />
+            <CheckCircle className="text-green-600 flex-shrink-0" size={20} />
           ) : (
-            <AlertCircle size={20} />
+            <AlertCircle className="text-red-600 flex-shrink-0" size={20} />
           )}
-          <span className="font-medium">{toast.message}</span>
+          <p className={toast.type === 'success' ? 'text-green-800' : 'text-red-800'}>
+            {toast.message}
+          </p>
         </div>
       )}
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm p-6">
-        <div className="space-y-8">
-          {/* Basic Information */}
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Grundinformationen</h2>
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Firmenname <span className="text-red-500">*</span>
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="flex space-x-8">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`pb-3 px-1 border-b-2 font-medium text-sm transition flex items-center gap-2 ${
+                activeTab === tab.id
+                  ? 'border-freiluft text-freiluft'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <tab.icon size={18} />
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Tab Content: Company Settings */}
+      {activeTab === 'company' && (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Company Name */}
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                Firmenname <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleChange('name', e.target.value)}
+                className={`w-full px-4 py-2 border rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition ${
+                  errors.name ? 'border-red-500' : 'border-gray-200'
+                }`}
+                placeholder="z.B. Muster AG"
+              />
+              {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name}</p>}
+            </div>
+
+            {/* Address */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2 sm:col-span-1">
+                <label htmlFor="street" className="block text-sm font-medium text-gray-700 mb-1">
+                  Strasse <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
-                    errors.name ? 'border-red-300' : 'border-gray-300'
+                  id="street"
+                  value={formData.street}
+                  onChange={(e) => handleChange('street', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition ${
+                    errors.street ? 'border-red-500' : 'border-gray-200'
                   }`}
-                  placeholder="z.B. Freiluft Chuchi GmbH"
+                  placeholder="Musterstrasse"
                 />
-                {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+                {errors.street && <p className="text-sm text-red-600 mt-1">{errors.street}</p>}
               </div>
 
-              <div>
-                <label htmlFor="uid_number" className="block text-sm font-medium text-gray-700 mb-1">
-                  UID-Nummer
+              <div className="col-span-2 sm:col-span-1">
+                <label htmlFor="house_number" className="block text-sm font-medium text-gray-700 mb-1">
+                  Hausnummer <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  id="uid_number"
-                  name="uid_number"
-                  value={formData.uid_number}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
-                    errors.uid_number ? 'border-red-300' : 'border-gray-300'
+                  id="house_number"
+                  value={formData.house_number}
+                  onChange={(e) => handleChange('house_number', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition ${
+                    errors.house_number ? 'border-red-500' : 'border-gray-200'
                   }`}
-                  placeholder="CHE-123.456.789"
+                  placeholder="123"
                 />
-                {errors.uid_number && <p className="text-red-500 text-sm mt-1">{errors.uid_number}</p>}
+                {errors.house_number && (
+                  <p className="text-sm text-red-600 mt-1">{errors.house_number}</p>
+                )}
               </div>
             </div>
-          </div>
 
-          {/* Address */}
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Adresse</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Strasse & Hausnummer <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-3">
-                  <div className="flex-grow">
-                    <input
-                      type="text"
-                      id="street"
-                      name="street"
-                      value={formData.street}
-                      onChange={handleChange}
-                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
-                        errors.street ? 'border-red-300' : 'border-gray-300'
-                      }`}
-                      placeholder="Musterstrasse"
-                    />
-                    {errors.street && <p className="text-red-500 text-sm mt-1">{errors.street}</p>}
-                  </div>
-                  <div className="w-28">
-                    <input
-                      type="text"
-                      id="house_number"
-                      name="house_number"
-                      value={formData.house_number}
-                      onChange={handleChange}
-                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
-                        errors.house_number ? 'border-red-300' : 'border-gray-300'
-                      }`}
-                      placeholder="123"
-                    />
-                    {errors.house_number && <p className="text-red-500 text-sm mt-1">{errors.house_number}</p>}
-                  </div>
-                </div>
-              </div>
-
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <label htmlFor="zip_code" className="block text-sm font-medium text-gray-700 mb-1">
-                  Postleitzahl <span className="text-red-500">*</span>
+                  PLZ <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   id="zip_code"
-                  name="zip_code"
                   value={formData.zip_code}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
-                    errors.zip_code ? 'border-red-300' : 'border-gray-300'
+                  onChange={(e) => handleChange('zip_code', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition ${
+                    errors.zip_code ? 'border-red-500' : 'border-gray-200'
                   }`}
-                  placeholder="8001"
+                  placeholder="8000"
                 />
-                {errors.zip_code && <p className="text-red-500 text-sm mt-1">{errors.zip_code}</p>}
+                {errors.zip_code && <p className="text-sm text-red-600 mt-1">{errors.zip_code}</p>}
               </div>
 
-              <div>
+              <div className="col-span-2">
                 <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
                   Ort <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   id="city"
-                  name="city"
                   value={formData.city}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
-                    errors.city ? 'border-red-300' : 'border-gray-300'
+                  onChange={(e) => handleChange('city', e.target.value)}
+                  className={`w-full px-4 py-2 border rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition ${
+                    errors.city ? 'border-red-500' : 'border-gray-200'
                   }`}
                   placeholder="Zürich"
                 />
-                {errors.city && <p className="text-red-500 text-sm mt-1">{errors.city}</p>}
+                {errors.city && <p className="text-sm text-red-600 mt-1">{errors.city}</p>}
               </div>
             </div>
-          </div>
 
-          {/* Banking Information */}
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Bankverbindung</h2>
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="bank_name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Bankname
-                </label>
-                <input
-                  type="text"
-                  id="bank_name"
-                  name="bank_name"
-                  value={formData.bank_name}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  placeholder="z.B. UBS, Credit Suisse, PostFinance"
-                />
-              </div>
-
+            {/* Banking */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="iban" className="block text-sm font-medium text-gray-700 mb-1">
                   IBAN
@@ -363,90 +462,218 @@ export default function Settings() {
                 <input
                   type="text"
                   id="iban"
-                  name="iban"
                   value={formData.iban}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
-                    errors.iban ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="CH93 0076 2011 6238 5295 7"
+                  onChange={(e) => handleChange('iban', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+                  placeholder="CH93 0000 0000 0000 0000 0"
                 />
-                {errors.iban && <p className="text-red-500 text-sm mt-1">{errors.iban}</p>}
               </div>
 
               <div>
                 <label htmlFor="qr_iban" className="block text-sm font-medium text-gray-700 mb-1">
-                  QR-IBAN (für Swiss QR-Bill)
+                  QR-IBAN
                 </label>
                 <input
                   type="text"
                   id="qr_iban"
-                  name="qr_iban"
                   value={formData.qr_iban}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
-                    errors.qr_iban ? 'border-red-300' : 'border-gray-300'
-                  }`}
-                  placeholder="CH44 3199 9123 0008 8901 2"
+                  onChange={(e) => handleChange('qr_iban', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+                  placeholder="CH44 3000 0000 0000 0000 0"
                 />
-                {errors.qr_iban && <p className="text-red-500 text-sm mt-1">{errors.qr_iban}</p>}
-                <p className="text-gray-500 text-sm mt-1">
-                  QR-IBAN wird für die Generierung von Swiss QR-Rechnungen benötigt
-                </p>
               </div>
             </div>
-          </div>
 
-          {/* Tax Information */}
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Steuerinformationen</h2>
-            <div className="space-y-4">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="vat_registered"
-                  name="vat_registered"
-                  checked={formData.vat_registered}
-                  onChange={handleChange}
-                  className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
-                />
-                <label htmlFor="vat_registered" className="ml-2 text-sm font-medium text-gray-700">
-                  MWST-pflichtig
+            <div>
+              <label htmlFor="bank_name" className="block text-sm font-medium text-gray-700 mb-1">
+                Bankname
+              </label>
+              <input
+                type="text"
+                id="bank_name"
+                value={formData.bank_name}
+                onChange={(e) => handleChange('bank_name', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+                placeholder="z.B. UBS AG"
+              />
+            </div>
+
+            {/* Tax */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="uid_number" className="block text-sm font-medium text-gray-700 mb-1">
+                  UID-Nummer
                 </label>
+                <input
+                  type="text"
+                  id="uid_number"
+                  value={formData.uid_number}
+                  onChange={(e) => handleChange('uid_number', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+                  placeholder="CHE-123.456.789"
+                />
               </div>
 
-              {formData.vat_registered && (
-                <div>
-                  <label htmlFor="vat_number" className="block text-sm font-medium text-gray-700 mb-1">
-                    MWST-Nummer
-                  </label>
-                  <input
-                    type="text"
-                    id="vat_number"
-                    name="vat_number"
-                    value={formData.vat_number}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                    placeholder="CHE-123.456.789 MWST"
-                  />
-                </div>
-              )}
+              <div>
+                <label htmlFor="vat_number" className="block text-sm font-medium text-gray-700 mb-1">
+                  MWST-Nummer
+                </label>
+                <input
+                  type="text"
+                  id="vat_number"
+                  value={formData.vat_number}
+                  onChange={(e) => handleChange('vat_number', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+                  placeholder="CHE-123.456.789 MWST"
+                />
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Submit Button */}
-        <div className="mt-8 flex justify-end">
-          <button
-            type="submit"
-            disabled={isSaving}
-            className="flex items-center gap-2 bg-freiluft text-white px-6 py-3 rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-          >
-            <Save size={20} />
-            {isSaving ? 'Wird gespeichert...' : 'Einstellungen speichern'}
-          </button>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="vat_registered"
+                checked={formData.vat_registered}
+                onChange={(e) => handleChange('vat_registered', e.target.checked)}
+                className="w-4 h-4 text-freiluft border-gray-300 rounded focus:ring-freiluft"
+              />
+              <label htmlFor="vat_registered" className="ml-2 text-sm text-gray-700">
+                MWST-pflichtig
+              </label>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex gap-3 pt-4 border-t border-gray-200">
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="flex items-center gap-2 px-6 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save size={18} />
+                {isSaving ? 'Speichert...' : 'Speichern'}
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
+      )}
+
+      {/* Tab Content: Pipeline Settings */}
+      {activeTab === 'pipeline' && (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Pipeline-Phasen verwalten</h2>
+            <p className="text-sm text-gray-600">
+              Definieren Sie die Phasen Ihrer Sales Pipeline. Diese werden im Kanban-Board angezeigt.
+            </p>
+          </div>
+
+          {isLoadingStages ? (
+            <div className="flex items-center justify-center h-32">
+              <p className="text-gray-500">Lädt...</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {stages.map((stage, index) => (
+                <div
+                  key={stage.id}
+                  className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition"
+                >
+                  {/* Position */}
+                  <div className="w-8 text-center text-sm font-medium text-gray-500">
+                    {index + 1}
+                  </div>
+
+                  {/* Color */}
+                  {editingStageId === stage.id ? (
+                    <select
+                      value={editStageColor}
+                      onChange={(e) => setEditStageColor(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:border-freiluft focus:ring-1 focus:ring-freiluft outline-none"
+                    >
+                      {colorOptions.map((color) => (
+                        <option key={color.value} value={color.value}>
+                          {color.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div
+                      className="w-6 h-6 rounded-full border-2 border-gray-200 flex-shrink-0"
+                      style={{ backgroundColor: stage.color }}
+                      title={stage.color}
+                    />
+                  )}
+
+                  {/* Name */}
+                  {editingStageId === stage.id ? (
+                    <input
+                      type="text"
+                      value={editStageName}
+                      onChange={(e) => setEditStageName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveStage(stage.id);
+                        if (e.key === 'Escape') handleCancelEdit();
+                      }}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-freiluft focus:ring-1 focus:ring-freiluft outline-none"
+                      autoFocus
+                    />
+                  ) : (
+                    <div className="flex-1 font-medium text-gray-900">{stage.name}</div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    {editingStageId === stage.id ? (
+                      <>
+                        <button
+                          onClick={() => handleSaveStage(stage.id)}
+                          className="p-2 hover:bg-green-100 rounded transition"
+                          title="Speichern"
+                        >
+                          <Check size={18} className="text-green-600" />
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          className="p-2 hover:bg-red-100 rounded transition"
+                          title="Abbrechen"
+                        >
+                          <X size={18} className="text-red-600" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleEditStage(stage)}
+                          className="p-2 hover:bg-gray-100 rounded transition"
+                          title="Bearbeiten"
+                        >
+                          <Edit2 size={18} className="text-gray-600" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteStage(stage)}
+                          className="p-2 hover:bg-red-100 rounded transition"
+                          title="Löschen"
+                        >
+                          <Trash2 size={18} className="text-red-600" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {/* Add New Stage Button */}
+              <button
+                onClick={handleAddStage}
+                className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition flex items-center justify-center gap-2 text-gray-600 hover:text-gray-900"
+              >
+                <Plus size={20} />
+                <span className="font-medium">Neue Phase hinzufügen</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

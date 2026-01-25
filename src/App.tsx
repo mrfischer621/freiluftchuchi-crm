@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout';
+import BentoLayout from './components/BentoLayout';
 import Dashboard from './pages/Dashboard';
+import Sales from './pages/Sales';
 import Kunden from './pages/Kunden';
 import Projekte from './pages/Projekte';
 import Zeiterfassung from './pages/Zeiterfassung';
@@ -27,11 +28,12 @@ function App() {
           path="/"
           element={
             <ProtectedRoute>
-              <Layout />
+              <BentoLayout />
             </ProtectedRoute>
           }
         >
           <Route index element={<Dashboard />} />
+          <Route path="sales" element={<Sales />} />
           <Route path="kunden" element={<Kunden />} />
           <Route path="projekte" element={<Projekte />} />
           <Route path="produkte" element={<Produkte />} />

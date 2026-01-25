@@ -3,12 +3,15 @@ import { supabase } from '../lib/supabase';
 import type { Customer } from '../lib/supabase';
 import CustomerForm from '../components/CustomerForm';
 import CustomerTable from '../components/CustomerTable';
+import Modal from '../components/Modal';
 import { useCompany } from '../context/CompanyContext';
+import { Plus } from 'lucide-react';
 
 export default function Kunden() {
   const { selectedCompany } = useCompany();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,7 +21,6 @@ export default function Kunden() {
     }
   }, [selectedCompany]);
 
-  // Early return if no company selected
   if (!selectedCompany) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -60,7 +62,6 @@ export default function Kunden() {
           .eq('id', editingCustomer.id);
 
         if (error) throw error;
-        setEditingCustomer(null);
       } else {
         const { error } = await supabase
           .from('customers')
@@ -69,6 +70,8 @@ export default function Kunden() {
         if (error) throw error;
       }
 
+      setIsModalOpen(false);
+      setEditingCustomer(null);
       await fetchCustomers();
     } catch (err) {
       console.error('Error saving customer:', err);
@@ -78,10 +81,12 @@ export default function Kunden() {
 
   const handleEdit = (customer: Customer) => {
     setEditingCustomer(customer);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
+    if (!confirm('Möchten Sie diesen Kunden wirklich löschen?')) return;
+
     try {
       const { error } = await supabase
         .from('customers')
@@ -96,28 +101,41 @@ export default function Kunden() {
     }
   };
 
-  const handleCancelEdit = () => {
+  const handleAddNew = () => {
+    setEditingCustomer(null);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
     setEditingCustomer(null);
   };
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Kunden</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Kunden</h1>
+          <p className="text-gray-600 mt-1">Verwalten Sie Ihre Kundendaten</p>
+        </div>
+        <button
+          onClick={handleAddNew}
+          className="flex items-center gap-2 px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition"
+        >
+          <Plus size={20} />
+          Neuer Kunde
+        </button>
       </div>
 
+      {/* Error Message */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {error}
         </div>
       )}
 
-      <CustomerForm
-        onSubmit={handleSubmit}
-        editingCustomer={editingCustomer}
-        onCancelEdit={handleCancelEdit}
-      />
-
+      {/* Table */}
       {isLoading ? (
         <div className="bg-white rounded-lg shadow-sm p-6">
           <p className="text-gray-500 text-center">Lädt Kunden...</p>
@@ -129,6 +147,20 @@ export default function Kunden() {
           onDelete={handleDelete}
         />
       )}
+
+      {/* Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        title={editingCustomer ? 'Kunde bearbeiten' : 'Neuer Kunde'}
+        size="lg"
+      >
+        <CustomerForm
+          onSubmit={handleSubmit}
+          editingCustomer={editingCustomer}
+          onCancelEdit={handleCloseModal}
+        />
+      </Modal>
     </div>
   );
 }

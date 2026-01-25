@@ -31,7 +31,9 @@
       "Bash(npm --version:*)",
       "Bash(npm ls:*)",
       "Bash(git restore:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(wc:*)",
+      "Bash(git -C /Users/nicolas/crm-projekt log --oneline)"
     ]
   }
 }

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import type { Transaction, Customer, Project } from '../lib/supabase';
 import TransactionForm from '../components/TransactionForm';
 import TransactionTable from '../components/TransactionTable';
+import Modal from '../components/Modal';
 import { useCompany } from '../context/CompanyContext';
 
 export default function Buchungen() {
@@ -14,7 +15,7 @@ export default function Buchungen() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>();
 
   // Filter states
@@ -149,9 +150,9 @@ export default function Buchungen() {
         if (error) throw error;
       }
 
-      await fetchData();
-      setShowForm(false);
+      setIsModalOpen(false);
       setEditingTransaction(undefined);
+      await fetchData();
     } catch (err) {
       console.error('Error saving transaction:', err);
       setError('Fehler beim Speichern der Buchung');
@@ -165,7 +166,7 @@ export default function Buchungen() {
       return;
     }
     setEditingTransaction(transaction);
-    setShowForm(true);
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -189,7 +190,12 @@ export default function Buchungen() {
 
   const handleNewTransaction = () => {
     setEditingTransaction(undefined);
-    setShowForm(true);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingTransaction(undefined);
   };
 
   if (!selectedCompany || loading) {
@@ -201,21 +207,24 @@ export default function Buchungen() {
   }
 
   return (
-    <div className="p-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Meine Buchungen</h1>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Buchungen</h1>
+          <p className="text-gray-600 mt-1">Verwalten Sie Ihre Einnahmen und Ausgaben</p>
+        </div>
         <button
           onClick={handleNewTransaction}
-          className="flex items-center gap-2 px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-opacity-90 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition"
         >
-          <Plus className="w-5 h-5" />
+          <Plus size={20} />
           Neue Buchung
         </button>
       </div>
 
       {/* Filters */}
-      <div className="mb-6 bg-white rounded-lg shadow p-4">
+      <div className="bg-white rounded-lg shadow-sm p-4">
         <div className="flex gap-4 items-center">
           {/* Account Filter (Tabs) */}
           <div className="flex gap-2">
@@ -257,7 +266,7 @@ export default function Buchungen() {
             <select
               value={filterPeriod}
               onChange={(e) => setFilterPeriod(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent"
+              className="px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
             >
               <option value="30">Letzte 30 Tage</option>
               <option value="90">Letzte 90 Tage</option>
@@ -270,13 +279,13 @@ export default function Buchungen() {
 
       {/* Error Message */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {error}
         </div>
       )}
 
       {/* Transactions Table */}
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-white rounded-lg shadow-sm">
         <TransactionTable
           transactions={filteredTransactions}
           customers={customers}
@@ -286,19 +295,21 @@ export default function Buchungen() {
         />
       </div>
 
-      {/* Transaction Form Modal */}
-      {showForm && (
+      {/* Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        title={editingTransaction ? 'Buchung bearbeiten' : 'Neue Buchung'}
+        size="lg"
+      >
         <TransactionForm
           transaction={editingTransaction}
           onSubmit={handleSubmit}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingTransaction(undefined);
-          }}
+          onCancel={handleCloseModal}
           customers={customers}
           projects={projects}
         />
-      )}
+      </Modal>
     </div>
   );
 }

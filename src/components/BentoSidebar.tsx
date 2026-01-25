@@ -11,7 +11,7 @@ import {
   BarChart,
   CalendarCheck,
   Settings,
-  LogOut
+  LogOut,
 } from 'lucide-react';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthProvider';
@@ -30,59 +30,88 @@ const navItems = [
   { name: 'Einstellungen', path: '/settings', icon: Settings },
 ];
 
-export default function Sidebar() {
+/**
+ * BentoSidebar - Swiss Modern Dark Navigation 2026
+ *
+ * Design:
+ * - Dark background (slate-900)
+ * - Light text (slate-400)
+ * - High contrast active state (blue-600 + white)
+ * - Subtle hover states
+ */
+export function BentoSidebar() {
   const { selectedCompany, isLoading } = useCompany();
   const { user, signOut } = useAuth();
 
   const handleSignOut = async () => {
-    if (confirm('Are you sure you want to sign out?')) {
+    if (confirm('Möchten Sie sich wirklich abmelden?')) {
       await signOut();
     }
   };
 
   return (
-    <aside className="w-60 bg-white shadow-md flex flex-col">
+    <div className="h-full flex flex-col">
       {/* Company Header */}
-      <div className="p-6">
-        <h1 className="text-xl font-bold text-freiluft truncate">
-          {isLoading ? 'Laden...' : selectedCompany?.name || 'Firma'}
+      <div className="px-5 py-5 border-b border-sidebar-border">
+        <h1 className="text-base font-semibold text-white tracking-tight truncate">
+          {isLoading ? 'Laden...' : selectedCompany?.name || 'Freiluftchuchi'}
         </h1>
         {user && (
-          <p className="text-sm text-gray-500 truncate mt-1">{user.email}</p>
+          <p className="text-xs text-sidebar-text truncate mt-1">
+            {user.email}
+          </p>
         )}
       </div>
 
       {/* Navigation */}
-      <nav className="px-3 flex-1">
+      <nav className="px-3 py-4 flex-1 overflow-y-auto">
         {navItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             end={item.path === '/'}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-colors ${
-                isActive
-                  ? 'bg-teal-100 text-freiluft font-medium'
-                  : 'text-gray-700 hover:bg-teal-50'
-              }`
+              `
+                flex items-center gap-3
+                px-3 py-2.5
+                rounded-lg
+                mb-0.5
+                text-sm font-medium
+                transition-all duration-150
+                ${
+                  isActive
+                    ? 'bg-brand text-white shadow-glow-brand'
+                    : 'text-sidebar-text hover:text-white hover:bg-sidebar-hover'
+                }
+              `.trim().replace(/\s+/g, ' ')
             }
           >
-            <item.icon size={20} />
+            <item.icon size={18} strokeWidth={2} />
             <span>{item.name}</span>
           </NavLink>
         ))}
       </nav>
 
       {/* Sign Out Button */}
-      <div className="p-3 border-t border-gray-200">
+      <div className="px-3 py-4 border-t border-sidebar-border">
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 px-4 py-3 rounded-lg w-full text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+          className="
+            flex items-center gap-3
+            px-3 py-2.5
+            rounded-lg
+            w-full
+            text-sm font-medium
+            text-sidebar-text
+            hover:text-danger
+            hover:bg-danger/10
+            transition-all duration-150
+          "
         >
-          <LogOut size={20} />
-          <span>Sign Out</span>
+          <LogOut size={18} strokeWidth={2} />
+          <span>Abmelden</span>
         </button>
       </div>
-    </aside>
+    </div>
   );
 }

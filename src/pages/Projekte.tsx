@@ -3,13 +3,16 @@ import { supabase } from '../lib/supabase';
 import type { Project, Customer } from '../lib/supabase';
 import ProjectForm from '../components/ProjectForm';
 import ProjectTable from '../components/ProjectTable';
+import Modal from '../components/Modal';
 import { useCompany } from '../context/CompanyContext';
+import { Plus } from 'lucide-react';
 
 export default function Projekte() {
   const { selectedCompany } = useCompany();
   const [projects, setProjects] = useState<Project[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -72,7 +75,6 @@ export default function Projekte() {
           .eq('id', editingProject.id);
 
         if (error) throw error;
-        setEditingProject(null);
       } else {
         const { error } = await supabase
           .from('projects')
@@ -81,6 +83,8 @@ export default function Projekte() {
         if (error) throw error;
       }
 
+      setIsModalOpen(false);
+      setEditingProject(null);
       await fetchData();
     } catch (err) {
       console.error('Error saving project:', err);
@@ -90,10 +94,12 @@ export default function Projekte() {
 
   const handleEdit = (project: Project) => {
     setEditingProject(project);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (id: string) => {
+    if (!confirm('Möchten Sie dieses Projekt wirklich löschen?')) return;
+
     try {
       const { error } = await supabase
         .from('projects')
@@ -108,35 +114,48 @@ export default function Projekte() {
     }
   };
 
-  const handleCancelEdit = () => {
+  const handleAddNew = () => {
+    setEditingProject(null);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
     setEditingProject(null);
   };
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Projekte</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Projekte</h1>
+          <p className="text-gray-600 mt-1">Verwalten Sie Ihre Projekte</p>
+        </div>
+        <button
+          onClick={handleAddNew}
+          className="flex items-center gap-2 px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition"
+        >
+          <Plus size={20} />
+          Neues Projekt
+        </button>
       </div>
 
+      {/* Error Message */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {error}
         </div>
       )}
 
+      {/* Warning if no customers */}
       {customers.length === 0 && !isLoading && (
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
           Bitte erstellen Sie zuerst Kunden, bevor Sie Projekte anlegen.
         </div>
       )}
 
-      <ProjectForm
-        onSubmit={handleSubmit}
-        editingProject={editingProject}
-        onCancelEdit={handleCancelEdit}
-        customers={customers}
-      />
-
+      {/* Table */}
       {isLoading ? (
         <div className="bg-white rounded-lg shadow-sm p-6">
           <p className="text-gray-500 text-center">Lädt Projekte...</p>
@@ -149,6 +168,21 @@ export default function Projekte() {
           onDelete={handleDelete}
         />
       )}
+
+      {/* Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        title={editingProject ? 'Projekt bearbeiten' : 'Neues Projekt'}
+        size="lg"
+      >
+        <ProjectForm
+          onSubmit={handleSubmit}
+          editingProject={editingProject}
+          onCancelEdit={handleCloseModal}
+          customers={customers}
+        />
+      </Modal>
     </div>
   );
 }

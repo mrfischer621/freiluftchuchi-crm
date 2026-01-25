@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Invoice, Customer } from '../lib/supabase';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 import FinancialChart from '../components/FinancialChart';
 import { useCompany } from '../context/CompanyContext';
+import { PageHeader, Card, KPICard, Button } from '../components/ui';
 
 type TimeFilter = 7 | 30 | 90;
 
@@ -36,7 +37,7 @@ export default function Dashboard() {
   if (!selectedCompany) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Firma wird geladen...</p>
+        <p className="text-text-secondary">Firma wird geladen...</p>
       </div>
     );
   }
@@ -257,142 +258,141 @@ export default function Dashboard() {
 
   const profit = revenue - expenses;
 
+  // Time filter options
+  const timeFilters: { value: TimeFilter; label: string }[] = [
+    { value: 7, label: '7 Tage' },
+    { value: 30, label: '30 Tage' },
+    { value: 90, label: '90 Tage' },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+      {/* Page Header with Time Filter */}
+      <PageHeader
+        title="Dashboard"
+        description={`Finanzübersicht der letzten ${timeFilter} Tage`}
+        actions={
+          <div className="flex gap-2">
+            {timeFilters.map((filter) => (
+              <Button
+                key={filter.value}
+                variant={timeFilter === filter.value ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => setTimeFilter(filter.value)}
+              >
+                {filter.label}
+              </Button>
+            ))}
+          </div>
+        }
+      />
 
-        {/* Time Filter Buttons */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setTimeFilter(7)}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
-              timeFilter === 7
-                ? 'bg-freiluft text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            7 Tage
-          </button>
-          <button
-            onClick={() => setTimeFilter(30)}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
-              timeFilter === 30
-                ? 'bg-freiluft text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            30 Tage
-          </button>
-          <button
-            onClick={() => setTimeFilter(90)}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
-              timeFilter === 90
-                ? 'bg-freiluft text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            90 Tage
-          </button>
-        </div>
-      </div>
+      {/* KPI Cards - Bento Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <KPICard
+          label="Einnahmen"
+          value={loading ? '...' : formatCurrency(revenue)}
+          trend="up"
+          icon={<TrendingUp size={20} />}
+          loading={loading}
+        />
 
-      {/* KPI Boxes */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition">
-          <h3 className="text-sm font-medium text-gray-600 mb-2">Einnahmen</h3>
-          <p className="text-3xl font-bold text-green-600">
-            {loading ? '...' : formatCurrency(revenue)}
-          </p>
-        </div>
+        <KPICard
+          label="Ausgaben"
+          value={loading ? '...' : formatCurrency(expenses)}
+          trend="down"
+          icon={<TrendingDown size={20} />}
+          loading={loading}
+        />
 
-        <div className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition">
-          <h3 className="text-sm font-medium text-gray-600 mb-2">Ausgaben</h3>
-          <p className="text-3xl font-bold text-red-600">
-            {loading ? '...' : formatCurrency(expenses)}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition">
-          <h3 className="text-sm font-medium text-gray-600 mb-2">Profit</h3>
-          <p className={`text-3xl font-bold ${profit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-            {loading ? '...' : formatCurrency(profit)}
-          </p>
-        </div>
+        <KPICard
+          label="Profit"
+          value={loading ? '...' : formatCurrency(profit)}
+          trend={profit >= 0 ? 'up' : 'down'}
+          icon={<Wallet size={20} />}
+          loading={loading}
+        />
       </div>
 
       {/* Financial Chart */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Einnahmen vs. Ausgaben (Letzte {timeFilter} Tage)
-        </h2>
-        {loading ? (
-          <div className="flex items-center justify-center h-[300px]">
-            <p className="text-gray-500">Laden...</p>
-          </div>
-        ) : (
-          <FinancialChart data={chartData} height={300} />
-        )}
-      </div>
+      <Card padding="md" hover>
+        <Card.Header
+          title={`Einnahmen vs. Ausgaben`}
+          subtitle={`Letzte ${timeFilter} Tage`}
+        />
+        <Card.Content>
+          {loading ? (
+            <div className="flex items-center justify-center h-[300px]">
+              <p className="text-text-secondary">Laden...</p>
+            </div>
+          ) : (
+            <FinancialChart data={chartData} height={300} />
+          )}
+        </Card.Content>
+      </Card>
 
-      {/* Open Invoices */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Offene Rechnungen</h2>
-
-        {loading ? (
-          <p className="text-gray-500">Laden...</p>
-        ) : openInvoices.length === 0 ? (
-          <p className="text-gray-500">Keine offenen Rechnungen</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Rechnungsnummer</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Kunde</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Betrag</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Fälligkeitsdatum</th>
-                </tr>
-              </thead>
-              <tbody>
-                {openInvoices.map((invoice) => {
-                  const overdue = isOverdue(invoice.due_date);
-                  return (
-                    <tr
-                      key={invoice.id}
-                      className={`border-b border-gray-100 hover:bg-gray-50 ${
-                        overdue ? 'bg-red-50' : ''
-                      }`}
-                    >
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          {overdue && (
-                            <AlertCircle className="w-4 h-4 text-red-600" />
-                          )}
-                          <span className={overdue ? 'font-semibold text-red-900' : ''}>
-                            {invoice.invoice_number}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        {invoice.customer?.name || 'Unbekannt'}
-                      </td>
-                      <td className="py-3 px-4 font-medium">
-                        {formatCurrency(invoice.total)}
-                      </td>
-                      <td className={`py-3 px-4 ${overdue ? 'font-semibold text-red-600' : ''}`}>
-                        {invoice.due_date
-                          ? new Date(invoice.due_date).toLocaleDateString('de-CH')
-                          : '-'}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {/* Open Invoices Table */}
+      <Card padding="md">
+        <Card.Header
+          title="Offene Rechnungen"
+          subtitle={openInvoices.length > 0 ? `${openInvoices.length} ausstehend` : undefined}
+        />
+        <Card.Content>
+          {loading ? (
+            <p className="text-text-secondary">Laden...</p>
+          ) : openInvoices.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-text-secondary">Keine offenen Rechnungen</p>
+            </div>
+          ) : (
+            <div className="table-container -mx-6">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th className="pl-6">Rechnungsnummer</th>
+                    <th>Kunde</th>
+                    <th>Betrag</th>
+                    <th className="pr-6">Fälligkeitsdatum</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {openInvoices.map((invoice) => {
+                    const overdue = isOverdue(invoice.due_date);
+                    return (
+                      <tr
+                        key={invoice.id}
+                        className={overdue ? 'bg-danger-light/50' : ''}
+                      >
+                        <td className="pl-6">
+                          <div className="flex items-center gap-2">
+                            {overdue && (
+                              <AlertCircle className="w-4 h-4 text-danger" />
+                            )}
+                            <span className={overdue ? 'font-semibold text-danger-dark' : ''}>
+                              {invoice.invoice_number}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          {invoice.customer?.name || 'Unbekannt'}
+                        </td>
+                        <td className="font-medium">
+                          {formatCurrency(invoice.total)}
+                        </td>
+                        <td className={`pr-6 ${overdue ? 'font-semibold text-danger' : ''}`}>
+                          {invoice.due_date
+                            ? new Date(invoice.due_date).toLocaleDateString('de-CH')
+                            : '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card.Content>
+      </Card>
     </div>
   );
 }

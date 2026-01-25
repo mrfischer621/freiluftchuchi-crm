@@ -161,6 +161,40 @@ export interface YearEndClosing {
   updated_at: string;
 }
 
+// Sales Pipeline Types
+export interface ProspectInfo {
+  name?: string;
+  company?: string;
+  contact_person?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface PipelineStage {
+  id: string;
+  company_id: string;
+  name: string;
+  position: number;
+  color: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Opportunity {
+  id: string;
+  company_id: string;
+  existing_customer_id: string | null;
+  prospect_info: ProspectInfo | null;
+  title: string;
+  stage_id: string;
+  expected_value: number | null;
+  last_contact_at: string;
+  next_action_date: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -213,6 +247,16 @@ export interface Database {
         Row: YearEndClosing;
         Insert: Omit<YearEndClosing, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<YearEndClosing, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      pipeline_stages: {
+        Row: PipelineStage;
+        Insert: Omit<PipelineStage, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<PipelineStage, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      opportunities: {
+        Row: Opportunity;
+        Insert: Omit<Opportunity, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Opportunity, 'id' | 'created_at' | 'updated_at'>>;
       };
     };
   };
