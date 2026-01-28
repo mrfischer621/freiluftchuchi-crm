@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Opportunity, Customer, ProspectInfo } from '../lib/supabase';
-import { SpatialButton } from './SpatialButton';
+import { Button } from './ui';
 
 type OpportunityFormProps = {
   onSubmit: (opportunity: Omit<Opportunity, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
@@ -308,24 +308,22 @@ export default function OpportunityForm({
         </div>
 
         {/* Form Actions */}
-        <div className="flex gap-3 pt-4 border-t border-gray-200">
-          <SpatialButton
+        <div className="flex gap-3 pt-4 border-t border-surface-border">
+          <Button
             type="submit"
             disabled={isSubmitting}
             variant="primary"
-            size="md"
           >
             {isSubmitting ? 'Speichert...' : editingOpportunity ? 'Aktualisieren' : 'Speichern'}
-          </SpatialButton>
+          </Button>
           {editingOpportunity && (
-            <SpatialButton
+            <Button
               type="button"
               onClick={handleCancel}
               variant="secondary"
-              size="md"
             >
               Abbrechen
-            </SpatialButton>
+            </Button>
           )}
         </div>
       </form>

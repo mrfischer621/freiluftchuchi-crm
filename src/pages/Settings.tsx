@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import type { PipelineStage } from '../lib/supabase';
+import type { PipelineStage, Profile } from '../lib/supabase';
 import { useCompany } from '../context/CompanyContext';
-import { Building2, Save, AlertCircle, CheckCircle, TrendingUp, Edit2, Check, X, Trash2, Plus } from 'lucide-react';
+import { useAuth } from '../context/AuthProvider';
+import { Building2, Save, AlertCircle, CheckCircle, TrendingUp, Edit2, Check, X, Trash2, Plus, User, FileText } from 'lucide-react';
 
-interface FormData {
+interface CompanyFormData {
   name: string;
   street: string;
   house_number: string;
@@ -23,14 +24,15 @@ interface Toast {
   message: string;
 }
 
-type TabType = 'company' | 'pipeline';
+type TabType = 'company' | 'profile' | 'templates' | 'pipeline';
 
 export default function Settings() {
   const { selectedCompany } = useCompany();
+  const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('company');
 
   // Company settings state
-  const [formData, setFormData] = useState<FormData>({
+  const [companyFormData, setCompanyFormData] = useState<CompanyFormData>({
     name: '',
     street: '',
     house_number: '',
@@ -43,6 +45,18 @@ export default function Settings() {
     vat_number: '',
     vat_registered: false,
   });
+
+  // User profile state
+  const [fullName, setFullName] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Text templates state (placeholder for Phase 3.6)
+  const [invoiceIntro, setInvoiceIntro] = useState('');
+  const [invoiceFooter, setInvoiceFooter] = useState('');
+  const [quoteIntro, setQuoteIntro] = useState('');
+  const [quoteFooter, setQuoteFooter] = useState('');
+
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -57,7 +71,7 @@ export default function Settings() {
   // Load company data
   useEffect(() => {
     if (selectedCompany) {
-      setFormData({
+      setCompanyFormData({
         name: selectedCompany.name || '',
         street: selectedCompany.street || '',
         house_number: selectedCompany.house_number || '',
@@ -72,6 +86,13 @@ export default function Settings() {
       });
     }
   }, [selectedCompany]);
+
+  // Load user profile data
+  useEffect(() => {
+    if (profile) {
+      setFullName(profile.full_name || '');
+    }
+  }, [profile]);
 
   // Load pipeline stages when pipeline tab is active
   useEffect(() => {
@@ -90,10 +111,10 @@ export default function Settings() {
     }
   }, [toast]);
 
-  if (!selectedCompany) {
+  if (!selectedCompany || !profile) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Firma wird geladen...</p>
+        <p className="text-gray-500">Lädt...</p>
       </div>
     );
   }
@@ -119,22 +140,22 @@ export default function Settings() {
     }
   };
 
-  const validateForm = (): boolean => {
+  const validateCompanyForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name.trim()) {
+    if (!companyFormData.name.trim()) {
       newErrors.name = 'Firmenname ist erforderlich';
     }
-    if (!formData.street.trim()) {
+    if (!companyFormData.street.trim()) {
       newErrors.street = 'Strasse ist erforderlich';
     }
-    if (!formData.house_number.trim()) {
+    if (!companyFormData.house_number.trim()) {
       newErrors.house_number = 'Hausnummer ist erforderlich';
     }
-    if (!formData.zip_code.trim()) {
+    if (!companyFormData.zip_code.trim()) {
       newErrors.zip_code = 'PLZ ist erforderlich';
     }
-    if (!formData.city.trim()) {
+    if (!companyFormData.city.trim()) {
       newErrors.city = 'Ort ist erforderlich';
     }
 
@@ -146,10 +167,10 @@ export default function Settings() {
     setToast({ type, message });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleCompanySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    if (!validateCompanyForm()) {
       showToast('error', 'Bitte füllen Sie alle Pflichtfelder aus.');
       return;
     }
@@ -159,22 +180,22 @@ export default function Settings() {
     try {
       const { error } = await supabase
         .from('companies')
-        .update(formData)
+        .update(companyFormData)
         .eq('id', selectedCompany.id);
 
       if (error) throw error;
 
-      showToast('success', 'Einstellungen erfolgreich gespeichert!');
+      showToast('success', 'Firmeneinstellungen erfolgreich gespeichert!');
     } catch (err) {
-      console.error('Error saving settings:', err);
-      showToast('error', 'Fehler beim Speichern der Einstellungen.');
+      console.error('Error saving company settings:', err);
+      showToast('error', 'Fehler beim Speichern der Firmeneinstellungen.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleChange = (field: keyof FormData, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const handleCompanyFieldChange = (field: keyof CompanyFormData, value: string | boolean) => {
+    setCompanyFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -182,6 +203,58 @@ export default function Settings() {
         return newErrors;
       });
     }
+  };
+
+  const handleProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+
+    try {
+      // Update full_name in profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ full_name: fullName.trim() || null })
+        .eq('id', user!.id);
+
+      if (profileError) throw profileError;
+
+      // Update password if provided
+      if (newPassword || confirmPassword) {
+        if (newPassword !== confirmPassword) {
+          showToast('error', 'Passwörter stimmen nicht überein.');
+          return;
+        }
+
+        if (newPassword.length < 6) {
+          showToast('error', 'Passwort muss mindestens 6 Zeichen lang sein.');
+          return;
+        }
+
+        const { error: passwordError } = await supabase.auth.updateUser({
+          password: newPassword,
+        });
+
+        if (passwordError) throw passwordError;
+
+        setNewPassword('');
+        setConfirmPassword('');
+        showToast('success', 'Benutzerprofil und Passwort erfolgreich aktualisiert!');
+      } else {
+        showToast('success', 'Benutzerprofil erfolgreich aktualisiert!');
+      }
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      showToast('error', 'Fehler beim Aktualisieren des Profils.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleTemplatesSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // TODO: Implement text templates saving (Phase 3.6)
+    // For now, just show a placeholder message
+    showToast('success', 'Textvorlagen-Funktion kommt in Phase 3.6');
   };
 
   // Pipeline stage handlers
@@ -228,7 +301,6 @@ export default function Settings() {
   };
 
   const handleDeleteStage = async (stage: PipelineStage) => {
-    // Check if stage has opportunities
     const { data: opportunities, error: checkError } = await supabase
       .from('opportunities')
       .select('id')
@@ -292,7 +364,9 @@ export default function Settings() {
   };
 
   const tabs = [
-    { id: 'company' as TabType, label: 'Unternehmenseinstellungen', icon: Building2 },
+    { id: 'company' as TabType, label: 'Firmenprofil', icon: Building2 },
+    { id: 'profile' as TabType, label: 'Benutzerprofil', icon: User },
+    { id: 'templates' as TabType, label: 'Textvorlagen', icon: FileText },
     { id: 'pipeline' as TabType, label: 'Sales Pipeline', icon: TrendingUp },
   ];
 
@@ -312,7 +386,7 @@ export default function Settings() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Einstellungen</h1>
-        <p className="text-gray-600 mt-1">Verwalten Sie Ihre Firmen- und System-Einstellungen</p>
+        <p className="text-gray-600 mt-1">Verwalten Sie Ihre Firmen- und Benutzereinstellungen</p>
       </div>
 
       {/* Toast Notification */}
@@ -356,10 +430,10 @@ export default function Settings() {
         </nav>
       </div>
 
-      {/* Tab Content: Company Settings */}
+      {/* Tab Content: Company Profile */}
       {activeTab === 'company' && (
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleCompanySubmit} className="space-y-6">
             {/* Company Name */}
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -368,8 +442,8 @@ export default function Settings() {
               <input
                 type="text"
                 id="name"
-                value={formData.name}
-                onChange={(e) => handleChange('name', e.target.value)}
+                value={companyFormData.name}
+                onChange={(e) => handleCompanyFieldChange('name', e.target.value)}
                 className={`w-full px-4 py-2 border rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition ${
                   errors.name ? 'border-red-500' : 'border-gray-200'
                 }`}
@@ -387,8 +461,8 @@ export default function Settings() {
                 <input
                   type="text"
                   id="street"
-                  value={formData.street}
-                  onChange={(e) => handleChange('street', e.target.value)}
+                  value={companyFormData.street}
+                  onChange={(e) => handleCompanyFieldChange('street', e.target.value)}
                   className={`w-full px-4 py-2 border rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition ${
                     errors.street ? 'border-red-500' : 'border-gray-200'
                   }`}
@@ -404,8 +478,8 @@ export default function Settings() {
                 <input
                   type="text"
                   id="house_number"
-                  value={formData.house_number}
-                  onChange={(e) => handleChange('house_number', e.target.value)}
+                  value={companyFormData.house_number}
+                  onChange={(e) => handleCompanyFieldChange('house_number', e.target.value)}
                   className={`w-full px-4 py-2 border rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition ${
                     errors.house_number ? 'border-red-500' : 'border-gray-200'
                   }`}
@@ -425,8 +499,8 @@ export default function Settings() {
                 <input
                   type="text"
                   id="zip_code"
-                  value={formData.zip_code}
-                  onChange={(e) => handleChange('zip_code', e.target.value)}
+                  value={companyFormData.zip_code}
+                  onChange={(e) => handleCompanyFieldChange('zip_code', e.target.value)}
                   className={`w-full px-4 py-2 border rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition ${
                     errors.zip_code ? 'border-red-500' : 'border-gray-200'
                   }`}
@@ -442,8 +516,8 @@ export default function Settings() {
                 <input
                   type="text"
                   id="city"
-                  value={formData.city}
-                  onChange={(e) => handleChange('city', e.target.value)}
+                  value={companyFormData.city}
+                  onChange={(e) => handleCompanyFieldChange('city', e.target.value)}
                   className={`w-full px-4 py-2 border rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition ${
                     errors.city ? 'border-red-500' : 'border-gray-200'
                   }`}
@@ -462,8 +536,8 @@ export default function Settings() {
                 <input
                   type="text"
                   id="iban"
-                  value={formData.iban}
-                  onChange={(e) => handleChange('iban', e.target.value)}
+                  value={companyFormData.iban}
+                  onChange={(e) => handleCompanyFieldChange('iban', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
                   placeholder="CH93 0000 0000 0000 0000 0"
                 />
@@ -476,8 +550,8 @@ export default function Settings() {
                 <input
                   type="text"
                   id="qr_iban"
-                  value={formData.qr_iban}
-                  onChange={(e) => handleChange('qr_iban', e.target.value)}
+                  value={companyFormData.qr_iban}
+                  onChange={(e) => handleCompanyFieldChange('qr_iban', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
                   placeholder="CH44 3000 0000 0000 0000 0"
                 />
@@ -491,8 +565,8 @@ export default function Settings() {
               <input
                 type="text"
                 id="bank_name"
-                value={formData.bank_name}
-                onChange={(e) => handleChange('bank_name', e.target.value)}
+                value={companyFormData.bank_name}
+                onChange={(e) => handleCompanyFieldChange('bank_name', e.target.value)}
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
                 placeholder="z.B. UBS AG"
               />
@@ -507,8 +581,8 @@ export default function Settings() {
                 <input
                   type="text"
                   id="uid_number"
-                  value={formData.uid_number}
-                  onChange={(e) => handleChange('uid_number', e.target.value)}
+                  value={companyFormData.uid_number}
+                  onChange={(e) => handleCompanyFieldChange('uid_number', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
                   placeholder="CHE-123.456.789"
                 />
@@ -521,8 +595,8 @@ export default function Settings() {
                 <input
                   type="text"
                   id="vat_number"
-                  value={formData.vat_number}
-                  onChange={(e) => handleChange('vat_number', e.target.value)}
+                  value={companyFormData.vat_number}
+                  onChange={(e) => handleCompanyFieldChange('vat_number', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
                   placeholder="CHE-123.456.789 MWST"
                 />
@@ -533,8 +607,8 @@ export default function Settings() {
               <input
                 type="checkbox"
                 id="vat_registered"
-                checked={formData.vat_registered}
-                onChange={(e) => handleChange('vat_registered', e.target.checked)}
+                checked={companyFormData.vat_registered}
+                onChange={(e) => handleCompanyFieldChange('vat_registered', e.target.checked)}
                 className="w-4 h-4 text-freiluft border-gray-300 rounded focus:ring-freiluft"
               />
               <label htmlFor="vat_registered" className="ml-2 text-sm text-gray-700">
@@ -552,6 +626,199 @@ export default function Settings() {
                 <Save size={18} />
                 {isSaving ? 'Speichert...' : 'Speichern'}
               </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Tab Content: User Profile */}
+      {activeTab === 'profile' && (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Benutzerprofil</h2>
+            <p className="text-sm text-gray-600">
+              Diese Einstellungen gelten global für alle Firmen
+            </p>
+          </div>
+
+          <form onSubmit={handleProfileSubmit} className="space-y-6">
+            {/* Full Name */}
+            <div>
+              <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-1">
+                Name
+              </label>
+              <input
+                type="text"
+                id="full_name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+                placeholder="Ihr vollständiger Name"
+              />
+            </div>
+
+            {/* Email (read-only) */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                E-Mail
+              </label>
+              <input
+                type="email"
+                id="email"
+                value={user?.email || ''}
+                disabled
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                E-Mail-Adresse kann nicht geändert werden
+              </p>
+            </div>
+
+            {/* Password Change */}
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-base font-semibold text-gray-900 mb-4">Passwort ändern</h3>
+
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="new_password" className="block text-sm font-medium text-gray-700 mb-1">
+                    Neues Passwort
+                  </label>
+                  <input
+                    type="password"
+                    id="new_password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+                    placeholder="Mindestens 6 Zeichen"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700 mb-1">
+                    Passwort wiederholen
+                  </label>
+                  <input
+                    type="password"
+                    id="confirm_password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+                    placeholder="Passwort bestätigen"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex gap-3 pt-4 border-t border-gray-200">
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="flex items-center gap-2 px-6 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save size={18} />
+                {isSaving ? 'Speichert...' : 'Speichern'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Tab Content: Text Templates */}
+      {activeTab === 'templates' && (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Textvorlagen</h2>
+            <p className="text-sm text-gray-600">
+              Standard-Texte für Offerten und Rechnungen (Markdown wird unterstützt)
+            </p>
+          </div>
+
+          <form onSubmit={handleTemplatesSubmit} className="space-y-6">
+            {/* Invoice Templates */}
+            <div className="space-y-4">
+              <h3 className="text-base font-semibold text-gray-900">Rechnungen</h3>
+
+              <div>
+                <label htmlFor="invoice_intro" className="block text-sm font-medium text-gray-700 mb-1">
+                  Einleitungstext
+                </label>
+                <textarea
+                  id="invoice_intro"
+                  value={invoiceIntro}
+                  onChange={(e) => setInvoiceIntro(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition font-mono text-sm"
+                  placeholder="Besten Dank für Ihren Auftrag. **Fett**, *kursiv*, - Listen..."
+                />
+                <p className="text-xs text-gray-500 mt-1">Erscheint oberhalb der Rechnungspo sitionen</p>
+              </div>
+
+              <div>
+                <label htmlFor="invoice_footer" className="block text-sm font-medium text-gray-700 mb-1">
+                  Fusstext / Bemerkungen
+                </label>
+                <textarea
+                  id="invoice_footer"
+                  value={invoiceFooter}
+                  onChange={(e) => setInvoiceFooter(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition font-mono text-sm"
+                  placeholder="Zahlbar innert 30 Tagen..."
+                />
+                <p className="text-xs text-gray-500 mt-1">Erscheint unterhalb der Rechnungspositionen</p>
+              </div>
+            </div>
+
+            {/* Quote Templates */}
+            <div className="space-y-4 border-t border-gray-200 pt-6">
+              <h3 className="text-base font-semibold text-gray-900">Offerten</h3>
+
+              <div>
+                <label htmlFor="quote_intro" className="block text-sm font-medium text-gray-700 mb-1">
+                  Einleitungstext
+                </label>
+                <textarea
+                  id="quote_intro"
+                  value={quoteIntro}
+                  onChange={(e) => setQuoteIntro(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition font-mono text-sm"
+                  placeholder="Vielen Dank für Ihre Anfrage..."
+                />
+                <p className="text-xs text-gray-500 mt-1">Erscheint oberhalb der Offertenpositionen</p>
+              </div>
+
+              <div>
+                <label htmlFor="quote_footer" className="block text-sm font-medium text-gray-700 mb-1">
+                  Fusstext / Bemerkungen
+                </label>
+                <textarea
+                  id="quote_footer"
+                  value={quoteFooter}
+                  onChange={(e) => setQuoteFooter(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition font-mono text-sm"
+                  placeholder="Wir freuen uns auf Ihre Antwort..."
+                />
+                <p className="text-xs text-gray-500 mt-1">Erscheint unterhalb der Offertenpositionen</p>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex gap-3 pt-4 border-t border-gray-200">
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="flex items-center gap-2 px-6 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save size={18} />
+                {isSaving ? 'Speichert...' : 'Alle speichern'}
+              </button>
+              <p className="text-sm text-amber-600 flex items-center gap-2">
+                <AlertCircle size={16} />
+                Funktion kommt in Phase 3.6
+              </p>
             </div>
           </form>
         </div>

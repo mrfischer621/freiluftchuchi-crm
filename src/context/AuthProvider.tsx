@@ -1,13 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-
-interface Profile {
-  id: string;
-  company_id: string | null;
-  email: string;
-  created_at: string;
-}
+import type { Profile } from '../lib/supabase';
 
 interface AuthContextType {
   user: User | null;

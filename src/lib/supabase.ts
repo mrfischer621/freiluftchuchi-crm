@@ -1,5 +1,25 @@
 import { createClient } from '@supabase/supabase-js';
 
+// User Profile (linked to auth.users)
+export interface Profile {
+  id: string; // auth.users.id
+  email: string;
+  full_name: string | null;
+  last_active_company_id: string | null; // Last selected company
+  created_at: string;
+  updated_at: string;
+}
+
+// User-Company Junction (many-to-many relationship)
+export interface UserCompany {
+  id: string;
+  user_id: string; // auth.users.id
+  company_id: string; // companies.id
+  role: 'admin' | 'member' | 'viewer';
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Company {
   id: string;
   name: string;
@@ -15,6 +35,12 @@ export interface Company {
   vat_number: string | null;
   vat_registered: boolean;
   created_at: string;
+  // Optional fields that may not exist in DB yet:
+  country?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  updated_at?: string;
 }
 
 export interface Customer {
@@ -198,6 +224,16 @@ export interface Opportunity {
 export interface Database {
   public: {
     Tables: {
+      profiles: {
+        Row: Profile;
+        Insert: Omit<Profile, 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Profile, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      user_companies: {
+        Row: UserCompany;
+        Insert: Omit<UserCompany, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<UserCompany, 'id' | 'created_at' | 'updated_at'>>;
+      };
       companies: {
         Row: Company;
         Insert: Omit<Company, 'id' | 'created_at'>;

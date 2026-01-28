@@ -10,8 +10,6 @@ import {
   Receipt,
   BarChart,
   CalendarCheck,
-  Settings,
-  LogOut,
 } from 'lucide-react';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthProvider';
@@ -27,7 +25,6 @@ const navItems = [
   { name: 'Buchungen', path: '/buchungen', icon: Receipt },
   { name: 'Auswertungen', path: '/auswertungen', icon: BarChart },
   { name: 'Jahresabschluss', path: '/jahresabschluss', icon: CalendarCheck },
-  { name: 'Einstellungen', path: '/settings', icon: Settings },
 ];
 
 /**
@@ -41,13 +38,7 @@ const navItems = [
  */
 export function BentoSidebar() {
   const { selectedCompany, isLoading } = useCompany();
-  const { user, signOut } = useAuth();
-
-  const handleSignOut = async () => {
-    if (confirm('Möchten Sie sich wirklich abmelden?')) {
-      await signOut();
-    }
-  };
+  const { user } = useAuth();
 
   return (
     <div className="h-full flex flex-col">
@@ -91,27 +82,6 @@ export function BentoSidebar() {
           </NavLink>
         ))}
       </nav>
-
-      {/* Sign Out Button */}
-      <div className="px-3 py-4 border-t border-sidebar-border">
-        <button
-          onClick={handleSignOut}
-          className="
-            flex items-center gap-3
-            px-3 py-2.5
-            rounded-lg
-            w-full
-            text-sm font-medium
-            text-sidebar-text
-            hover:text-danger
-            hover:bg-danger/10
-            transition-all duration-150
-          "
-        >
-          <LogOut size={18} strokeWidth={2} />
-          <span>Abmelden</span>
-        </button>
-      </div>
     </div>
   );
 }
