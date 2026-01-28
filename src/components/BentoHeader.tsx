@@ -18,7 +18,7 @@ import { CreateCompanyModal } from './CreateCompanyModal';
 export function BentoHeader() {
   const navigate = useNavigate();
   const { user, signOut, profile } = useAuth();
-  const { selectedCompany, companies, switchCompany, refreshCompanies, isLoading } = useCompany();
+  const { selectedCompany, companies, switchCompany, isLoading } = useCompany();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isCompanySwitcherOpen, setIsCompanySwitcherOpen] = useState(false);
   const [isCreateCompanyModalOpen, setIsCreateCompanyModalOpen] = useState(false);

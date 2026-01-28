@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Company, UserCompany } from '../lib/supabase';
+import type { Company } from '../lib/supabase';
 import { useAuth } from './AuthProvider';
 
 interface CompanyContextType {
@@ -22,7 +22,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   // Fetch all companies user has access to
-  const fetchUserCompanies = async (userId: string, forceRefresh: boolean = false) => {
+  const fetchUserCompanies = async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -131,7 +131,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   // Refresh companies list (useful after creating a new company)
   const refreshCompanies = async () => {
     if (!user) return;
-    await fetchUserCompanies(user.id, true);
+    await fetchUserCompanies();
   };
 
   // Switch to a different company
@@ -161,7 +161,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
         // Also refresh the companies list in background
         if (user) {
-          fetchUserCompanies(user.id).catch(console.error);
+          fetchUserCompanies().catch(console.error);
         }
       }
 
@@ -206,7 +206,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       }
 
       // Fetch user's companies
-      await fetchUserCompanies(user.id);
+      await fetchUserCompanies();
     };
 
     loadCompanies();
