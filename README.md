@@ -1,73 +1,138 @@
-# React + TypeScript + Vite
+# Freiluftchuchi CRM
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Multi-Tenant CRM für Schweizer Einzelfirmen mit integriertem Finanzmanagement, Zeiterfassung, Rechnungsstellung mit Swiss QR-Bill und Offerten-Modul.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Frontend:** React 19.2 + TypeScript 5.9 + Vite 5.4
+- **Styling:** Tailwind CSS 3.4
+- **Backend:** Supabase (PostgreSQL + Row-Level Security)
+- **Deployment:** Vercel
 
-## React Compiler
+## Quick Start
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # Production build
+npm run lint     # ESLint check
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Features
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+| Modul | Beschreibung |
+|-------|-------------|
+| Dashboard | KPIs, Umsatz-Charts, Quick Actions |
+| Sales Pipeline | Kanban-Board mit Drag & Drop |
+| Kunden | Kundenverwaltung mit Swiss-Adressen |
+| Projekte | Projektverwaltung mit Budgets |
+| Zeiterfassung | Stundenerfassung pro Projekt |
+| **Angebote** | Offerten mit PDF-Export |
+| Rechnungen | Swiss QR-Bill (SPS 2025 v2.3) |
+| Buchungen | Einnahmen/Ausgaben-Journal |
+| Auswertungen | Finanzanalysen & Charts |
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+---
+
+## Offerten-Modul (Angebote)
+
+### Übersicht
+
+Vollständiges Angebots-Management mit CRUD, PDF-Export und Konvertierung zu Rechnungen.
+
+### Datenbank-Schema
+
+```sql
+-- Tabellen: quotes, quote_items
+-- Migration: supabase/migrations/20260131_quotes_module.sql
+
+quotes (
+  id, company_id, quote_number,  -- AN-YYYY-NNN Format
+  customer_id, project_id, opportunity_id,
+  issue_date, valid_until,       -- Gültigkeitsdatum
+  subtotal, vat_rate, vat_amount, total,
+  status,                        -- offen|versendet|akzeptiert|abgelehnt|bestaetigt|ueberfallig
+  converted_to_invoice_id, converted_at
+)
+
+quote_items (
+  id, quote_id, description, quantity, unit_price, total, sort_order
+)
 ```
+
+### RLS Policies
+
+```sql
+-- quotes: Standard company_id Policy
+CREATE POLICY "Tenant Isolation" ON quotes
+  FOR ALL USING (
+    company_id IN (SELECT company_id FROM user_companies WHERE user_id = auth.uid())
+  );
+
+-- quote_items: JOIN-based Policy (kein company_id)
+CREATE POLICY "Tenant Isolation via Quote" ON quote_items
+  FOR ALL USING (
+    quote_id IN (SELECT id FROM quotes WHERE company_id IN (...))
+  );
+```
+
+### Status-Workflow
+
+```
+offen → versendet → akzeptiert → bestaetigt (nach Konvertierung)
+                  ↘ abgelehnt
+                  ↘ ueberfallig (valid_until < heute)
+```
+
+### PDF-Export
+
+- **Titel:** "ANGEBOT" (nicht "RECHNUNG")
+- **Gültigkeitsdatum:** Prominent angezeigt
+- **Kein QR-Bill:** Angebote sind keine Zahlungsdokumente
+- **Text-Templates:** `company.quote_intro_text` / `quote_footer_text`
+
+### Sales Pipeline Integration
+
+Deals mit bestehendem Kunden haben einen "Angebot"-Button:
+```
+/angebote?customerId=xxx&opportunityId=yyy
+```
+
+### Dateien
+
+| Datei | Beschreibung |
+|-------|-------------|
+| `src/pages/Angebote.tsx` | Hauptseite mit CRUD |
+| `src/components/QuoteForm.tsx` | Formular |
+| `src/components/QuoteTable.tsx` | Tabelle mit Status-Badges |
+| `src/components/QuoteToInvoiceModal.tsx` | Konvertierung |
+| `src/utils/quoteValidation.ts` | Validierung (ohne IBAN) |
+| `src/utils/pdfGenerator.ts` | `generateQuotePDF()` |
+
+---
+
+## Architektur
+
+### Multi-Company (Multi-Tenant)
+
+- Table-based RLS (keine Session Variables)
+- `user_companies` Junction Table
+- Frontend filtert explizit nach `company_id` (Defense in Depth)
+
+### Wichtige Dokumentation
+
+- `CLAUDE.md` - Projekt-Kontext & Guidelines
+- `MULTI_COMPANY_IMPLEMENTATION.md` - Multi-Company Architektur
+- `ROADMAP_PROMPT.md` - Entwicklungs-Roadmap
+- `PDF_GENERATOR_DOCUMENTATION.md` - PDF & QR-Bill
+
+---
+
+## Environment Variables
+
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+**Nie den Service Role Key im Frontend verwenden!**

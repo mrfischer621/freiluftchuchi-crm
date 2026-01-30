@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Invoice, InvoiceItem, Customer, Project, Product } from '../lib/supabase';
 import { useCompany } from '../context/CompanyContext';
+import { shouldWarnOnEdit, getEditWarningMessage } from '../utils/invoiceUtils';
 
 type InvoiceFormData = {
   invoice: Omit<Invoice, 'id' | 'created_at' | 'subtotal' | 'vat_amount' | 'total'>;
@@ -14,33 +15,56 @@ type InvoiceFormProps = {
   customers: Customer[];
   projects: Project[];
   nextInvoiceNumber: string;
+  existingInvoice?: Invoice;
+  existingItems?: InvoiceItem[];
 };
 
-export default function InvoiceForm({ onSubmit, customers, projects, nextInvoiceNumber }: InvoiceFormProps) {
+export default function InvoiceForm({ onSubmit, customers, projects, nextInvoiceNumber, existingInvoice, existingItems }: InvoiceFormProps) {
   const { selectedCompany } = useCompany();
-  const [customerId, setCustomerId] = useState('');
-  const [projectId, setProjectId] = useState('');
-  const [invoiceNumber, setInvoiceNumber] = useState(nextInvoiceNumber);
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
-  const [dueDate, setDueDate] = useState('');
-  const [status, setStatus] = useState<Invoice['status']>('entwurf');
-  const [vatRate, setVatRate] = useState('7.7');
-  const [items, setItems] = useState<Array<{ description: string; quantity: string; unit_price: string; product_id?: string }>>([
-    { description: '', quantity: '1', unit_price: '' }
-  ]);
+  const isEditMode = !!existingInvoice;
+
+  // Initialize state with existing values or defaults
+  const [customerId, setCustomerId] = useState(existingInvoice?.customer_id || '');
+  const [projectId, setProjectId] = useState(existingInvoice?.project_id || '');
+  const [invoiceNumber, setInvoiceNumber] = useState(existingInvoice?.invoice_number || nextInvoiceNumber);
+  const [issueDate, setIssueDate] = useState(
+    existingInvoice?.issue_date || new Date().toISOString().split('T')[0]
+  );
+  const [dueDate, setDueDate] = useState(existingInvoice?.due_date || '');
+  const [status, setStatus] = useState<Invoice['status']>(existingInvoice?.status || 'entwurf');
+  const [vatRate, setVatRate] = useState(existingInvoice?.vat_rate?.toString() || '7.7');
+  const [items, setItems] = useState<Array<{ description: string; quantity: string; unit_price: string; product_id?: string }>>(
+    existingItems && existingItems.length > 0
+      ? existingItems.map(item => ({
+          description: item.description,
+          quantity: item.quantity.toString(),
+          unit_price: item.unit_price.toString(),
+        }))
+      : [{ description: '', quantity: '1', unit_price: '' }]
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
 
-  useEffect(() => {
-    setInvoiceNumber(nextInvoiceNumber);
-  }, [nextInvoiceNumber]);
+  // Show warning for sent/overdue invoices in edit mode
+  const showEditWarning = isEditMode && shouldWarnOnEdit(existingInvoice.status);
+  const editWarningMessage = isEditMode ? getEditWarningMessage(existingInvoice.status) : '';
 
+  // Only update invoice number from prop in create mode
   useEffect(() => {
-    const issue = new Date(issueDate);
-    const due = new Date(issue);
-    due.setDate(due.getDate() + 30);
-    setDueDate(due.toISOString().split('T')[0]);
-  }, [issueDate]);
+    if (!isEditMode) {
+      setInvoiceNumber(nextInvoiceNumber);
+    }
+  }, [nextInvoiceNumber, isEditMode]);
+
+  // Auto-calculate due date only in create mode
+  useEffect(() => {
+    if (!isEditMode) {
+      const issue = new Date(issueDate);
+      const due = new Date(issue);
+      due.setDate(due.getDate() + 30);
+      setDueDate(due.toISOString().split('T')[0]);
+    }
+  }, [issueDate, isEditMode]);
 
   useEffect(() => {
     if (selectedCompany) {
@@ -157,7 +181,23 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">Neue Rechnung</h2>
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        {isEditMode ? 'Rechnung bearbeiten' : 'Neue Rechnung'}
+      </h2>
+
+      {/* Warning for editing sent/overdue invoices */}
+      {showEditWarning && (
+        <div className="mb-4 flex items-start gap-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
+          <AlertTriangle className="flex-shrink-0 text-amber-600 mt-0.5" size={20} />
+          <div>
+            <p className="text-amber-800 font-medium">{editWarningMessage}</p>
+            <p className="text-amber-700 text-sm mt-1">
+              Änderungen werden gespeichert, stellen Sie sicher, dass der Kunde über die Korrektur informiert wird.
+            </p>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -418,7 +458,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
             disabled={isSubmitting || items.length === 0}
             className="rounded-lg px-4 py-2 font-medium bg-freiluft text-white hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? 'Speichert...' : 'Rechnung speichern'}
+            {isSubmitting ? 'Speichert...' : isEditMode ? 'Änderungen speichern' : 'Rechnung speichern'}
           </button>
         </div>
       </form>

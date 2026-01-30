@@ -1,10 +1,16 @@
+# --- Environment & Security (KRITISCH) ---
 .env
 .env.local
-node_modules
-dist
-.DS_Store
+*.local
 
-# Logs
+# --- Dependencies ---
+node_modules
+
+# --- Build Output ---
+dist
+dist-ssr
+
+# --- Logs ---
 logs
 *.log
 npm-debug.log*
@@ -13,16 +19,13 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# --- OS Files ---
+.DS_Store
 
-# Editor directories and files
+# --- Editor / IDE ---
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj

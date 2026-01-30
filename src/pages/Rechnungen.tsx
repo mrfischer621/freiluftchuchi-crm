@@ -6,6 +6,7 @@ import InvoiceTable from '../components/InvoiceTable';
 import Modal from '../components/Modal';
 import { downloadInvoicePDF } from '../utils/pdfGenerator';
 import { validateInvoiceData } from '../utils/invoiceValidation';
+import { canEditInvoice, getEditBlockedReason } from '../utils/invoiceUtils';
 import { useCompany } from '../context/CompanyContext';
 import { Plus, AlertCircle } from 'lucide-react';
 
@@ -30,6 +31,10 @@ export default function Rechnungen() {
   const [nextInvoiceNumber, setNextInvoiceNumber] = useState(`RE-${new Date().getFullYear()}-001`);
   const [toast, setToast] = useState<Toast | null>(null);
   const isFetchingRef = useRef(false);
+
+  // Edit mode state
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [editingItems, setEditingItems] = useState<InvoiceItem[]>([]);
 
   useEffect(() => {
     console.log('[Rechnungen] useEffect triggered, selectedCompany:', selectedCompany?.name);
@@ -143,8 +148,10 @@ export default function Rechnungen() {
   ) => {
     if (!selectedCompany) return;
 
+    const isUpdate = !!editingInvoice;
+
     try {
-      // Ensure session variable is set before INSERT (fixes RLS policy enforcement)
+      // Ensure session variable is set (fixes RLS policy enforcement)
       const { error: sessionError } = await supabase.rpc('set_active_company', {
         company_id: selectedCompany.id
       });
@@ -154,39 +161,88 @@ export default function Rechnungen() {
         throw sessionError;
       }
 
-      // Insert invoice with company_id
-      const { data: invoiceData, error: invoiceError } = await supabase
-        .from('invoices')
-        .insert([{
-          ...data.invoice,
-          company_id: selectedCompany.id,
-          subtotal: calculatedTotals.subtotal,
-          vat_amount: calculatedTotals.vat_amount,
-          total: calculatedTotals.total,
-        }] as any)
-        .select()
-        .single();
+      if (isUpdate) {
+        // UPDATE MODE: Update existing invoice
+        const { error: invoiceError } = await supabase
+          .from('invoices')
+          .update({
+            customer_id: data.invoice.customer_id,
+            project_id: data.invoice.project_id,
+            issue_date: data.invoice.issue_date,
+            due_date: data.invoice.due_date,
+            vat_rate: data.invoice.vat_rate,
+            status: data.invoice.status,
+            paid_at: data.invoice.paid_at,
+            subtotal: calculatedTotals.subtotal,
+            vat_amount: calculatedTotals.vat_amount,
+            total: calculatedTotals.total,
+          })
+          .eq('id', editingInvoice.id);
 
-      if (invoiceError) throw invoiceError;
+        if (invoiceError) throw invoiceError;
 
-      // Insert invoice items
-      const itemsWithInvoiceId = data.items.map(item => ({
-        invoice_id: (invoiceData as any).id,
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total: item.quantity * item.unit_price,
-      }));
+        // DATA INTEGRITY: Delete all old items and insert new ones
+        // This is the safest approach - no complex ID matching required
+        const { error: deleteError } = await supabase
+          .from('invoice_items')
+          .delete()
+          .eq('invoice_id', editingInvoice.id);
 
-      const { error: itemsError } = await supabase
-        .from('invoice_items')
-        .insert(itemsWithInvoiceId as any);
+        if (deleteError) throw deleteError;
 
-      if (itemsError) throw itemsError;
+        // Insert new items
+        const itemsWithInvoiceId = data.items.map(item => ({
+          invoice_id: editingInvoice.id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total: item.quantity * item.unit_price,
+        }));
 
-      setIsModalOpen(false);
-      setToast({ type: 'success', message: 'Rechnung erfolgreich erstellt!' });
-      await fetchData();
+        const { error: itemsError } = await supabase
+          .from('invoice_items')
+          .insert(itemsWithInvoiceId as any);
+
+        if (itemsError) throw itemsError;
+
+        handleCloseModal();
+        setToast({ type: 'success', message: 'Rechnung erfolgreich aktualisiert!' });
+        await fetchData();
+      } else {
+        // CREATE MODE: Insert new invoice
+        const { data: invoiceData, error: invoiceError } = await supabase
+          .from('invoices')
+          .insert([{
+            ...data.invoice,
+            company_id: selectedCompany.id,
+            subtotal: calculatedTotals.subtotal,
+            vat_amount: calculatedTotals.vat_amount,
+            total: calculatedTotals.total,
+          }] as any)
+          .select()
+          .single();
+
+        if (invoiceError) throw invoiceError;
+
+        // Insert invoice items
+        const itemsWithInvoiceId = data.items.map(item => ({
+          invoice_id: (invoiceData as any).id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total: item.quantity * item.unit_price,
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('invoice_items')
+          .insert(itemsWithInvoiceId as any);
+
+        if (itemsError) throw itemsError;
+
+        handleCloseModal();
+        setToast({ type: 'success', message: 'Rechnung erfolgreich erstellt!' });
+        await fetchData();
+      }
     } catch (err: any) {
       console.error('Error saving invoice:', err);
       // Show user-friendly error message
@@ -224,11 +280,42 @@ export default function Rechnungen() {
   };
 
   const handleAddNew = () => {
+    // Reset edit mode for new invoice
+    setEditingInvoice(null);
+    setEditingItems([]);
     setIsModalOpen(true);
+  };
+
+  const handleEdit = async (invoice: Invoice) => {
+    // Check if editing is allowed
+    if (!canEditInvoice(invoice.status)) {
+      setToast({ type: 'error', message: getEditBlockedReason(invoice.status) });
+      return;
+    }
+
+    try {
+      // Fetch invoice items
+      const { data: items, error } = await supabase
+        .from('invoice_items')
+        .select('*')
+        .eq('invoice_id', invoice.id)
+        .order('id', { ascending: true });
+
+      if (error) throw error;
+
+      setEditingInvoice(invoice);
+      setEditingItems(items || []);
+      setIsModalOpen(true);
+    } catch (err) {
+      console.error('Error loading invoice items:', err);
+      setToast({ type: 'error', message: 'Fehler beim Laden der Rechnungspositionen.' });
+    }
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setEditingInvoice(null);
+    setEditingItems([]);
   };
 
   const handleDownloadPDF = async (invoice: Invoice) => {
@@ -339,6 +426,7 @@ export default function Rechnungen() {
           customers={customers}
           onDelete={handleDelete}
           onDownloadPDF={handleDownloadPDF}
+          onEdit={handleEdit}
         />
       )}
 
@@ -346,7 +434,7 @@ export default function Rechnungen() {
       <Modal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        title="Neue Rechnung"
+        title={editingInvoice ? 'Rechnung bearbeiten' : 'Neue Rechnung'}
         size="xl"
       >
         <InvoiceForm
@@ -354,6 +442,8 @@ export default function Rechnungen() {
           customers={customers}
           projects={projects}
           nextInvoiceNumber={nextInvoiceNumber}
+          existingInvoice={editingInvoice || undefined}
+          existingItems={editingItems.length > 0 ? editingItems : undefined}
         />
       </Modal>
 
