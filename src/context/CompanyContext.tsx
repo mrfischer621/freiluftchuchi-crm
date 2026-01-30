@@ -64,6 +64,11 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         vat_number: row.vat_number,
         vat_registered: row.vat_registered,
         created_at: row.created_at,
+        // Text templates (Phase 3.6)
+        invoice_intro_text: row.invoice_intro_text,
+        invoice_footer_text: row.invoice_footer_text,
+        quote_intro_text: row.quote_intro_text,
+        quote_footer_text: row.quote_footer_text,
       }));
 
       setCompanies(companiesData);

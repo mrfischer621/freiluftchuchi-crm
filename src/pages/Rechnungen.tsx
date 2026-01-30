@@ -27,7 +27,7 @@ export default function Rechnungen() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [nextInvoiceNumber, setNextInvoiceNumber] = useState('RE-2025-001');
+  const [nextInvoiceNumber, setNextInvoiceNumber] = useState(`RE-${new Date().getFullYear()}-001`);
   const [toast, setToast] = useState<Toast | null>(null);
   const isFetchingRef = useRef(false);
 
@@ -106,21 +106,27 @@ export default function Rechnungen() {
       });
 
       // Generate next invoice number (COMPANY-SPECIFIC)
-      if (invoicesResult.data && invoicesResult.data.length > 0) {
-        const lastNumber = (invoicesResult.data[0] as any).invoice_number;
-        const match = lastNumber.match(/RE-(\d{4})-(\d{3})/);
-        if (match) {
-          const year = new Date().getFullYear();
-          const currentYear = parseInt(match[1]);
-          const num = parseInt(match[2]);
+      // Find the highest invoice number for the current year
+      const currentYear = new Date().getFullYear();
+      let highestNumber = 0;
 
-          if (currentYear === year) {
-            setNextInvoiceNumber(`RE-${year}-${String(num + 1).padStart(3, '0')}`);
-          } else {
-            setNextInvoiceNumber(`RE-${year}-001`);
+      if (invoicesResult.data && invoicesResult.data.length > 0) {
+        for (const invoice of invoicesResult.data) {
+          const invoiceNumber = (invoice as any).invoice_number;
+          const match = invoiceNumber?.match(/RE-(\d{4})-(\d{3})/);
+          if (match) {
+            const invoiceYear = parseInt(match[1]);
+            const num = parseInt(match[2]);
+            // Only consider invoices from current year
+            if (invoiceYear === currentYear && num > highestNumber) {
+              highestNumber = num;
+            }
           }
         }
       }
+
+      // Set next invoice number
+      setNextInvoiceNumber(`RE-${currentYear}-${String(highestNumber + 1).padStart(3, '0')}`);
     } catch (err) {
       console.error('[Rechnungen] Error fetching data:', err);
       setError('Fehler beim Laden der Daten. Bitte überprüfen Sie Ihre Supabase-Konfiguration.');
@@ -179,9 +185,22 @@ export default function Rechnungen() {
       if (itemsError) throw itemsError;
 
       setIsModalOpen(false);
+      setToast({ type: 'success', message: 'Rechnung erfolgreich erstellt!' });
       await fetchData();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving invoice:', err);
+      // Show user-friendly error message
+      if (err?.code === '23505') {
+        setToast({
+          type: 'error',
+          message: `Rechnungsnummer "${data.invoice.invoice_number}" existiert bereits. Bitte wählen Sie eine andere Nummer.`
+        });
+      } else {
+        setToast({
+          type: 'error',
+          message: 'Fehler beim Speichern der Rechnung: ' + (err?.message || 'Unbekannter Fehler')
+        });
+      }
       throw err;
     }
   };
@@ -220,13 +239,24 @@ export default function Rechnungen() {
         return;
       }
 
-      // Fetch invoice items
-      const { data: items, error: itemsError } = await supabase
-        .from('invoice_items')
-        .select('*')
-        .eq('invoice_id', invoice.id);
+      // Fetch invoice items and fresh company data (including text templates) in parallel
+      const [itemsResult, companyResult] = await Promise.all([
+        supabase
+          .from('invoice_items')
+          .select('*')
+          .eq('invoice_id', invoice.id),
+        supabase
+          .from('companies')
+          .select('*')
+          .eq('id', selectedCompany.id)
+          .single()
+      ]);
 
-      if (itemsError) throw itemsError;
+      if (itemsResult.error) throw itemsResult.error;
+      if (companyResult.error) throw companyResult.error;
+
+      const items = itemsResult.data;
+      const freshCompanyData = companyResult.data;
 
       // Get customer
       const customer = customers.find((c) => c.id === invoice.customer_id);
@@ -238,7 +268,7 @@ export default function Rechnungen() {
       // VALIDATE DATA BEFORE PDF GENERATION
       const validation = validateInvoiceData(
         { ...invoice, items: items || [] },
-        selectedCompany,
+        freshCompanyData,
         customer
       );
 
@@ -249,12 +279,12 @@ export default function Rechnungen() {
         return;
       }
 
-      // Generate and download PDF
+      // Generate and download PDF with fresh company data (includes text templates)
       await downloadInvoicePDF({
         invoice,
         items: items || [],
         customer,
-        company: selectedCompany,
+        company: freshCompanyData,
       });
 
       setToast({ type: 'success', message: 'PDF erfolgreich erstellt' });

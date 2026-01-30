@@ -23,6 +23,9 @@ interface InvoiceData {
   items: InvoiceItem[];
   customer: Customer;
   company: Company;
+  // Optional text templates (loaded from company settings)
+  introText?: string | null;
+  footerText?: string | null;
 }
 
 // ============================================================================
@@ -584,12 +587,74 @@ function drawInvoiceHeader(
   }
 }
 
+/**
+ * Draw intro text above invoice items
+ * @returns The Y position after the intro text
+ */
+function drawIntroText(
+  doc: jsPDF,
+  introText: string | null | undefined,
+  startY: number
+): number {
+  if (!introText || !introText.trim()) {
+    return startY;
+  }
+
+  let y = startY;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+
+  const sanitizedText = sanitizeForPDF(introText);
+  const lines = doc.splitTextToSize(sanitizedText, 170);
+
+  lines.forEach((line: string) => {
+    doc.text(line, 20, y);
+    y += 5;
+  });
+
+  y += 5; // Extra spacing after intro
+  return y;
+}
+
+/**
+ * Draw footer text below invoice totals
+ * @returns The Y position after the footer text
+ */
+function drawFooterText(
+  doc: jsPDF,
+  footerText: string | null | undefined,
+  startY: number
+): number {
+  if (!footerText || !footerText.trim()) {
+    return startY;
+  }
+
+  let y = startY + 8; // Spacing before footer
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+
+  const sanitizedText = sanitizeForPDF(footerText);
+  const lines = doc.splitTextToSize(sanitizedText, 170);
+
+  lines.forEach((line: string) => {
+    doc.text(line, 20, y);
+    y += 4;
+  });
+
+  return y;
+}
+
+/**
+ * Draw invoice items table
+ * @returns The Y position after the items and totals
+ */
 function drawInvoiceItems(
   doc: jsPDF,
   items: InvoiceItem[],
-  invoice: Invoice
-): void {
-  let y = 100;
+  invoice: Invoice,
+  startY: number
+): number {
+  let y = startY;
 
   // Table header
   doc.setFont('helvetica', 'bold');
@@ -655,6 +720,8 @@ function drawInvoiceItems(
   doc.setFontSize(11);
   doc.text('Gesamtbetrag:', 110, y);
   doc.text(`CHF ${formatAmount(invoice.total)}`, 190, y, { align: 'right' });
+
+  return y;
 }
 
 // ============================================================================
@@ -780,7 +847,20 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<Blob> {
 
   // Draw invoice content
   drawInvoiceHeader(doc, company, customer, invoice);
-  drawInvoiceItems(doc, items, invoice);
+
+  // Determine intro/footer text - use passed values or fall back to company defaults
+  const introText = data.introText !== undefined ? data.introText : company.invoice_intro_text;
+  const footerText = data.footerText !== undefined ? data.footerText : company.invoice_footer_text;
+
+  // Draw intro text (if any) - starts at Y=95 (after header)
+  const contentY = drawIntroText(doc, introText, 95);
+
+  // Draw invoice items - dynamic start based on intro text
+  const itemsStartY = contentY > 95 ? contentY : 100;
+  let endY = drawInvoiceItems(doc, items, invoice, itemsStartY);
+
+  // Draw footer text (if any)
+  endY = drawFooterText(doc, footerText, endY);
 
   // Draw separator line with scissors
   drawSeparatorLine(doc, LAYOUT.SEPARATOR_Y);
@@ -789,20 +869,23 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<Blob> {
   drawReceiptSection(doc, company, customer, invoice, qrReference);
   await drawPaymentSection(doc, company, customer, invoice, qrCodeDataURL, qrReference);
 
-  // Add payment instructions at bottom of main content
-  let footerY = 170;
+  // Add payment instructions at bottom of main content (before QR section)
+  // Position dynamically but ensure it doesn't overlap with QR section
+  const maxFooterY = LAYOUT.SEPARATOR_Y - 25; // Leave space before separator
+  let paymentInstructionsY = Math.min(endY + 10, maxFooterY);
+
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.text(
     'Bitte verwenden Sie für die Zahlung den untenstehenden Einzahlungsschein.',
     20,
-    footerY
+    paymentInstructionsY
   );
-  footerY += 5;
+  paymentInstructionsY += 5;
   doc.text(
     'Vielen Dank für Ihr Vertrauen.',
     20,
-    footerY
+    paymentInstructionsY
   );
 
   // Convert to blob

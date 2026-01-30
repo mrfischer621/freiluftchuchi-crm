@@ -35,6 +35,11 @@ export interface Company {
   vat_number: string | null;
   vat_registered: boolean;
   created_at: string;
+  // Text templates for invoices and quotes
+  invoice_intro_text: string | null;
+  invoice_footer_text: string | null;
+  quote_intro_text: string | null;
+  quote_footer_text: string | null;
   // Optional fields that may not exist in DB yet:
   country?: string | null;
   phone?: string | null;

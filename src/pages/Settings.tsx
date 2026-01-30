@@ -84,6 +84,11 @@ export default function Settings() {
         vat_number: selectedCompany.vat_number || '',
         vat_registered: selectedCompany.vat_registered || false,
       });
+      // Load text templates
+      setInvoiceIntro(selectedCompany.invoice_intro_text || '');
+      setInvoiceFooter(selectedCompany.invoice_footer_text || '');
+      setQuoteIntro(selectedCompany.quote_intro_text || '');
+      setQuoteFooter(selectedCompany.quote_footer_text || '');
     }
   }, [selectedCompany]);
 
@@ -255,9 +260,38 @@ export default function Settings() {
 
   const handleTemplatesSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement text templates saving (Phase 3.6)
-    // For now, just show a placeholder message
-    showToast('success', 'Textvorlagen-Funktion kommt in Phase 3.6');
+    setIsSaving(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('companies')
+        .update({
+          invoice_intro_text: invoiceIntro.trim() || null,
+          invoice_footer_text: invoiceFooter.trim() || null,
+          quote_intro_text: quoteIntro.trim() || null,
+          quote_footer_text: quoteFooter.trim() || null,
+        })
+        .eq('id', selectedCompany.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update local state with returned data to ensure consistency
+      if (data) {
+        setInvoiceIntro(data.invoice_intro_text || '');
+        setInvoiceFooter(data.invoice_footer_text || '');
+        setQuoteIntro(data.quote_intro_text || '');
+        setQuoteFooter(data.quote_footer_text || '');
+      }
+
+      showToast('success', 'Textvorlagen erfolgreich gespeichert!');
+    } catch (err) {
+      console.error('Error saving text templates:', err);
+      showToast('error', 'Fehler beim Speichern der Textvorlagen.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Pipeline stage handlers
@@ -818,10 +852,6 @@ export default function Settings() {
                 <Save size={18} />
                 {isSaving ? 'Speichert...' : 'Alle speichern'}
               </button>
-              <p className="text-sm text-amber-600 flex items-center gap-2">
-                <AlertCircle size={16} />
-                Funktion kommt in Phase 3.6
-              </p>
             </div>
           </form>
         </div>
