@@ -120,6 +120,39 @@ export interface InvoiceItem {
   total: number;
 }
 
+// Quote (Offerte/Angebot) Types
+export type QuoteStatus = 'offen' | 'versendet' | 'akzeptiert' | 'abgelehnt' | 'bestaetigt' | 'ueberfallig';
+
+export interface Quote {
+  id: string;
+  company_id: string;
+  quote_number: string;
+  customer_id: string;
+  project_id: string | null;
+  opportunity_id: string | null;
+  issue_date: string;
+  valid_until: string;
+  subtotal: number;
+  vat_rate: number;
+  vat_amount: number;
+  total: number;
+  status: QuoteStatus;
+  converted_to_invoice_id: string | null;
+  converted_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QuoteItem {
+  id: string;
+  quote_id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+  sort_order: number;
+}
+
 export interface Transaction {
   id: string;
   company_id: string;
@@ -268,6 +301,16 @@ export interface Database {
         Row: InvoiceItem;
         Insert: Omit<InvoiceItem, 'id'>;
         Update: Partial<Omit<InvoiceItem, 'id'>>;
+      };
+      quotes: {
+        Row: Quote;
+        Insert: Omit<Quote, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Quote, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      quote_items: {
+        Row: QuoteItem;
+        Insert: Omit<QuoteItem, 'id'>;
+        Update: Partial<Omit<QuoteItem, 'id'>>;
       };
       transactions: {
         Row: Transaction;

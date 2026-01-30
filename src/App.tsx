@@ -5,6 +5,7 @@ import Sales from './pages/Sales';
 import Kunden from './pages/Kunden';
 import Projekte from './pages/Projekte';
 import Zeiterfassung from './pages/Zeiterfassung';
+import Angebote from './pages/Angebote';
 import Rechnungen from './pages/Rechnungen';
 import Buchungen from './pages/Buchungen';
 import Auswertungen from './pages/Auswertungen';
@@ -38,6 +39,7 @@ function App() {
           <Route path="projekte" element={<Projekte />} />
           <Route path="produkte" element={<Produkte />} />
           <Route path="zeiterfassung" element={<Zeiterfassung />} />
+          <Route path="angebote" element={<Angebote />} />
           <Route path="rechnungen" element={<Rechnungen />} />
           <Route path="buchungen" element={<Buchungen />} />
           <Route path="auswertungen" element={<Auswertungen />} />

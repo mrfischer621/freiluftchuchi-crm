@@ -17,6 +17,7 @@ export interface KanbanColumnProps {
   onConvert: (opp: Opportunity) => void;
   onAddNew: (stageId: string) => void;
   onStageRename: (stageId: string, newName: string) => void;
+  onCreateQuote?: (opp: Opportunity) => void;
 }
 
 export function KanbanColumn({
@@ -27,6 +28,7 @@ export function KanbanColumn({
   onConvert,
   onAddNew,
   onStageRename,
+  onCreateQuote,
 }: KanbanColumnProps) {
   const opportunityIds = opportunities.map((opp) => String(opp.id));
   const { setNodeRef } = useDroppable({
@@ -119,6 +121,7 @@ export function KanbanColumn({
                   customer={customer}
                   onEdit={onEdit}
                   onConvert={onConvert}
+                  onCreateQuote={onCreateQuote}
                 />
               );
             })

@@ -12,7 +12,7 @@
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 import { SwissQRBill } from './swissqr';
-import type { Invoice, InvoiceItem, Customer, Company } from '../lib/supabase';
+import type { Invoice, InvoiceItem, Customer, Company, Quote, QuoteItem } from '../lib/supabase';
 
 // ============================================================================
 // TYPES
@@ -21,6 +21,16 @@ import type { Invoice, InvoiceItem, Customer, Company } from '../lib/supabase';
 interface InvoiceData {
   invoice: Invoice;
   items: InvoiceItem[];
+  customer: Customer;
+  company: Company;
+  // Optional text templates (loaded from company settings)
+  introText?: string | null;
+  footerText?: string | null;
+}
+
+interface QuoteData {
+  quote: Quote;
+  items: QuoteItem[];
   customer: Customer;
   company: Company;
   // Optional text templates (loaded from company settings)
@@ -903,6 +913,308 @@ export async function downloadInvoicePDF(data: InvoiceData): Promise<void> {
   const link = document.createElement('a');
   link.href = url;
   link.download = `Rechnung_${data.invoice.invoice_number}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
+}
+
+// ============================================================================
+// QUOTE PDF GENERATION (NO QR-Bill)
+// ============================================================================
+
+/**
+ * Draw quote header (similar to invoice but with "ANGEBOT" title)
+ */
+function drawQuoteHeader(
+  doc: jsPDF,
+  company: Company,
+  customer: Customer,
+  quote: Quote
+): void {
+  let y = 20;
+
+  // Company logo placeholder or name
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.text(sanitizeForPDF(company.name), 20, y);
+  y += 6;
+
+  // Company address
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(sanitizeForPDF(formatAddress(company.street, company.house_number)), 20, y);
+  y += 4;
+  doc.text(sanitizeForPDF(`${company.zip_code} ${company.city}`), 20, y);
+  y += 8;
+
+  // Quote title
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.text('ANGEBOT', 20, y);
+  y += 10;
+
+  // Customer address (right side)
+  const customerX = 120;
+  let customerY = 40;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.text(sanitizeForPDF(customer.name), customerX, customerY);
+  customerY += 5;
+
+  if (customer.contact_person) {
+    doc.text(sanitizeForPDF(customer.contact_person), customerX, customerY);
+    customerY += 5;
+  }
+
+  if (customer.street) {
+    doc.text(sanitizeForPDF(formatAddress(customer.street, customer.house_number)), customerX, customerY);
+    customerY += 5;
+  }
+
+  if (customer.zip_code && customer.city) {
+    doc.text(sanitizeForPDF(`${customer.zip_code} ${customer.city}`), customerX, customerY);
+    customerY += 5;
+  }
+
+  // Display country only if different from Switzerland
+  const rawCountry = (customer.country || 'CH').trim();
+  const customerCountry = (rawCountry === 'Schweiz' || rawCountry === 'CH')
+    ? 'CH'
+    : rawCountry.substring(0, 2).toUpperCase();
+
+  if (customerCountry !== 'CH') {
+    doc.text(sanitizeForPDF(getCountryName(customerCountry)), customerX, customerY);
+    customerY += 5;
+  }
+
+  // Quote details
+  y += 10;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('Angebotsnummer:', 20, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(sanitizeForPDF(quote.quote_number), 70, y);
+  y += 6;
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Datum:', 20, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(formatDate(quote.issue_date), 70, y);
+  y += 6;
+
+  // Prominent validity date
+  doc.setFont('helvetica', 'bold');
+  doc.text('Gültig bis:', 20, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(180, 60, 60); // Slightly red to stand out
+  doc.text(formatDate(quote.valid_until), 70, y);
+  doc.setTextColor(0, 0, 0); // Reset to black
+  y += 6;
+
+  if (company.uid_number) {
+    doc.setFont('helvetica', 'bold');
+    doc.text('UID:', 20, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(sanitizeForPDF(company.uid_number), 70, y);
+    y += 6;
+  }
+}
+
+/**
+ * Draw quote items table
+ * @returns The Y position after the items and totals
+ */
+function drawQuoteItems(
+  doc: jsPDF,
+  items: QuoteItem[],
+  quote: Quote,
+  startY: number
+): number {
+  let y = startY;
+
+  // Table header
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('Beschreibung', 20, y);
+  doc.text('Menge', 120, y);
+  doc.text('Preis', 145, y);
+  doc.text('Total', 175, y, { align: 'right' });
+  y += 2;
+
+  // Header line
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.5);
+  doc.line(20, y, 190, y);
+  y += 6;
+
+  // Items
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+
+  items.forEach((item) => {
+    // Handle long descriptions - sanitize to prevent rendering glitches
+    const description = sanitizeForPDF(item.description || '');
+    const lines = doc.splitTextToSize(description, 95);
+
+    lines.forEach((line: string, index: number) => {
+      doc.text(line, 20, y);
+      if (index === 0) {
+        doc.text(item.quantity.toString(), 120, y);
+        doc.text(`CHF ${formatAmount(item.unit_price)}`, 145, y);
+        doc.text(`CHF ${formatAmount(item.total)}`, 190, y, { align: 'right' });
+      }
+      y += 5;
+    });
+  });
+
+  // Spacing
+  y += 5;
+
+  // Subtotal
+  doc.setFont('helvetica', 'bold');
+  doc.text('Zwischensumme:', 145, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`CHF ${formatAmount(quote.subtotal)}`, 190, y, { align: 'right' });
+  y += 6;
+
+  // VAT
+  if (quote.vat_amount > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.text(`MWST (${quote.vat_rate}%):`, 145, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`CHF ${formatAmount(quote.vat_amount)}`, 190, y, { align: 'right' });
+    y += 6;
+  }
+
+  // Total line
+  doc.setLineWidth(0.5);
+  doc.line(145, y, 190, y);
+  y += 6;
+
+  // Total
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('Gesamtbetrag:', 110, y);
+  doc.text(`CHF ${formatAmount(quote.total)}`, 190, y, { align: 'right' });
+
+  return y;
+}
+
+/**
+ * Generate quote PDF (NO QR-Bill section)
+ *
+ * @param data - Quote data with all related entities
+ * @returns Promise<Blob> - PDF file as blob
+ */
+export async function generateQuotePDF(data: QuoteData): Promise<Blob> {
+  const { quote, items, customer, company } = data;
+
+  // Safety checks - ensure required company data exists
+  if (!company.street) {
+    throw new Error(
+      'Firmenadresse unvollständig: Strasse fehlt. ' +
+      'Bitte vervollständigen Sie die Firmeneinstellungen.'
+    );
+  }
+
+  if (!company.zip_code) {
+    throw new Error(
+      'Firmenadresse unvollständig: Postleitzahl fehlt. ' +
+      'Bitte vervollständigen Sie die Firmeneinstellungen.'
+    );
+  }
+
+  if (!company.city) {
+    throw new Error(
+      'Firmenadresse unvollständig: Ort fehlt. ' +
+      'Bitte vervollständigen Sie die Firmeneinstellungen.'
+    );
+  }
+
+  // Safety checks for customer
+  if (!customer.street) {
+    throw new Error(
+      `Kundenadresse unvollständig: Strasse fehlt für Kunde "${customer.name}".`
+    );
+  }
+
+  if (!customer.zip_code || !customer.city) {
+    throw new Error(
+      `Kundenadresse unvollständig: PLZ/Ort fehlt für Kunde "${customer.name}".`
+    );
+  }
+
+  // Create PDF document
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  // Draw quote content
+  drawQuoteHeader(doc, company, customer, quote);
+
+  // Determine intro/footer text - use passed values or fall back to company defaults
+  const introText = data.introText !== undefined ? data.introText : company.quote_intro_text;
+  const footerText = data.footerText !== undefined ? data.footerText : company.quote_footer_text;
+
+  // Draw intro text (if any) - starts at Y=95 (after header)
+  const contentY = drawIntroText(doc, introText, 95);
+
+  // Draw quote items - dynamic start based on intro text
+  const itemsStartY = contentY > 95 ? contentY : 100;
+  let endY = drawQuoteItems(doc, items, quote, itemsStartY);
+
+  // Draw footer text (if any)
+  endY = drawFooterText(doc, footerText, endY);
+
+  // Add closing note (no payment instructions for quotes)
+  let closingY = endY + 15;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.text(
+    `Dieses Angebot ist gültig bis zum ${formatDate(quote.valid_until)}.`,
+    20,
+    closingY
+  );
+  closingY += 6;
+  doc.text(
+    'Bei Fragen stehen wir Ihnen gerne zur Verfügung.',
+    20,
+    closingY
+  );
+  closingY += 10;
+  doc.text(
+    'Freundliche Grüsse',
+    20,
+    closingY
+  );
+  closingY += 6;
+  doc.setFont('helvetica', 'bold');
+  doc.text(
+    sanitizeForPDF(company.name),
+    20,
+    closingY
+  );
+
+  // Convert to blob
+  const pdfBlob = doc.output('blob');
+  return pdfBlob;
+}
+
+/**
+ * Download quote PDF
+ */
+export async function downloadQuotePDF(data: QuoteData): Promise<void> {
+  const pdfBlob = await generateQuotePDF(data);
+  const url = URL.createObjectURL(pdfBlob);
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `Angebot_${data.quote.quote_number}.pdf`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

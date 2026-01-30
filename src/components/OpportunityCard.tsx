@@ -1,5 +1,5 @@
 import { useSortable } from '@dnd-kit/sortable';
-import { AlertCircle, Calendar, GripVertical } from 'lucide-react';
+import { AlertCircle, Calendar, GripVertical, FileSpreadsheet } from 'lucide-react';
 import type { Opportunity, Customer } from '../lib/supabase';
 
 // ============================================================================
@@ -11,6 +11,7 @@ export interface OpportunityCardProps {
   customer?: Customer;
   onEdit: (opp: Opportunity) => void;
   onConvert: (opp: Opportunity) => void;
+  onCreateQuote?: (opp: Opportunity) => void;
   isDragging?: boolean;
 }
 
@@ -19,6 +20,7 @@ export function OpportunityCard({
   customer,
   onEdit,
   onConvert,
+  onCreateQuote,
   isDragging = false,
 }: OpportunityCardProps) {
   const {
@@ -117,7 +119,7 @@ export function OpportunityCard({
       )}
 
       {/* Actions - Spatial Buttons */}
-      <div className="flex gap-2 pt-3 border-t border-gray-100">
+      <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-100">
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -148,6 +150,27 @@ export function OpportunityCard({
             "
           >
             Als Kunde anlegen
+          </button>
+        )}
+        {/* Create Quote - only for existing customers */}
+        {opportunity.existing_customer_id && onCreateQuote && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCreateQuote(opportunity);
+            }}
+            className="
+              flex-1 text-xs font-semibold px-3 py-2
+              bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-xl
+              hover:from-emerald-600 hover:to-emerald-700
+              active:translate-y-[1px]
+              transition-all duration-150 tracking-tight
+              shadow-sm hover:shadow-md
+              flex items-center justify-center gap-1
+            "
+          >
+            <FileSpreadsheet size={12} />
+            Angebot
           </button>
         )}
       </div>

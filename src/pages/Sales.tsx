@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Opportunity, PipelineStage, Customer } from '../lib/supabase';
 import { useCompany } from '../context/CompanyContext';
@@ -23,6 +24,7 @@ import { PageHeader, Button } from '../components/ui';
 
 export default function Sales() {
   const { selectedCompany } = useCompany();
+  const navigate = useNavigate();
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -167,6 +169,13 @@ export default function Sales() {
   const handleCancelEdit = () => {
     setEditingOpportunity(null);
     setShowForm(false);
+  };
+
+  // Navigate to Angebote page to create a quote for this opportunity
+  const handleCreateQuote = (opportunity: Opportunity) => {
+    if (opportunity.existing_customer_id) {
+      navigate(`/angebote?customerId=${opportunity.existing_customer_id}&opportunityId=${opportunity.id}`);
+    }
   };
 
   // BUGFIX: Strict string comparison and immutable update with proper typing
@@ -342,6 +351,7 @@ export default function Sales() {
                   onConvert={handleConvert}
                   onAddNew={handleAddNew}
                   onStageRename={handleStageRename}
+                  onCreateQuote={handleCreateQuote}
                 />
               );
             })}
