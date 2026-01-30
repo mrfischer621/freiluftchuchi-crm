@@ -27,7 +27,7 @@ interface Toast {
 type TabType = 'company' | 'profile' | 'templates' | 'pipeline';
 
 export default function Settings() {
-  const { selectedCompany } = useCompany();
+  const { selectedCompany, refreshCompanies } = useCompany();
   const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('company');
 
@@ -184,6 +184,9 @@ export default function Settings() {
         .eq('id', selectedCompany.id);
 
       if (error) throw error;
+
+      // Refresh company data in context to reflect changes
+      await refreshCompanies();
 
       showToast('success', 'Firmeneinstellungen erfolgreich gespeichert!');
     } catch (err) {

@@ -306,3 +306,84 @@ Main sidebar routes (11 total):
 9. Auswertungen - `/auswertungen` (Analytics)
 10. Jahresabschluss - `/jahresabschluss` (Year-end)
 11. Einstellungen - `/settings` (Settings)
+
+## Multi-Company Architecture
+
+**Status:** ✅ Production-Ready (Single-User + Multi-User capable)
+**Dokumentation:** `MULTI_COMPANY_IMPLEMENTATION.md`
+
+### Architektur-Übersicht
+
+**Table-Based RLS (Session-Variable-Free):**
+- RLS Policies prüfen `user_companies` Tabelle direkt
+- Keine Session Variables (verhindert Supabase Connection Pooling Probleme)
+- RLS auf `user_companies` ist **DEAKTIVIERT** (verhindert infinite recursion)
+
+### Wichtige RPC-Funktionen
+
+**`get_user_companies()`** - Gibt alle Firmen des Users zurück
+```typescript
+const { data: companies } = await supabase.rpc('get_user_companies');
+```
+
+**`set_active_company(company_id)`** - Setzt aktive Firma
+```typescript
+await supabase.rpc('set_active_company', { company_id: 'uuid' });
+```
+
+### Frontend Pattern
+
+**CompanyContext:**
+```typescript
+const { selectedCompany, switchCompany } = useCompany();
+
+// Alle Queries filtern nach selectedCompany.id
+const { data } = await supabase
+  .from('customers')
+  .select('*')
+  .eq('company_id', selectedCompany.id);  // ✅ Explizit filtern
+```
+
+### RLS Policies
+
+**Standard Policy (alle Tabellen mit company_id):**
+```sql
+CREATE POLICY "Tenant Isolation" ON public.table_name
+  FOR ALL
+  USING (
+    company_id IN (
+      SELECT company_id FROM user_companies WHERE user_id = auth.uid()
+    )
+  );
+```
+
+**Spezialfall: invoice_items (kein company_id):**
+```sql
+CREATE POLICY "Tenant Isolation via Invoice" ON invoice_items
+  FOR ALL
+  USING (
+    invoice_id IN (
+      SELECT id FROM invoices WHERE company_id IN (
+        SELECT company_id FROM user_companies WHERE user_id = auth.uid()
+      )
+    )
+  );
+```
+
+### Wichtige Migrations
+
+- `20260129_fix_rls_no_session.sql` - Entfernt Session-Dependency (KRITISCH!)
+- `20260129_disable_rls_user_companies.sql` - Deaktiviert RLS (verhindert Recursion)
+- `20260129_add_user_companies_indexes.sql` - Performance-Optimierung
+
+### Best Practices
+
+**✅ DO:**
+- Frontend IMMER nach `company_id` filtern (Defense in Depth)
+- `get_user_companies()` RPC für Firmenliste verwenden
+- `set_active_company()` nur bei Company-Switch aufrufen
+
+**❌ DON'T:**
+- `set_active_company()` vor jedem INSERT/UPDATE callen (unnötig!)
+- Direkte Queries auf `user_companies` machen (nur via RPC)
+- RLS auf `user_companies` enablen (ohne Recursion-Fix)

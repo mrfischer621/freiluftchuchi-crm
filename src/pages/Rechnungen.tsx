@@ -1,17 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Invoice, InvoiceItem, Customer, Project } from '../lib/supabase';
 import InvoiceForm from '../components/InvoiceForm';
 import InvoiceTable from '../components/InvoiceTable';
 import Modal from '../components/Modal';
 import { downloadInvoicePDF } from '../utils/pdfGenerator';
+import { validateInvoiceData } from '../utils/invoiceValidation';
 import { useCompany } from '../context/CompanyContext';
-import { Plus } from 'lucide-react';
+import { Plus, AlertCircle } from 'lucide-react';
 
 type InvoiceFormData = {
   invoice: Omit<Invoice, 'id' | 'created_at' | 'subtotal' | 'vat_amount' | 'total'>;
   items: Array<Omit<InvoiceItem, 'id' | 'invoice_id' | 'total'>>;
 };
+
+interface Toast {
+  type: 'success' | 'error';
+  message: string;
+}
 
 export default function Rechnungen() {
   const { selectedCompany } = useCompany();
@@ -22,12 +28,24 @@ export default function Rechnungen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nextInvoiceNumber, setNextInvoiceNumber] = useState('RE-2025-001');
+  const [toast, setToast] = useState<Toast | null>(null);
+  const isFetchingRef = useRef(false);
 
   useEffect(() => {
+    console.log('[Rechnungen] useEffect triggered, selectedCompany:', selectedCompany?.name);
     if (selectedCompany) {
+      console.log('[Rechnungen] Calling fetchData...');
       fetchData();
     }
   }, [selectedCompany]);
+
+  // Auto-hide toast after 5 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   // Early return if no company selected
   if (!selectedCompany) {
@@ -39,11 +57,21 @@ export default function Rechnungen() {
   }
 
   const fetchData = async () => {
+    console.log('[Rechnungen] fetchData called for company:', selectedCompany?.name);
     if (!selectedCompany) return;
 
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) {
+      console.log('[Rechnungen] Already fetching, skipping duplicate call');
+      return;
+    }
+
     try {
+      isFetchingRef.current = true;
       setIsLoading(true);
       setError(null);
+
+      console.log('[Rechnungen] Fetching data...');
 
       const [invoicesResult, customersResult, projectsResult] = await Promise.all([
         supabase
@@ -71,6 +99,12 @@ export default function Rechnungen() {
       setCustomers(customersResult.data || []);
       setProjects(projectsResult.data || []);
 
+      console.log('[Rechnungen] Data fetched successfully:', {
+        invoices: invoicesResult.data?.length || 0,
+        customers: customersResult.data?.length || 0,
+        projects: projectsResult.data?.length || 0
+      });
+
       // Generate next invoice number (COMPANY-SPECIFIC)
       if (invoicesResult.data && invoicesResult.data.length > 0) {
         const lastNumber = (invoicesResult.data[0] as any).invoice_number;
@@ -88,10 +122,12 @@ export default function Rechnungen() {
         }
       }
     } catch (err) {
-      console.error('Error fetching data:', err);
+      console.error('[Rechnungen] Error fetching data:', err);
       setError('Fehler beim Laden der Daten. Bitte überprüfen Sie Ihre Supabase-Konfiguration.');
     } finally {
+      console.log('[Rechnungen] fetchData completed, setting isLoading to false');
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
   };
 
@@ -102,6 +138,16 @@ export default function Rechnungen() {
     if (!selectedCompany) return;
 
     try {
+      // Ensure session variable is set before INSERT (fixes RLS policy enforcement)
+      const { error: sessionError } = await supabase.rpc('set_active_company', {
+        company_id: selectedCompany.id
+      });
+
+      if (sessionError) {
+        console.error('Failed to set active company:', sessionError);
+        throw sessionError;
+      }
+
       // Insert invoice with company_id
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
@@ -170,7 +216,7 @@ export default function Rechnungen() {
     try {
       // Validate company data
       if (!selectedCompany) {
-        alert('Keine Firma ausgewählt');
+        setToast({ type: 'error', message: 'Keine Firma ausgewählt' });
         return;
       }
 
@@ -185,7 +231,21 @@ export default function Rechnungen() {
       // Get customer
       const customer = customers.find((c) => c.id === invoice.customer_id);
       if (!customer) {
-        alert('Kunde nicht gefunden');
+        setToast({ type: 'error', message: 'Kunde nicht gefunden' });
+        return;
+      }
+
+      // VALIDATE DATA BEFORE PDF GENERATION
+      const validation = validateInvoiceData(
+        { ...invoice, items: items || [] },
+        selectedCompany,
+        customer
+      );
+
+      if (!validation.valid) {
+        // Show all validation errors
+        const errorMessage = validation.errors.join(' • ');
+        setToast({ type: 'error', message: errorMessage });
         return;
       }
 
@@ -196,9 +256,14 @@ export default function Rechnungen() {
         customer,
         company: selectedCompany,
       });
+
+      setToast({ type: 'success', message: 'PDF erfolgreich erstellt' });
     } catch (err) {
       console.error('Error generating PDF:', err);
-      alert(`Fehler beim Erstellen des PDFs: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`);
+      setToast({
+        type: 'error',
+        message: `Fehler beim Erstellen des PDFs: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`,
+      });
     }
   };
 
@@ -261,6 +326,66 @@ export default function Rechnungen() {
           nextInvoiceNumber={nextInvoiceNumber}
         />
       </Modal>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-md animate-slide-in">
+          <div
+            className={`flex items-start gap-3 rounded-lg px-4 py-3 shadow-lg ${
+              toast.type === 'success'
+                ? 'bg-green-50 border border-green-200'
+                : 'bg-red-50 border border-red-200'
+            }`}
+          >
+            {toast.type === 'success' ? (
+              <div className="flex-shrink-0 w-5 h-5 text-green-600">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+            ) : (
+              <AlertCircle
+                className={`flex-shrink-0 ${toast.type === 'error' ? 'text-red-600' : 'text-green-600'}`}
+                size={20}
+              />
+            )}
+            <div className="flex-1">
+              <p className={toast.type === 'success' ? 'text-green-800' : 'text-red-800'}>
+                {toast.message}
+              </p>
+            </div>
+            <button
+              onClick={() => setToast(null)}
+              className={`flex-shrink-0 ${
+                toast.type === 'success'
+                  ? 'text-green-600 hover:text-green-800'
+                  : 'text-red-600 hover:text-red-800'
+              }`}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

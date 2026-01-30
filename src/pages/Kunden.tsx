@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Customer } from '../lib/supabase';
 import CustomerForm from '../components/CustomerForm';
@@ -14,12 +14,50 @@ export default function Kunden() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isFetchingRef = useRef(false);
 
-  useEffect(() => {
-    if (selectedCompany) {
-      fetchCustomers();
+  const fetchCustomers = useCallback(async () => {
+    console.log('[Kunden] fetchCustomers called for company:', selectedCompany?.name);
+    if (!selectedCompany) return;
+
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) {
+      console.log('[Kunden] Already fetching, skipping duplicate call');
+      return;
+    }
+
+    try {
+      isFetchingRef.current = true;
+      setIsLoading(true);
+      setError(null);
+
+      console.log('[Kunden] Fetching customers...');
+
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('company_id', selectedCompany.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCustomers(data || []);
+      console.log('[Kunden] Customers fetched successfully:', data?.length || 0);
+    } catch (err) {
+      console.error('Error fetching customers:', err);
+      setError('Fehler beim Laden der Kunden. Bitte überprüfen Sie Ihre Supabase-Konfiguration.');
+    } finally {
+      setIsLoading(false);
+      isFetchingRef.current = false;
     }
   }, [selectedCompany]);
+
+  useEffect(() => {
+    console.log('[Kunden] useEffect triggered, selectedCompany:', selectedCompany?.name);
+    if (selectedCompany) {
+      console.log('[Kunden] Calling fetchCustomers...');
+      fetchCustomers();
+    }
+  }, [selectedCompany, fetchCustomers]);
 
   if (!selectedCompany) {
     return (
@@ -29,32 +67,13 @@ export default function Kunden() {
     );
   }
 
-  const fetchCustomers = async () => {
-    if (!selectedCompany) return;
-
-    try {
-      setIsLoading(true);
-      setError(null);
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('company_id', selectedCompany.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setCustomers(data || []);
-    } catch (err) {
-      console.error('Error fetching customers:', err);
-      setError('Fehler beim Laden der Kunden. Bitte überprüfen Sie Ihre Supabase-Konfiguration.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleSubmit = async (customerData: Omit<Customer, 'id' | 'created_at'>) => {
     if (!selectedCompany) return;
 
     try {
+      // Ensure session variable is set before INSERT/UPDATE
+      await supabase.rpc('set_active_company', { company_id: selectedCompany.id });
+
       if (editingCustomer) {
         const { error } = await supabase
           .from('customers')

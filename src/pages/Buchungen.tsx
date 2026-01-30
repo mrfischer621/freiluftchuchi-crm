@@ -38,6 +38,9 @@ export default function Buchungen() {
     try {
       setLoading(true);
 
+      // Clear existing data to force React re-render
+      setTransactions([]);
+
       // Fetch transactions for this company
       const { data: transactionsData, error: transactionsError } = await supabase
         .from('transactions')

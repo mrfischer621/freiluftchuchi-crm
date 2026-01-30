@@ -43,8 +43,17 @@ export default function Dashboard() {
   }
 
   const loadFinancialData = async () => {
+    if (!selectedCompany) return;
+
     try {
       setLoading(true);
+
+      // Clear existing data to force React re-render
+      setRevenue(0);
+      setExpenses(0);
+      setOpenInvoices([]);
+      setChartData([]);
+
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - timeFilter);
       const cutoffDateStr = cutoffDate.toISOString();

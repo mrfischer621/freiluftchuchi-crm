@@ -39,6 +39,10 @@ export default function Zeiterfassung() {
       setIsLoading(true);
       setError(null);
 
+      // Clear existing data to force React re-render
+      setEntries([]);
+      setProjects([]);
+
       const [entriesResult, projectsResult] = await Promise.all([
         supabase
           .from('time_entries')

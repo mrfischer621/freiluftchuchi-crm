@@ -38,6 +38,10 @@ export default function Projekte() {
       setIsLoading(true);
       setError(null);
 
+      // Clear existing data to force React re-render
+      setProjects([]);
+      setCustomers([]);
+
       const [projectsResult, customersResult] = await Promise.all([
         supabase
           .from('projects')
@@ -68,6 +72,9 @@ export default function Projekte() {
     if (!selectedCompany) return;
 
     try {
+      // Set active company session before INSERT/UPDATE
+      await supabase.rpc('set_active_company', { company_id: selectedCompany.id });
+
       if (editingProject) {
         const { error } = await supabase
           .from('projects')

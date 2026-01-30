@@ -28,6 +28,9 @@ export default function Produkte() {
       setLoading(true);
       setError(null);
 
+      // Clear existing data to force React re-render
+      setProducts([]);
+
       const { data, error: fetchError } = await supabase
         .from('products')
         .select('*')
@@ -49,6 +52,9 @@ export default function Produkte() {
     if (!selectedCompany) return;
 
     try {
+      // Set active company session before INSERT/UPDATE
+      await supabase.rpc('set_active_company', { company_id: selectedCompany.id });
+
       if (editingProduct) {
         // Update existing product
         const { error: updateError } = await supabase

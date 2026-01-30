@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { BentoSidebar } from './BentoSidebar';
 import { BentoHeader } from './BentoHeader';
+import { useCompany } from '../context/CompanyContext';
 
 /**
  * BentoLayout - Swiss Modern App Shell 2026
@@ -13,6 +14,8 @@ import { BentoHeader } from './BentoHeader';
  * - Main content fills available height for Kanban-style pages
  */
 export default function BentoLayout() {
+  const { selectedCompany } = useCompany();
+
   return (
     <div className="h-screen w-screen overflow-hidden flex">
       {/* Sidebar - Dark, Fixed Width */}
@@ -30,7 +33,8 @@ export default function BentoLayout() {
         {/* Main Content - Fills remaining height */}
         <main className="flex-1 min-h-0 overflow-hidden">
           <div className="h-full px-6 py-6 overflow-auto">
-            <Outlet />
+            {/* CRITICAL FIX: Key prop forces complete remount when company changes */}
+            <Outlet key={selectedCompany?.id || 'no-company'} />
           </div>
         </main>
       </div>

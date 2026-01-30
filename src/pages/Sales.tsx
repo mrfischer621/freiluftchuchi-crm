@@ -62,6 +62,11 @@ export default function Sales() {
       setIsLoading(true);
       setError(null);
 
+      // Clear existing data to force React re-render
+      setStages([]);
+      setOpportunities([]);
+      setCustomers([]);
+
       // Fetch stages
       const { data: stagesData, error: stagesError } = await supabase
         .from('pipeline_stages')

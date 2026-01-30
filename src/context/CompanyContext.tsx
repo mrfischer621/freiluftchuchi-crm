@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Company } from '../lib/supabase';
 import { useAuth } from './AuthProvider';
@@ -20,6 +20,8 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasInitializedRef = useRef(false);
+  const isManualSwitchRef = useRef(false);
 
   // Fetch all companies user has access to
   const fetchUserCompanies = async () => {
@@ -82,60 +84,105 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     availableCompanies: Company[],
     userCompanies: { company_id: string; is_active: boolean }[]
   ) => {
+    // CRITICAL FIX: Skip if already initialized (prevents race conditions during manual switches)
+    if (hasInitializedRef.current) {
+      console.log('[CompanyContext] Already initialized, skipping selectInitialCompany');
+      return;
+    }
+
+    // CRITICAL FIX: Skip if manual switch is in progress
+    if (isManualSwitchRef.current) {
+      console.log('[CompanyContext] Manual switch in progress, skipping selectInitialCompany');
+      return;
+    }
+
+    console.log('[CompanyContext] Selecting initial company...');
+    console.log('[CompanyContext] Available companies:', availableCompanies.map(c => ({ id: c.id, name: c.name })));
+    console.log('[CompanyContext] User companies (from RPC):', userCompanies);
+    console.log('[CompanyContext] Profile last_active_company_id:', profile?.last_active_company_id);
+
     if (availableCompanies.length === 0) {
       setSelectedCompany(null);
       return;
     }
 
-    // Try to find the currently active company from RPC result
-    const activeCompany = userCompanies.find((uc) => uc.is_active);
-    if (activeCompany) {
-      const company = availableCompanies.find((c) => c.id === activeCompany.company_id);
-      if (company) {
-        setSelectedCompany(company);
-        return;
-      }
-    }
+    let selectedCompanyId: string | null = null;
+    let selectionReason = '';
 
-    // Fallback: Use last_active_company_id from profile
+    // PRIORITY 1: Use last_active_company_id from profile (most reliable)
+    // This is the user's explicitly saved preference
     if (profile?.last_active_company_id) {
       const lastActiveCompany = availableCompanies.find(
         (c) => c.id === profile.last_active_company_id
       );
       if (lastActiveCompany) {
-        // Set as active in session
-        await setActiveCompanySession(lastActiveCompany.id);
-        setSelectedCompany(lastActiveCompany);
-        return;
+        selectedCompanyId = lastActiveCompany.id;
+        selectionReason = 'from profile.last_active_company_id (user preference)';
       }
     }
 
-    // Final fallback: Use first available company
-    const firstCompany = availableCompanies[0];
-    await setActiveCompanySession(firstCompany.id);
-    setSelectedCompany(firstCompany);
+    // PRIORITY 2: Use is_active flag from RPC (fallback)
+    // Only use this if last_active_company_id is not set
+    if (!selectedCompanyId) {
+      const activeCompany = userCompanies.find((uc) => uc.is_active);
+      if (activeCompany) {
+        const company = availableCompanies.find((c) => c.id === activeCompany.company_id);
+        if (company) {
+          selectedCompanyId = company.id;
+          selectionReason = 'from is_active flag (fallback)';
+        }
+      }
+    }
+
+    // PRIORITY 3: Use first available company (final fallback)
+    if (!selectedCompanyId) {
+      selectedCompanyId = availableCompanies[0].id;
+      selectionReason = 'first available company (final fallback)';
+    }
+
+    console.log('[CompanyContext] Selected company:', selectedCompanyId, selectionReason);
+
+    // Set session variable ONLY on initial load
+    await setActiveCompanySession(selectedCompanyId);
+
+    const selectedCompany = availableCompanies.find((c) => c.id === selectedCompanyId);
+    if (selectedCompany) {
+      console.log('[CompanyContext] Setting selected company:', selectedCompany.name);
+      setSelectedCompany(selectedCompany);
+      hasInitializedRef.current = true; // Mark as initialized
+    }
   };
 
   // Set active company in session (calls set_active_company RPC)
   const setActiveCompanySession = async (companyId: string) => {
     try {
+      console.log('[CompanyContext] Setting active company:', companyId);
       const { error } = await supabase.rpc('set_active_company', { company_id: companyId });
       if (error) {
-        console.error('Error setting active company:', error);
+        console.error('[CompanyContext] Error setting active company:', error);
+      } else {
+        console.log('[CompanyContext] Active company set successfully');
       }
     } catch (err) {
-      console.error('Unexpected error setting active company:', err);
+      console.error('[CompanyContext] Unexpected error setting active company:', err);
     }
   };
 
   // Refresh companies list (useful after creating a new company)
   const refreshCompanies = async () => {
     if (!user) return;
+    // Reset initialization flag to allow selectInitialCompany to run
+    hasInitializedRef.current = false;
     await fetchUserCompanies();
   };
 
   // Switch to a different company
   const switchCompany = async (companyId: string) => {
+    console.log('[CompanyContext] Manual company switch requested:', companyId);
+
+    // CRITICAL FIX: Set manual switch flag to prevent selectInitialCompany from interfering
+    isManualSwitchRef.current = true;
+
     try {
       setIsLoading(true);
       setError(null);
@@ -145,7 +192,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
       // If company not found in local list, try fetching it directly from DB
       if (!targetCompany) {
-
+        console.log('[CompanyContext] Company not in cache, fetching from DB...');
         const { data: companyData, error: fetchError } = await supabase
           .from('companies')
           .select('*')
@@ -159,13 +206,18 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
         targetCompany = companyData as Company;
 
-        // Also refresh the companies list in background
-        if (user) {
-          fetchUserCompanies().catch(console.error);
-        }
+        // CRITICAL FIX: Don't call fetchUserCompanies() here - it triggers selectInitialCompany
+        // which can race with our manual switch and overwrite the session
+        // Instead, just add the company to the local list
+        setCompanies(prev => {
+          const exists = prev.some(c => c.id === companyId);
+          if (exists) return prev;
+          return [...prev, targetCompany!];
+        });
       }
 
       // Call set_active_company RPC (validates access + updates session + updates last_active)
+      console.log('[CompanyContext] Setting active company session for:', targetCompany.name);
       const { error: rpcError } = await supabase.rpc('set_active_company', { company_id: companyId });
 
       if (rpcError) {
@@ -174,16 +226,21 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      console.log('[CompanyContext] Active company session set, updating local state');
       // Update local state
       setSelectedCompany(targetCompany);
 
-      // Reload page to refresh all data with new company context
-      // This ensures all subscriptions and queries are reset
-      window.location.reload();
+      // Note: Pages will automatically refresh via useEffect watching selectedCompany
+      // No need to reload the entire page anymore
     } catch (err) {
       console.error('Unexpected error switching company:', err);
       setError('Unerwarteter Fehler beim Wechseln der Firma');
+    } finally {
       setIsLoading(false);
+      // Reset manual switch flag after a small delay to ensure state propagation
+      setTimeout(() => {
+        isManualSwitchRef.current = false;
+      }, 100);
     }
   };
 
