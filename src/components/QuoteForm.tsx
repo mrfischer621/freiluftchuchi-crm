@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Quote, QuoteItem, Customer, Project, Product } from '../lib/supabase';
 import { useCompany } from '../context/CompanyContext';
+import { shouldWarnOnEdit, getEditWarningMessage } from '../utils/quoteUtils';
 
 type QuoteFormData = {
   quote: Omit<Quote, 'id' | 'created_at' | 'updated_at' | 'subtotal' | 'vat_amount' | 'total'>;
@@ -16,6 +17,8 @@ type QuoteFormProps = {
   nextQuoteNumber: string;
   initialCustomerId?: string;
   initialOpportunityId?: string;
+  existingQuote?: Quote;
+  existingItems?: QuoteItem[];
 };
 
 export default function QuoteForm({
@@ -25,32 +28,55 @@ export default function QuoteForm({
   nextQuoteNumber,
   initialCustomerId,
   initialOpportunityId,
+  existingQuote,
+  existingItems,
 }: QuoteFormProps) {
   const { selectedCompany } = useCompany();
-  const [customerId, setCustomerId] = useState(initialCustomerId || '');
-  const [projectId, setProjectId] = useState('');
-  const [quoteNumber, setQuoteNumber] = useState(nextQuoteNumber);
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
-  const [validUntil, setValidUntil] = useState('');
-  const [status, setStatus] = useState<Quote['status']>('offen');
-  const [vatRate, setVatRate] = useState('7.7');
-  const [items, setItems] = useState<Array<{ description: string; quantity: string; unit_price: string; product_id?: string; sort_order: number }>>([
-    { description: '', quantity: '1', unit_price: '', sort_order: 0 }
-  ]);
+  const isEditMode = !!existingQuote;
+
+  // Initialize state with existing values or defaults
+  const [customerId, setCustomerId] = useState(existingQuote?.customer_id || initialCustomerId || '');
+  const [projectId, setProjectId] = useState(existingQuote?.project_id || '');
+  const [quoteNumber, setQuoteNumber] = useState(existingQuote?.quote_number || nextQuoteNumber);
+  const [issueDate, setIssueDate] = useState(
+    existingQuote?.issue_date || new Date().toISOString().split('T')[0]
+  );
+  const [validUntil, setValidUntil] = useState(existingQuote?.valid_until || '');
+  const [status, setStatus] = useState<Quote['status']>(existingQuote?.status || 'offen');
+  const [vatRate, setVatRate] = useState(existingQuote?.vat_rate?.toString() || '7.7');
+  const [items, setItems] = useState<Array<{ description: string; quantity: string; unit_price: string; product_id?: string; sort_order: number }>>(
+    existingItems && existingItems.length > 0
+      ? existingItems.map((item, index) => ({
+          description: item.description,
+          quantity: item.quantity.toString(),
+          unit_price: item.unit_price.toString(),
+          sort_order: item.sort_order ?? index,
+        }))
+      : [{ description: '', quantity: '1', unit_price: '', sort_order: 0 }]
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
 
-  useEffect(() => {
-    setQuoteNumber(nextQuoteNumber);
-  }, [nextQuoteNumber]);
+  // Show warning for sent/accepted/rejected quotes in edit mode
+  const showEditWarning = isEditMode && shouldWarnOnEdit(existingQuote.status);
+  const editWarningMessage = isEditMode ? getEditWarningMessage(existingQuote.status) : '';
 
-  // Set default validity date (30 days from issue date)
+  // Only update quote number from prop in create mode
   useEffect(() => {
-    const issue = new Date(issueDate);
-    const validity = new Date(issue);
-    validity.setDate(validity.getDate() + 30);
-    setValidUntil(validity.toISOString().split('T')[0]);
-  }, [issueDate]);
+    if (!isEditMode) {
+      setQuoteNumber(nextQuoteNumber);
+    }
+  }, [nextQuoteNumber, isEditMode]);
+
+  // Set default validity date (30 days from issue date) - only in create mode
+  useEffect(() => {
+    if (!isEditMode) {
+      const issue = new Date(issueDate);
+      const validity = new Date(issue);
+      validity.setDate(validity.getDate() + 30);
+      setValidUntil(validity.toISOString().split('T')[0]);
+    }
+  }, [issueDate, isEditMode]);
 
   useEffect(() => {
     if (selectedCompany) {
@@ -58,12 +84,12 @@ export default function QuoteForm({
     }
   }, [selectedCompany]);
 
-  // Set initial customer from props (e.g., from Sales Pipeline)
+  // Set initial customer from props (e.g., from Sales Pipeline) - only in create mode
   useEffect(() => {
-    if (initialCustomerId) {
+    if (!isEditMode && initialCustomerId) {
       setCustomerId(initialCustomerId);
     }
-  }, [initialCustomerId]);
+  }, [initialCustomerId, isEditMode]);
 
   const fetchProducts = async () => {
     if (!selectedCompany) return;
@@ -177,7 +203,23 @@ export default function QuoteForm({
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">Neues Angebot</h2>
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        {isEditMode ? 'Angebot bearbeiten' : 'Neues Angebot'}
+      </h2>
+
+      {/* Warning for editing sent/accepted/rejected quotes */}
+      {showEditWarning && (
+        <div className="mb-4 flex items-start gap-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
+          <AlertTriangle className="flex-shrink-0 text-amber-600 mt-0.5" size={20} />
+          <div>
+            <p className="text-amber-800 font-medium">{editWarningMessage}</p>
+            <p className="text-amber-700 text-sm mt-1">
+              Änderungen werden gespeichert, stellen Sie sicher, dass der Kunde über die Korrektur informiert wird.
+            </p>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -439,7 +481,7 @@ export default function QuoteForm({
             disabled={isSubmitting || items.length === 0}
             className="rounded-lg px-4 py-2 font-medium bg-freiluft text-white hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? 'Speichert...' : 'Angebot speichern'}
+            {isSubmitting ? 'Speichert...' : isEditMode ? 'Änderungen speichern' : 'Angebot speichern'}
           </button>
         </div>
       </form>

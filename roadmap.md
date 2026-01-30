@@ -450,34 +450,30 @@ const createNewCompany = async (data: CreateCompanyData) => {
 
 ## PHASE 3: Rechnungs-Upgrade 💰 (Priorität: HOCH)
 
-### 3.1 Rechnungen bearbeiten
+### 3.1 Rechnungen bearbeiten ✅ ERLEDIGT
 
-**Aktuell:** Rechnungen können nur erstellt, nicht bearbeitet werden.
-
-**Problem:** Bearbeitung von "bezahlt"-Rechnungen darf nicht erlaubt sein (Buchungsrelevanz).
-
-**Lösung:**
-```typescript
-const canEditInvoice = (invoice: Invoice): boolean => {
-  return invoice.status !== 'bezahlt'; // Alle außer bezahlte Rechnungen
-};
-
-// InvoiceTable.tsx
-<Button
-  variant="ghost"
-  onClick={() => openEditModal(invoice)}
-  disabled={invoice.status === 'bezahlt'}
->
-  Bearbeiten
-</Button>
-```
+**Implementiert:**
+- `src/utils/invoiceUtils.ts` - Utility mit `canEditInvoice()`, `shouldWarnOnEdit()`, `getEditWarningMessage()`
+- `InvoiceTable.tsx` - Bearbeiten-Button (disabled bei 'bezahlt')
+- `InvoiceForm.tsx` - Edit-Mode via `existingInvoice` + `existingItems` Props
+- `Rechnungen.tsx` - Update-Logik mit sicherer Item-Synchronisation (DELETE + INSERT)
+- Warnung bei 'versendet'/'überfällig' Status
 
 **Checkliste:**
-- [ ] [InvoiceForm.tsx](src/components/InvoiceForm.tsx) - Edit Mode aktivieren
-- [ ] Bearbeiten-Button in [Rechnungen.tsx](src/pages/Rechnungen.tsx) Table
-- [ ] Validierung: Alle Stati außer 'bezahlt' editierbar (entwurf, versendet, überfällig)
-- [ ] Toast Notification bei Versuch, bezahlte Rechnung zu bearbeiten
-- [ ] Optional: Warnung bei Edit von 'versendet' Rechnungen (bereits beim Kunden)
+- [x] [InvoiceForm.tsx](src/components/InvoiceForm.tsx) - Edit Mode aktivieren
+- [x] Bearbeiten-Button in [Rechnungen.tsx](src/pages/Rechnungen.tsx) Table
+- [x] Validierung: Alle Stati außer 'bezahlt' editierbar (entwurf, versendet, überfällig)
+- [x] Toast Notification bei Versuch, bezahlte Rechnung zu bearbeiten
+- [x] Warnung bei Edit von 'versendet' Rechnungen (bereits beim Kunden)
+
+### 3.1b Offerten bearbeiten ✅ ERLEDIGT
+
+**Analog zu Rechnungen implementiert:**
+- `src/utils/quoteUtils.ts` - Utility mit `canEditQuote()` (sperrt nur 'bestaetigt')
+- `QuoteTable.tsx` - Bearbeiten-Button (disabled bei 'bestaetigt')
+- `QuoteForm.tsx` - Edit-Mode via `existingQuote` + `existingItems` Props
+- `Angebote.tsx` - Update-Logik mit sicherer Item-Synchronisation
+- Warnung bei 'versendet'/'akzeptiert'/'abgelehnt' Status
 
 ### 3.2 PDF-Vorschau Modal
 
@@ -1400,13 +1396,15 @@ supabase db push
 **Completed:**
 - Phase 1.1-1.6 - Multi-Company Support + Settings + Validierung ✅
 - Phase 2 - Offerten-Modul komplett ✅
+- Phase 3.1 - Rechnungen bearbeiten ✅
+- Phase 3.1b - Offerten bearbeiten ✅
 - Phase 3.6 - Textvorlagen ✅
 
-**Next:** Phase 3.1 - Rechnungen bearbeiten (Edit Mode für Entwurf/Versendet)
+**Next:** Phase 3.2 - PDF-Vorschau Modal
 **Alt:** Phase 3.4 - Zeiterfassungs-Import (KW-Gruppierung in Rechnung)
 
 ---
 
-**Version:** 1.2
+**Version:** 1.3
 **Aktualisiert:** 2026-01-30
-**Status:** Phase 2 (Offerten) abgeschlossen → Weiter mit Phase 3.1 oder 3.4
+**Status:** Phase 3.1 (Bearbeitung) abgeschlossen → Weiter mit Phase 3.2 oder 3.4

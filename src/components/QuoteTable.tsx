@@ -1,5 +1,6 @@
-import { Download, Trash2, FileCheck, Edit } from 'lucide-react';
+import { Download, Trash2, FileCheck, Pencil } from 'lucide-react';
 import type { Quote, Customer } from '../lib/supabase';
+import { canEditQuote, getEditBlockedReason } from '../utils/quoteUtils';
 
 type QuoteTableProps = {
   quotes: Quote[];
@@ -45,11 +46,6 @@ export default function QuoteTable({
     if (window.confirm(`Möchten Sie das Angebot "${quoteNumber}" wirklich löschen?`)) {
       await onDelete(id);
     }
-  };
-
-  // Check if quote is editable (only offen or versendet)
-  const isEditable = (status: Quote['status']) => {
-    return status === 'offen' || status === 'versendet';
   };
 
   // Check if quote can be deleted (only offen)
@@ -130,7 +126,19 @@ export default function QuoteTable({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
                   <div className="flex justify-end gap-2">
-                    {/* PDF Download - always available */}
+                    {/* 1. Edit - disabled for bestaetigt (converted to invoice) */}
+                    {onEdit && (
+                      <button
+                        onClick={() => onEdit(quote)}
+                        disabled={!canEditQuote(quote.status)}
+                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed"
+                        title={canEditQuote(quote.status) ? 'Bearbeiten' : getEditBlockedReason(quote.status)}
+                      >
+                        <Pencil size={18} />
+                      </button>
+                    )}
+
+                    {/* 2. PDF Download - always available */}
                     <button
                       onClick={() => onDownloadPDF(quote)}
                       className="p-2 text-freiluft hover:bg-teal-50 rounded-lg transition"
@@ -139,18 +147,7 @@ export default function QuoteTable({
                       <Download size={18} />
                     </button>
 
-                    {/* Edit - only for offen/versendet */}
-                    {isEditable(quote.status) && onEdit && (
-                      <button
-                        onClick={() => onEdit(quote)}
-                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
-                        title="Bearbeiten"
-                      >
-                        <Edit size={18} />
-                      </button>
-                    )}
-
-                    {/* Convert to Invoice - only for akzeptiert */}
+                    {/* 3. Convert to Invoice - only for akzeptiert */}
                     {isConvertible(quote.status) && (
                       <button
                         onClick={() => onConvertToInvoice(quote)}
@@ -161,7 +158,7 @@ export default function QuoteTable({
                       </button>
                     )}
 
-                    {/* Delete - only for offen */}
+                    {/* 3. Delete - only for offen */}
                     {isDeletable(quote.status) && (
                       <button
                         onClick={() => handleDelete(quote.id, quote.quote_number)}

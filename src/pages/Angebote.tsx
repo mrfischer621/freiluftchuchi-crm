@@ -8,6 +8,7 @@ import QuoteToInvoiceModal from '../components/QuoteToInvoiceModal';
 import Modal from '../components/Modal';
 import { downloadQuotePDF } from '../utils/pdfGenerator';
 import { validateQuoteData } from '../utils/quoteValidation';
+import { canEditQuote, getEditBlockedReason } from '../utils/quoteUtils';
 import { useCompany } from '../context/CompanyContext';
 import { Plus, AlertCircle } from 'lucide-react';
 
@@ -37,6 +38,10 @@ export default function Angebote() {
   const [nextInvoiceNumber, setNextInvoiceNumber] = useState(`RE-${new Date().getFullYear()}-001`);
   const [toast, setToast] = useState<Toast | null>(null);
   const isFetchingRef = useRef(false);
+
+  // Edit mode state
+  const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
+  const [editingItems, setEditingItems] = useState<QuoteItem[]>([]);
 
   // Get URL params for Sales Pipeline integration
   const initialCustomerId = searchParams.get('customerId') || undefined;
@@ -166,8 +171,10 @@ export default function Angebote() {
   ) => {
     if (!selectedCompany) return;
 
+    const isUpdate = !!editingQuote;
+
     try {
-      // Ensure session variable is set before INSERT
+      // Ensure session variable is set (fixes RLS policy enforcement)
       const { error: sessionError } = await supabase.rpc('set_active_company', {
         company_id: selectedCompany.id
       });
@@ -177,40 +184,89 @@ export default function Angebote() {
         throw sessionError;
       }
 
-      // Insert quote with company_id
-      const { data: quoteData, error: quoteError } = await supabase
-        .from('quotes')
-        .insert([{
-          ...data.quote,
-          company_id: selectedCompany.id,
-          subtotal: calculatedTotals.subtotal,
-          vat_amount: calculatedTotals.vat_amount,
-          total: calculatedTotals.total,
-        }] as any)
-        .select()
-        .single();
+      if (isUpdate) {
+        // UPDATE MODE: Update existing quote
+        const { error: quoteError } = await supabase
+          .from('quotes')
+          .update({
+            customer_id: data.quote.customer_id,
+            project_id: data.quote.project_id,
+            issue_date: data.quote.issue_date,
+            valid_until: data.quote.valid_until,
+            vat_rate: data.quote.vat_rate,
+            status: data.quote.status,
+            subtotal: calculatedTotals.subtotal,
+            vat_amount: calculatedTotals.vat_amount,
+            total: calculatedTotals.total,
+          })
+          .eq('id', editingQuote.id);
 
-      if (quoteError) throw quoteError;
+        if (quoteError) throw quoteError;
 
-      // Insert quote items
-      const itemsWithQuoteId = data.items.map((item, index) => ({
-        quote_id: (quoteData as any).id,
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total: item.quantity * item.unit_price,
-        sort_order: index,
-      }));
+        // DATA INTEGRITY: Delete all old items and insert new ones
+        // This is the safest approach - no complex ID matching required
+        const { error: deleteError } = await supabase
+          .from('quote_items')
+          .delete()
+          .eq('quote_id', editingQuote.id);
 
-      const { error: itemsError } = await supabase
-        .from('quote_items')
-        .insert(itemsWithQuoteId as any);
+        if (deleteError) throw deleteError;
 
-      if (itemsError) throw itemsError;
+        // Insert new items
+        const itemsWithQuoteId = data.items.map((item, index) => ({
+          quote_id: editingQuote.id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total: item.quantity * item.unit_price,
+          sort_order: index,
+        }));
 
-      setIsModalOpen(false);
-      setToast({ type: 'success', message: 'Angebot erfolgreich erstellt!' });
-      await fetchData();
+        const { error: itemsError } = await supabase
+          .from('quote_items')
+          .insert(itemsWithQuoteId as any);
+
+        if (itemsError) throw itemsError;
+
+        handleCloseModal();
+        setToast({ type: 'success', message: 'Angebot erfolgreich aktualisiert!' });
+        await fetchData();
+      } else {
+        // CREATE MODE: Insert new quote
+        const { data: quoteData, error: quoteError } = await supabase
+          .from('quotes')
+          .insert([{
+            ...data.quote,
+            company_id: selectedCompany.id,
+            subtotal: calculatedTotals.subtotal,
+            vat_amount: calculatedTotals.vat_amount,
+            total: calculatedTotals.total,
+          }] as any)
+          .select()
+          .single();
+
+        if (quoteError) throw quoteError;
+
+        // Insert quote items
+        const itemsWithQuoteId = data.items.map((item, index) => ({
+          quote_id: (quoteData as any).id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total: item.quantity * item.unit_price,
+          sort_order: index,
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('quote_items')
+          .insert(itemsWithQuoteId as any);
+
+        if (itemsError) throw itemsError;
+
+        handleCloseModal();
+        setToast({ type: 'success', message: 'Angebot erfolgreich erstellt!' });
+        await fetchData();
+      }
     } catch (err: any) {
       console.error('Error saving quote:', err);
       if (err?.code === '23505') {
@@ -246,11 +302,42 @@ export default function Angebote() {
   };
 
   const handleAddNew = () => {
+    // Reset edit mode for new quote
+    setEditingQuote(null);
+    setEditingItems([]);
     setIsModalOpen(true);
+  };
+
+  const handleEdit = async (quote: Quote) => {
+    // Check if editing is allowed
+    if (!canEditQuote(quote.status)) {
+      setToast({ type: 'error', message: getEditBlockedReason(quote.status) });
+      return;
+    }
+
+    try {
+      // Fetch quote items
+      const { data: items, error } = await supabase
+        .from('quote_items')
+        .select('*')
+        .eq('quote_id', quote.id)
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+
+      setEditingQuote(quote);
+      setEditingItems(items || []);
+      setIsModalOpen(true);
+    } catch (err) {
+      console.error('Error loading quote items:', err);
+      setToast({ type: 'error', message: 'Fehler beim Laden der Angebotspositionen.' });
+    }
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setEditingQuote(null);
+    setEditingItems([]);
   };
 
   const handleDownloadPDF = async (quote: Quote) => {
@@ -466,14 +553,15 @@ export default function Angebote() {
           onDelete={handleDelete}
           onDownloadPDF={handleDownloadPDF}
           onConvertToInvoice={handleConvertToInvoice}
+          onEdit={handleEdit}
         />
       )}
 
-      {/* New Quote Modal */}
+      {/* New/Edit Quote Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        title="Neues Angebot"
+        title={editingQuote ? 'Angebot bearbeiten' : 'Neues Angebot'}
         size="xl"
       >
         <QuoteForm
@@ -481,8 +569,10 @@ export default function Angebote() {
           customers={customers}
           projects={projects}
           nextQuoteNumber={nextQuoteNumber}
-          initialCustomerId={initialCustomerId}
-          initialOpportunityId={initialOpportunityId}
+          initialCustomerId={editingQuote ? undefined : initialCustomerId}
+          initialOpportunityId={editingQuote ? undefined : initialOpportunityId}
+          existingQuote={editingQuote || undefined}
+          existingItems={editingItems.length > 0 ? editingItems : undefined}
         />
       </Modal>
 
