@@ -109,6 +109,11 @@ export interface Invoice {
   status: 'entwurf' | 'versendet' | 'bezahlt' | 'überfällig';
   paid_at: string | null;
   created_at: string;
+  // Additional fields for customization
+  title: string | null;
+  introduction_text: string | null;
+  footer_text: string | null;
+  total_discount_percent: number;
 }
 
 export interface InvoiceItem {
@@ -118,6 +123,7 @@ export interface InvoiceItem {
   quantity: number;
   unit_price: number;
   total: number;
+  discount_percent: number;
 }
 
 // Quote (Offerte/Angebot) Types

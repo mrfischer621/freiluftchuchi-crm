@@ -156,7 +156,7 @@ export default function Rechnungen() {
 
   const handleSubmit = async (
     data: InvoiceFormData,
-    calculatedTotals: { subtotal: number; vat_amount: number; total: number }
+    calculatedTotals: { subtotal: number; vat_amount: number; total: number; discountAmount?: number }
   ) => {
     if (!selectedCompany) return;
 
@@ -173,6 +173,13 @@ export default function Rechnungen() {
         throw sessionError;
       }
 
+      // Helper to calculate item total with discount
+      const calculateItemTotal = (item: typeof data.items[0]) => {
+        const lineTotal = item.quantity * item.unit_price;
+        const discountAmount = lineTotal * ((item.discount_percent || 0) / 100);
+        return lineTotal - discountAmount;
+      };
+
       if (isUpdate) {
         // UPDATE MODE: Update existing invoice
         const { error: invoiceError } = await supabase
@@ -188,6 +195,11 @@ export default function Rechnungen() {
             subtotal: calculatedTotals.subtotal,
             vat_amount: calculatedTotals.vat_amount,
             total: calculatedTotals.total,
+            // New fields for Phase 3.3
+            title: data.invoice.title,
+            introduction_text: data.invoice.introduction_text,
+            footer_text: data.invoice.footer_text,
+            total_discount_percent: data.invoice.total_discount_percent || 0,
           })
           .eq('id', editingInvoice.id);
 
@@ -202,13 +214,14 @@ export default function Rechnungen() {
 
         if (deleteError) throw deleteError;
 
-        // Insert new items
+        // Insert new items with discount
         const itemsWithInvoiceId = data.items.map(item => ({
           invoice_id: editingInvoice.id,
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unit_price,
-          total: item.quantity * item.unit_price,
+          discount_percent: item.discount_percent || 0,
+          total: calculateItemTotal(item),
         }));
 
         const { error: itemsError } = await supabase
@@ -236,13 +249,14 @@ export default function Rechnungen() {
 
         if (invoiceError) throw invoiceError;
 
-        // Insert invoice items
+        // Insert invoice items with discount
         const itemsWithInvoiceId = data.items.map(item => ({
           invoice_id: (invoiceData as any).id,
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unit_price,
-          total: item.quantity * item.unit_price,
+          discount_percent: item.discount_percent || 0,
+          total: calculateItemTotal(item),
         }));
 
         const { error: itemsError } = await supabase
@@ -377,6 +391,9 @@ export default function Rechnungen() {
       items: items || [],
       customer,
       company: freshCompanyData,
+      // Use invoice-specific texts if available, otherwise pdfGenerator falls back to company defaults
+      introText: invoice.introduction_text,
+      footerText: invoice.footer_text,
     };
   };
 

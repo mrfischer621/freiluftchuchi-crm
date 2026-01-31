@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Plus, AlertTriangle } from 'lucide-react';
+import { Trash2, Plus, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Invoice, InvoiceItem, Customer, Project, Product } from '../lib/supabase';
 import { useCompany } from '../context/CompanyContext';
@@ -11,12 +11,20 @@ type InvoiceFormData = {
 };
 
 type InvoiceFormProps = {
-  onSubmit: (data: InvoiceFormData, calculatedTotals: { subtotal: number; vat_amount: number; total: number }) => Promise<void>;
+  onSubmit: (data: InvoiceFormData, calculatedTotals: { subtotal: number; vat_amount: number; total: number; discountAmount: number }) => Promise<void>;
   customers: Customer[];
   projects: Project[];
   nextInvoiceNumber: string;
   existingInvoice?: Invoice;
   existingItems?: InvoiceItem[];
+};
+
+type ItemState = {
+  description: string;
+  quantity: string;
+  unit_price: string;
+  discount_percent: string;
+  product_id?: string;
 };
 
 export default function InvoiceForm({ onSubmit, customers, projects, nextInvoiceNumber, existingInvoice, existingItems }: InvoiceFormProps) {
@@ -33,14 +41,29 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
   const [dueDate, setDueDate] = useState(existingInvoice?.due_date || '');
   const [status, setStatus] = useState<Invoice['status']>(existingInvoice?.status || 'entwurf');
   const [vatRate, setVatRate] = useState(existingInvoice?.vat_rate?.toString() || '7.7');
-  const [items, setItems] = useState<Array<{ description: string; quantity: string; unit_price: string; product_id?: string }>>(
+
+  // New fields for Phase 3.3
+  const [title, setTitle] = useState(existingInvoice?.title || '');
+  const [introText, setIntroText] = useState(existingInvoice?.introduction_text || '');
+  const [footerText, setFooterText] = useState(existingInvoice?.footer_text || '');
+  const [totalDiscountPercent, setTotalDiscountPercent] = useState(
+    existingInvoice?.total_discount_percent?.toString() || '0'
+  );
+  const [showDiscounts, setShowDiscounts] = useState(
+    (existingInvoice?.total_discount_percent && existingInvoice.total_discount_percent > 0) ||
+    (existingItems && existingItems.some(item => item.discount_percent > 0)) ||
+    false
+  );
+
+  const [items, setItems] = useState<ItemState[]>(
     existingItems && existingItems.length > 0
       ? existingItems.map(item => ({
           description: item.description,
           quantity: item.quantity.toString(),
           unit_price: item.unit_price.toString(),
+          discount_percent: (item.discount_percent || 0).toString(),
         }))
-      : [{ description: '', quantity: '1', unit_price: '' }]
+      : [{ description: '', quantity: '1', unit_price: '', discount_percent: '0' }]
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -95,20 +118,35 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
     : [];
 
   const calculateTotals = () => {
-    const subtotal = items.reduce((sum, item) => {
+    // Calculate item subtotals with line discounts
+    const itemsSubtotal = items.reduce((sum, item) => {
       const qty = parseFloat(item.quantity) || 0;
       const price = parseFloat(item.unit_price) || 0;
-      return sum + (qty * price);
+      const lineDiscount = parseFloat(item.discount_percent) || 0;
+      const lineTotal = qty * price;
+      const lineDiscountAmount = lineTotal * (lineDiscount / 100);
+      return sum + (lineTotal - lineDiscountAmount);
     }, 0);
 
-    const vat_amount = subtotal * (parseFloat(vatRate) / 100);
-    const total = subtotal + vat_amount;
+    // Apply total discount
+    const totalDiscountPct = parseFloat(totalDiscountPercent) || 0;
+    const totalDiscountAmount = itemsSubtotal * (totalDiscountPct / 100);
+    const subtotalAfterDiscount = itemsSubtotal - totalDiscountAmount;
 
-    return { subtotal, vat_amount, total };
+    // Calculate VAT on discounted amount
+    const vat_amount = subtotalAfterDiscount * (parseFloat(vatRate) / 100);
+    const total = subtotalAfterDiscount + vat_amount;
+
+    return {
+      subtotal: itemsSubtotal,
+      discountAmount: totalDiscountAmount,
+      vat_amount,
+      total
+    };
   };
 
   const handleAddItem = () => {
-    setItems([...items, { description: '', quantity: '1', unit_price: '' }]);
+    setItems([...items, { description: '', quantity: '1', unit_price: '', discount_percent: '0' }]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -141,12 +179,19 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
     }
   };
 
+  const loadCompanyTemplate = () => {
+    if (selectedCompany) {
+      setIntroText(selectedCompany.invoice_intro_text || '');
+      setFooterText(selectedCompany.invoice_footer_text || '');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const { subtotal, vat_amount, total } = calculateTotals();
+      const { subtotal, vat_amount, total, discountAmount } = calculateTotals();
 
       const invoiceData: InvoiceFormData = {
         invoice: {
@@ -159,6 +204,10 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
           vat_rate: parseFloat(vatRate),
           status,
           paid_at: null,
+          title: title || null,
+          introduction_text: introText || null,
+          footer_text: footerText || null,
+          total_discount_percent: parseFloat(totalDiscountPercent) || 0,
         },
         items: items
           .filter(item => item.description && item.unit_price)
@@ -166,10 +215,11 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
             description: item.description,
             quantity: parseFloat(item.quantity) || 1,
             unit_price: parseFloat(item.unit_price),
+            discount_percent: parseFloat(item.discount_percent) || 0,
           })),
       };
 
-      await onSubmit(invoiceData, { subtotal, vat_amount, total });
+      await onSubmit(invoiceData, { subtotal, vat_amount, total, discountAmount });
     } catch (error) {
       console.error('Error submitting invoice:', error);
     } finally {
@@ -178,6 +228,16 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
   };
 
   const totals = calculateTotals();
+
+  // Calculate line total with discount for display
+  const getLineTotal = (item: ItemState) => {
+    const qty = parseFloat(item.quantity) || 0;
+    const price = parseFloat(item.unit_price) || 0;
+    const discount = parseFloat(item.discount_percent) || 0;
+    const subtotal = qty * price;
+    const discountAmount = subtotal * (discount / 100);
+    return subtotal - discountAmount;
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
@@ -199,6 +259,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Customer, Project, Invoice Number */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label htmlFor="customer" className="block text-sm font-medium text-gray-700 mb-1">
@@ -256,6 +317,22 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
           </div>
         </div>
 
+        {/* Title (new) */}
+        <div>
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+            Titel / Betreff (optional)
+          </label>
+          <input
+            type="text"
+            id="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="z.B. Webentwicklung Januar 2026"
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+          />
+        </div>
+
+        {/* Dates and Status */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label htmlFor="issueDate" className="block text-sm font-medium text-gray-700 mb-1">
@@ -302,28 +379,63 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
           </div>
         </div>
 
+        {/* Introduction Text (new) */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="introText" className="block text-sm font-medium text-gray-700">
+              Einleitungstext (optional)
+            </label>
+            <button
+              type="button"
+              onClick={loadCompanyTemplate}
+              className="text-xs text-freiluft hover:underline"
+            >
+              Vorlage laden
+            </button>
+          </div>
+          <textarea
+            id="introText"
+            value={introText}
+            onChange={(e) => setIntroText(e.target.value)}
+            placeholder="Einleitungstext für die Rechnung..."
+            rows={2}
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition resize-none"
+          />
+        </div>
+
+        {/* Items Section */}
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-900">Positionen</h3>
-            <button
-              type="button"
-              onClick={handleAddItem}
-              className="rounded-lg px-3 py-1.5 text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition flex items-center gap-2"
-            >
-              <Plus size={16} />
-              Position hinzufügen
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowDiscounts(!showDiscounts)}
+                className="rounded-lg px-3 py-1.5 text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition flex items-center gap-2"
+              >
+                {showDiscounts ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                Rabatte
+              </button>
+              <button
+                type="button"
+                onClick={handleAddItem}
+                className="rounded-lg px-3 py-1.5 text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition flex items-center gap-2"
+              >
+                <Plus size={16} />
+                Position hinzufügen
+              </button>
+            </div>
           </div>
 
           <div className="space-y-3">
             {items.map((item, index) => (
               <div key={index} className="space-y-2">
-                <div className="grid grid-cols-12 gap-2 items-end">
+                <div className={`grid gap-2 items-end ${showDiscounts ? 'grid-cols-12' : 'grid-cols-12'}`}>
                   {/* Product Selector */}
-                  <div className="col-span-3">
+                  <div className={showDiscounts ? 'col-span-2' : 'col-span-3'}>
                     {index === 0 && (
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Produkt (optional)
+                        Produkt
                       </label>
                     )}
                     <select
@@ -331,17 +443,17 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
                       onChange={(e) => handleProductSelect(index, e.target.value)}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
                     >
-                      <option value="">Freie Eingabe</option>
+                      <option value="">Frei</option>
                       {products.map((product) => (
                         <option key={product.id} value={product.id}>
-                          {product.name} - CHF {product.price.toFixed(2)}/{product.unit}
+                          {product.name}
                         </option>
                       ))}
                     </select>
                   </div>
 
                   {/* Description */}
-                  <div className="col-span-4">
+                  <div className={showDiscounts ? 'col-span-4' : 'col-span-4'}>
                     {index === 0 && (
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Beschreibung
@@ -380,7 +492,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
                   <div className="col-span-2">
                     {index === 0 && (
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Einzelpreis
+                        Preis
                       </label>
                     )}
                     <input
@@ -394,6 +506,27 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
                     />
                   </div>
+
+                  {/* Line Discount (conditional) */}
+                  {showDiscounts && (
+                    <div className="col-span-1">
+                      {index === 0 && (
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Rabatt %
+                        </label>
+                      )}
+                      <input
+                        type="number"
+                        value={item.discount_percent}
+                        onChange={(e) => handleItemChange(index, 'discount_percent', e.target.value)}
+                        placeholder="0"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                      />
+                    </div>
+                  )}
 
                   {/* Delete Button */}
                   <div className="col-span-1 flex justify-end">
@@ -415,8 +548,13 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
                 <div className="flex justify-end pr-11">
                   <div className="text-sm text-gray-600">
                     Total: <span className="font-semibold text-gray-900">
-                      CHF {((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)).toFixed(2)}
+                      CHF {getLineTotal(item).toFixed(2)}
                     </span>
+                    {showDiscounts && parseFloat(item.discount_percent) > 0 && (
+                      <span className="text-xs text-green-600 ml-2">
+                        (-{item.discount_percent}%)
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -424,12 +562,53 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
           </div>
         </div>
 
+        {/* Footer Text (new) */}
+        <div>
+          <label htmlFor="footerText" className="block text-sm font-medium text-gray-700 mb-1">
+            Bemerkungen / Fusstext (optional)
+          </label>
+          <textarea
+            id="footerText"
+            value={footerText}
+            onChange={(e) => setFooterText(e.target.value)}
+            placeholder="Bemerkungen oder zusätzliche Informationen..."
+            rows={2}
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition resize-none"
+          />
+        </div>
+
+        {/* Totals Section */}
         <div className="border-t pt-4">
           <div className="max-w-sm ml-auto space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Zwischentotal:</span>
               <span className="font-medium">CHF {totals.subtotal.toFixed(2)}</span>
             </div>
+
+            {/* Total Discount (conditional) */}
+            {showDiscounts && (
+              <div className="flex justify-between text-sm items-center gap-4">
+                <span className="text-gray-600">Gesamtrabatt:</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={totalDiscountPercent}
+                    onChange={(e) => setTotalDiscountPercent(e.target.value)}
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    className="w-16 px-2 py-1 border border-gray-200 rounded text-sm text-right"
+                  />
+                  <span className="text-gray-500">%</span>
+                  {totals.discountAmount > 0 && (
+                    <span className="font-medium text-green-600">
+                      -CHF {totals.discountAmount.toFixed(2)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-between text-sm items-center gap-4">
               <span className="text-gray-600">MwSt ({vatRate}%):</span>
               <div className="flex items-center gap-2">

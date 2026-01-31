@@ -666,13 +666,20 @@ function drawInvoiceItems(
 ): number {
   let y = startY;
 
+  // Check if any items have discounts
+  const hasLineDiscounts = items.some(item => (item.discount_percent || 0) > 0);
+  const hasTotalDiscount = (invoice.total_discount_percent || 0) > 0;
+
   // Table header
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.text('Beschreibung', 20, y);
-  doc.text('Menge', 120, y);
-  doc.text('Preis', 145, y);
-  doc.text('Total', 175, y, { align: 'right' });
+  doc.text('Menge', 110, y);
+  doc.text('Preis', 135, y);
+  if (hasLineDiscounts) {
+    doc.text('Rabatt', 160, y);
+  }
+  doc.text('Total', 190, y, { align: 'right' });
   y += 2;
 
   // Header line
@@ -688,13 +695,21 @@ function drawInvoiceItems(
   items.forEach((item) => {
     // Handle long descriptions - sanitize to prevent rendering glitches
     const description = sanitizeForPDF(item.description || '');
-    const lines = doc.splitTextToSize(description, 95);
+    const lines = doc.splitTextToSize(description, hasLineDiscounts ? 85 : 95);
+    const lineDiscount = item.discount_percent || 0;
 
     lines.forEach((line: string, index: number) => {
       doc.text(line, 20, y);
       if (index === 0) {
-        doc.text(item.quantity.toString(), 120, y);
-        doc.text(`CHF ${formatAmount(item.unit_price)}`, 145, y);
+        doc.text(item.quantity.toString(), 110, y);
+        doc.text(`CHF ${formatAmount(item.unit_price)}`, 135, y);
+        if (hasLineDiscounts) {
+          if (lineDiscount > 0) {
+            doc.text(`-${lineDiscount}%`, 160, y);
+          } else {
+            doc.text('-', 160, y);
+          }
+        }
         doc.text(`CHF ${formatAmount(item.total)}`, 190, y, { align: 'right' });
       }
       y += 5;
@@ -704,12 +719,27 @@ function drawInvoiceItems(
   // Spacing
   y += 5;
 
-  // Subtotal
+  // Calculate items subtotal (before total discount)
+  const itemsSubtotal = items.reduce((sum, item) => sum + item.total, 0);
+
+  // Subtotal (items total after line discounts)
   doc.setFont('helvetica', 'bold');
   doc.text('Zwischensumme:', 145, y);
   doc.setFont('helvetica', 'normal');
-  doc.text(`CHF ${formatAmount(invoice.subtotal)}`, 190, y, { align: 'right' });
+  doc.text(`CHF ${formatAmount(itemsSubtotal)}`, 190, y, { align: 'right' });
   y += 6;
+
+  // Total Discount (if any)
+  if (hasTotalDiscount) {
+    const totalDiscountAmount = itemsSubtotal * (invoice.total_discount_percent / 100);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Rabatt (${invoice.total_discount_percent}%):`, 145, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 128, 0); // Green for discount
+    doc.text(`-CHF ${formatAmount(totalDiscountAmount)}`, 190, y, { align: 'right' });
+    doc.setTextColor(0, 0, 0); // Reset to black
+    y += 6;
+  }
 
   // VAT
   if (invoice.vat_amount > 0) {

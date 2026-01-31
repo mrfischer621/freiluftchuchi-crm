@@ -491,52 +491,24 @@ const createNewCompany = async (data: CreateCompanyData) => {
 - [x] Modal schliessen & Download-Funktion
 - [x] Memory Leak Prevention (URL.revokeObjectURL bei close)
 
-### 3.3 Zusätzliche Felder
+### 3.3 Zusätzliche Felder ✅ ERLEDIGT
 
-**Database Update:**
-```sql
-ALTER TABLE invoices
-  ADD COLUMN title text, -- Auftragstitel
-  ADD COLUMN introduction_text text, -- Einleitungstext
-  ADD COLUMN footer_text text, -- Bemerkungen
-  ADD COLUMN line_discount_enabled boolean DEFAULT false,
-  ADD COLUMN total_discount_enabled boolean DEFAULT false;
-```
-
-**UI Update:**
-```tsx
-// InvoiceForm.tsx - Neue Felder mit Markdown Support
-<input placeholder="Auftragstitel (optional)" />
-
-{/* Markdown-Textareas mit Preview */}
-<div className="markdown-field">
-  <label>Einleitungstext (Markdown)</label>
-  <textarea placeholder="**Fett**, *kursiv*, - Listen..." rows={3} />
-  <small>Markdown wird im PDF formatiert dargestellt</small>
-</div>
-
-<div className="markdown-field">
-  <label>Bemerkungen (Markdown)</label>
-  <textarea placeholder="Zahlbar innert 30 Tagen..." rows={3} />
-</div>
-
-// Rabatt-Sektion
-<Checkbox checked={lineDiscount} onChange={...}>
-  Zeilenrabatte aktivieren
-</Checkbox>
-<Checkbox checked={totalDiscount} onChange={...}>
-  Totalrabatt aktivieren
-</Checkbox>
-```
+**Implementiert:**
+- Migration `20260131_invoice_fields.sql` - title, introduction_text, footer_text, total_discount_percent, discount_percent (items)
+- InvoiceForm mit Titel, Einleitungstext, Bemerkungen, Zeilenrabatte und Gesamtrabatt
+- pdfGenerator zeigt Rabatte korrekt an (Zeilen + Total)
+- "Vorlage laden" Button für Company-Templates
+- Toggle für Rabatt-Felder (versteckt wenn nicht gebraucht)
 
 **Checkliste:**
-- [ ] Migration `20260128_invoice_fields.sql`
-- [ ] Types in [lib/supabase.ts](src/lib/supabase.ts) erweitern
-- [ ] Form-Felder in [InvoiceForm.tsx](src/components/InvoiceForm.tsx)
-- [ ] Markdown-Parser installieren: `npm install marked` oder `react-markdown`
-- [ ] PDF-Template in [pdfGenerator.ts](src/utils/pdfGenerator.ts) anpassen
-- [ ] Markdown → HTML/PDF-Rendering (fett, kursiv, Listen)
-- [ ] QuoteForm analog anpassen (Offerten nutzen gleiches Pattern)
+- [x] Migration `20260131_invoice_fields.sql`
+- [x] Types in [lib/supabase.ts](src/lib/supabase.ts) erweitern
+- [x] Form-Felder in [InvoiceForm.tsx](src/components/InvoiceForm.tsx)
+- [x] PDF-Template in [pdfGenerator.ts](src/utils/pdfGenerator.ts) für Rabatte angepasst
+- [x] Rechnungen.tsx handleSubmit für neue Felder angepasst
+- [x] preparePdfData für invoice-spezifische Texte angepasst
+- [ ] QuoteForm analog anpassen (optional, später)
+- [ ] Markdown-Parser (optional, später)
 
 ### 3.4 Zeiterfassungs-Import
 
@@ -1394,13 +1366,14 @@ supabase db push
 - Phase 3.1 - Rechnungen bearbeiten ✅
 - Phase 3.1b - Offerten bearbeiten ✅
 - Phase 3.2 - PDF-Vorschau Modal ✅
+- Phase 3.3 - Zusätzliche Felder (Title, Intro, Footer, Rabatte) ✅
 - Phase 3.6 - Textvorlagen ✅
 
-**Next:** Phase 3.3 - Zusätzliche Felder (Title, Intro, Footer, Discounts)
-**Alt:** Phase 3.4 - Zeiterfassungs-Import (KW-Gruppierung in Rechnung)
+**Next:** Phase 3.4 - Zeiterfassungs-Import (KW-Gruppierung in Rechnung)
+**Alt:** Phase 3.5 - Rabatte (Zeilen + Total) - TEILWEISE in 3.3 erledigt
 
 ---
 
-**Version:** 1.4
+**Version:** 1.5
 **Aktualisiert:** 2026-01-31
-**Status:** Phase 3.2 (PDF-Vorschau) abgeschlossen → Weiter mit Phase 3.3 oder 3.4
+**Status:** Phase 3.3 abgeschlossen → Weiter mit Phase 3.4 (Zeiterfassungs-Import)
