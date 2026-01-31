@@ -966,16 +966,19 @@ if (billable === null || billable === undefined) {
 **WICHTIG:** Kein separater Export nötig - Zeiten werden direkt aus dem Rechnungsmodul importiert.
 
 **Checkliste:**
-- [ ] Tabs in [Zeiterfassung.tsx](src/pages/Zeiterfassung.tsx)
-- [ ] [TimeReporting.tsx](src/components/TimeReporting.tsx) Component
-- [ ] Filter-Logic mit State Management
-- [ ] KPI-Berechnung:
-  - [ ] Anzahl Leistungen (entries.length)
-  - [ ] Total Stunden (sum of hours)
-  - [ ] Verrechenbarkeits-Quote (billable / total * 100)
-  - [ ] Effektiver Stundenlohn (total_revenue / billable_hours) - aus verknüpften Rechnungen
-- [ ] BarChart mit Recharts Library (verrechenbar vs. nicht-verrechenbar)
-- [ ] ❌ KEIN Export-Button (nicht benötigt)
+- [x] Tabs in Zeiterfassung.tsx (Erfassung / Reporting)
+- [x] TimeReporting.tsx Component erstellt
+- [x] Filter-Logic: Datumsbereich, Kunde, Projekt
+- [x] Schnellauswahl: 7 Tage, 30 Tage, Monat, Jahr
+- [x] KPI-Berechnung:
+  - [x] Anzahl Leistungen (entries.length)
+  - [x] Total Stunden (sum of hours)
+  - [x] Verrechenbarkeits-Quote (billable / total * 100)
+  - [x] Effektiver Stundenlohn (total_revenue / billable_hours)
+- [x] BarChart mit Recharts (verrechenbar vs. nicht-verrechenbar)
+- [x] Projekt-Breakdown mit Progress-Bars
+- [x] Gesamtumsatz-Anzeige
+- [x] ❌ KEIN Export-Button (wie geplant)
 
 ---
 
@@ -1366,11 +1369,16 @@ supabase db push
 - Phase 3.5 - Rabatte (Zeilen + Total) ✅
 - Phase 3.6 - Textvorlagen ✅
 - Phase 3.7 - Swiss QR-Bill Fixes & Validierung ✅
+- Phase 3.8 - Kontenplan (Beleg-Upload Struktur bereit) ✅
+- Phase 4.1 - Inline-Input für Zeiteinträge ✅
+- Phase 4.2 - Tabellen-Erweiterungen (KW, Kunde, Gruppierung) ✅
+- Phase 4.3 - Pflichtfeld Verrechenbar ✅
+- Phase 4.4 - Reporting-Submodul ✅
 
-**Next:** Phase 3.8 - Buchungen (Beleg-Upload & Kontenplan)
+**Next:** Phase 5 - UI/UX & Globale Filter
 
 ---
 
-**Version:** 1.7
+**Version:** 1.8
 **Aktualisiert:** 2026-01-31
-**Status:** Phase 3 (Rechnungs-Upgrade) vollständig abgeschlossen → Weiter mit Phase 3.8 oder Phase 4
+**Status:** Phase 4 (Zeiterfassung & Reporting) vollständig abgeschlossen → Weiter mit Phase 5

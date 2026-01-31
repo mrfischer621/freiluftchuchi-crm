@@ -3,12 +3,14 @@ import { supabase } from '../lib/supabase';
 import type { TimeEntry, Project, Customer } from '../lib/supabase';
 import TimeEntryForm from '../components/TimeEntryForm';
 import TimeEntryTable from '../components/TimeEntryTable';
+import TimeReporting from '../components/TimeReporting';
 import Modal from '../components/Modal';
 import { useCompany } from '../context/CompanyContext';
-import { Plus, Calendar, Layers } from 'lucide-react';
+import { Plus, Calendar, Layers, ClipboardList, BarChart3 } from 'lucide-react';
 import { getWeek, getYear, parseISO } from 'date-fns';
 
 type GroupingMode = 'date' | 'week';
+type TabMode = 'erfassung' | 'reporting';
 
 // Extended TimeEntry with customer name from project
 interface TimeEntryWithCustomer extends TimeEntry {
@@ -26,6 +28,9 @@ export default function Zeiterfassung() {
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<TabMode>('erfassung');
 
   // Grouping mode state
   const [groupingMode, setGroupingMode] = useState<GroupingMode>(() => {
@@ -255,42 +260,72 @@ export default function Zeiterfassung() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Zeiterfassung</h1>
-          <p className="text-gray-600 mt-1">Erfassen Sie Ihre Arbeitszeiten</p>
+          <p className="text-gray-600 mt-1">Erfassen und analysieren Sie Ihre Arbeitszeiten</p>
         </div>
-        <div className="flex items-center gap-3">
-          {/* Grouping Toggle */}
-          <div className="flex bg-gray-100 rounded-lg p-1">
+        {activeTab === 'erfassung' && (
+          <div className="flex items-center gap-3">
+            {/* Grouping Toggle */}
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setGroupingMode('date')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                  groupingMode === 'date'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Calendar size={16} />
+                Datum
+              </button>
+              <button
+                onClick={() => setGroupingMode('week')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                  groupingMode === 'week'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Layers size={16} />
+                KW
+              </button>
+            </div>
             <button
-              onClick={() => setGroupingMode('date')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition ${
-                groupingMode === 'date'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              onClick={handleAddNew}
+              className="flex items-center gap-2 px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition"
             >
-              <Calendar size={16} />
-              Datum
-            </button>
-            <button
-              onClick={() => setGroupingMode('week')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition ${
-                groupingMode === 'week'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Layers size={16} />
-              KW
+              <Plus size={20} />
+              Detailliert
             </button>
           </div>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="flex space-x-8">
           <button
-            onClick={handleAddNew}
-            className="flex items-center gap-2 px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition"
+            onClick={() => setActiveTab('erfassung')}
+            className={`pb-3 px-1 border-b-2 font-medium text-sm transition flex items-center gap-2 ${
+              activeTab === 'erfassung'
+                ? 'border-freiluft text-freiluft'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
           >
-            <Plus size={20} />
-            Detailliert
+            <ClipboardList size={18} />
+            Zeiterfassung
           </button>
-        </div>
+          <button
+            onClick={() => setActiveTab('reporting')}
+            className={`pb-3 px-1 border-b-2 font-medium text-sm transition flex items-center gap-2 ${
+              activeTab === 'reporting'
+                ? 'border-freiluft text-freiluft'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <BarChart3 size={18} />
+            Reporting
+          </button>
+        </nav>
       </div>
 
       {/* Error Message */}
@@ -301,13 +336,16 @@ export default function Zeiterfassung() {
       )}
 
       {/* Warning if no projects */}
-      {projects.length === 0 && !isLoading && (
+      {projects.length === 0 && !isLoading && activeTab === 'erfassung' && (
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
           Bitte erstellen Sie zuerst Projekte, bevor Sie Zeiteinträge erfassen.
         </div>
       )}
 
-      {/* Quick-Add Inline Form */}
+      {/* Tab Content: Erfassung */}
+      {activeTab === 'erfassung' && (
+        <>
+          {/* Quick-Add Inline Form */}
       {projects.length > 0 && (
         <div className="bg-white rounded-lg shadow-sm p-4">
           <form onSubmit={handleQuickAdd} className="flex flex-wrap gap-3 items-end">
@@ -431,20 +469,27 @@ export default function Zeiterfassung() {
         </div>
       )}
 
-      {/* Table */}
-      {isLoading ? (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <p className="text-gray-500 text-center">Lädt Zeiteinträge...</p>
-        </div>
-      ) : (
-        <TimeEntryTable
-          entries={filteredEntries}
-          projects={projects}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          groupingMode={groupingMode}
-          groupedEntries={groupedEntries}
-        />
+          {/* Table */}
+          {isLoading ? (
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <p className="text-gray-500 text-center">Lädt Zeiteinträge...</p>
+            </div>
+          ) : (
+            <TimeEntryTable
+              entries={filteredEntries}
+              projects={projects}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              groupingMode={groupingMode}
+              groupedEntries={groupedEntries}
+            />
+          )}
+        </>
+      )}
+
+      {/* Tab Content: Reporting */}
+      {activeTab === 'reporting' && (
+        <TimeReporting entries={entries} projects={projects} />
       )}
 
       {/* Modal */}
