@@ -582,7 +582,7 @@ export default function Settings() {
 
               <div>
                 <label htmlFor="qr_iban" className="block text-sm font-medium text-gray-700 mb-1">
-                  QR-IBAN
+                  QR-IBAN <span className="text-xs font-normal text-blue-600">(empfohlen)</span>
                 </label>
                 <input
                   type="text"
@@ -594,6 +594,10 @@ export default function Settings() {
                 />
               </div>
             </div>
+            <p className="text-xs text-gray-500 -mt-2">
+              QR-IBAN (beginnt mit CH..30xxx-31xxx) ermöglicht automatische Zahlungszuordnung via Referenznummer.
+              Mindestens IBAN oder QR-IBAN ist für QR-Rechnungen erforderlich.
+            </p>
 
             <div>
               <label htmlFor="bank_name" className="block text-sm font-medium text-gray-700 mb-1">

@@ -579,39 +579,24 @@ const groupTimeEntries = (entries: TimeEntry[]): InvoiceItem[] => {
 - [ ] Validierung: Zeiten dürfen nicht doppelt verrechnet werden (invoice_id IS NULL check)
 - [ ] UI: Summe der Stunden pro KW prominent anzeigen
 
-### 3.5 Rabatte (Zeilen + Total)
+### 3.5 Rabatte (Zeilen + Total) ✅ ERLEDIGT
 
-**Zeilenrabatt:**
-```typescript
-interface InvoiceItem {
-  // ...
-  unit_price: number;
-  discount_percent: number; // NEU
-  subtotal: number; // unit_price * quantity
-  discount_amount: number; // subtotal * (discount_percent / 100)
-  total: number; // subtotal - discount_amount
-}
-```
+**Hinweis:** Wurde bereits in Phase 3.3 implementiert (Migration 20260131_invoice_fields.sql).
 
-**Totalrabatt:**
-```typescript
-interface Invoice {
-  // ...
-  subtotal: number; // Summe aller Item-Totals
-  total_discount_percent: number; // NEU
-  total_discount_amount: number; // subtotal * (percent / 100)
-  vat_amount: number; // (subtotal - total_discount) * vat_rate
-  total_amount: number; // subtotal - total_discount + vat
-}
-```
+**Implementiert:**
+- `discount_percent` in invoice_items (Zeilen-Rabatt)
+- `total_discount_percent` in invoices (Gesamt-Rabatt)
+- InvoiceForm: Rabatt-Input pro Zeile + Totalrabatt mit Toggle
+- Berechnung: Subtotal → Zeilen-Rabatte → Total-Rabatt → MwSt → Total
+- PDF: Zeigt Zeilen-Rabatte und Gesamt-Rabatt korrekt an (pdfGenerator.ts:670-738)
 
 **Checkliste:**
-- [ ] Database: discount_percent in invoice_items
-- [ ] Database: total_discount_percent in invoices
-- [ ] InvoiceForm: Rabatt-Input pro Zeile (conditional)
-- [ ] InvoiceForm: Totalrabatt-Input (conditional)
-- [ ] Berechnung: Subtotal → Rabatt → MwSt → Total
-- [ ] PDF: Rabatte anzeigen (Zeilen + Subtotal-Abzug)
+- [x] Database: discount_percent in invoice_items
+- [x] Database: total_discount_percent in invoices
+- [x] InvoiceForm: Rabatt-Input pro Zeile (conditional)
+- [x] InvoiceForm: Totalrabatt-Input (conditional)
+- [x] Berechnung: Subtotal → Rabatt → MwSt → Total
+- [x] PDF: Rabatte anzeigen (Zeilen + Subtotal-Abzug)
 
 ### 3.6 Textvorlagen ✅ ERLEDIGT
 
@@ -648,29 +633,30 @@ ADD COLUMN quote_footer_text TEXT;
 - [ ] QuoteForm: Analog (wenn Offerten-Modul implementiert wird)
 - [ ] Optional: Live-Preview der Markdown-Formatierung
 
-### 3.7 Swiss QR-Bill - Fixes & Validierung
+### 3.7 Swiss QR-Bill - Fixes & Validierung ✅ ERLEDIGT
 
-**Problem:** QR-Bill Implementation ist teilweise vorhanden, aber Validierung fehlt.
+**Status:** Vollständig implementiert und funktional.
 
-**Aktueller Status (aus Codebase-Analyse):**
-- [swissqr.ts](src/utils/swissqr.ts) existiert
-- [pdfGenerator.ts](src/utils/pdfGenerator.ts) existiert
-- Dokumentation: SWISSQR_IMPLEMENTATION_V2.md vorhanden
+**Implementiert:**
+- **Latin-1 Sanitization:** `clean()` und `isAllowedLatinChar()` in swissqr.ts (Zeilen 62-93)
+- **Vollständige Validierung:** IBAN-Prüfziffern, QR-IBAN-Erkennung, QRR/SCOR-Referenzen, Adressen
+- **QR-IBAN vs. IBAN Logik:** Automatische Erkennung (IID 30000-31999), korrekte Referenztyp-Zuordnung
+- **PDF-Integration:** QR-Bill nach SPS 2025 v2.3 Standard
+- **Fehlerhandling:** Deutsche Fehlermeldungen, Validierung vor PDF-Generierung
+- **Settings UI:** QR-IBAN Feld mit "(empfohlen)" Label und Hinweistext
 
-**Fehlende/Unvollständige Features:**
-1. Latin-1 Validierung der Eingaben (Namen, Adressen)
-2. QR-IBAN vs. IBAN Unterscheidung im UI
-3. Fehlerhandling bei unvollständigen Daten (bereits in 1.5 adressiert)
-4. QR-Code Positionierung auf PDF prüfen
+**Dokumentation:**
+- `SWISSQR_IMPLEMENTATION_V2.md` - Vollständige technische Dokumentation
+- `SECURITY_SANITIZATION.md` - Sicherheitshinweise zu Latin-1
 
 **Checkliste:**
-- [ ] [swissqr.ts](src/utils/swissqr.ts) reviewen - Latin-1 Character Check
-- [ ] Validation-Funktion: validateSwissQRData()
-- [ ] Company Settings: QR-IBAN Feld prominenter machen
-- [ ] InvoiceForm: Warnung wenn QR-IBAN fehlt
-- [ ] PDF: QR-Code Position & Grösse testen (SPS 2025 Standard)
-- [ ] Test mit beiden: IBAN & QR-IBAN
-- [ ] Referenz-Nummer korrekt generieren (Rechnungsnummer)
+- [x] swissqr.ts Latin-1 Character Check (Zeilen 51-93)
+- [x] Validation-Funktion: validateInvoiceData() in invoiceValidation.ts
+- [x] Company Settings: QR-IBAN Feld mit Hinweistext
+- [x] PDF-Validierung: Warnung wenn IBAN/QR-IBAN fehlt
+- [x] PDF: QR-Code Position & Grösse (SPS 2025 Standard)
+- [x] Automatische Erkennung IBAN vs. QR-IBAN
+- [x] Referenz-Nummer: SwissQRBill.generateQRReference() mit Mod10-Prüfziffer
 
 ### 3.8 Buchungen - Beleg-Upload & Kontenplan
 
@@ -1376,13 +1362,15 @@ supabase db push
 - Phase 3.1b - Offerten bearbeiten ✅
 - Phase 3.2 - PDF-Vorschau Modal ✅
 - Phase 3.3 - Zusätzliche Felder (Title, Intro, Footer, Rabatte) ✅
+- Phase 3.4 - Zeiterfassungs-Import ✅
+- Phase 3.5 - Rabatte (Zeilen + Total) ✅
 - Phase 3.6 - Textvorlagen ✅
+- Phase 3.7 - Swiss QR-Bill Fixes & Validierung ✅
 
-**Next:** Phase 3.4 - Zeiterfassungs-Import (KW-Gruppierung in Rechnung)
-**Alt:** Phase 3.5 - Rabatte (Zeilen + Total) - TEILWEISE in 3.3 erledigt
+**Next:** Phase 3.8 - Buchungen (Beleg-Upload & Kontenplan)
 
 ---
 
-**Version:** 1.5
+**Version:** 1.7
 **Aktualisiert:** 2026-01-31
-**Status:** Phase 3.3 abgeschlossen → Weiter mit Phase 3.4 (Zeiterfassungs-Import)
+**Status:** Phase 3 (Rechnungs-Upgrade) vollständig abgeschlossen → Weiter mit Phase 3.8 oder Phase 4
