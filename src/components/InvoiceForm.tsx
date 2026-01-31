@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Plus, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, Plus, AlertTriangle, ChevronDown, ChevronUp, Clock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Invoice, InvoiceItem, Customer, Project, Product } from '../lib/supabase';
 import { useCompany } from '../context/CompanyContext';
 import { shouldWarnOnEdit, getEditWarningMessage } from '../utils/invoiceUtils';
+import TimeEntryImportModal from './TimeEntryImportModal';
 
 type InvoiceFormData = {
   invoice: Omit<Invoice, 'id' | 'created_at' | 'subtotal' | 'vat_amount' | 'total'>;
   items: Array<Omit<InvoiceItem, 'id' | 'invoice_id' | 'total'>>;
+  timeEntryIds?: string[]; // IDs of time entries to link after save
 };
 
 type InvoiceFormProps = {
-  onSubmit: (data: InvoiceFormData, calculatedTotals: { subtotal: number; vat_amount: number; total: number; discountAmount: number }) => Promise<void>;
+  onSubmit: (data: InvoiceFormData, calculatedTotals: { subtotal: number; vat_amount: number; total: number; discountAmount: number }, timeEntryIds?: string[]) => Promise<void>;
   customers: Customer[];
   projects: Project[];
   nextInvoiceNumber: string;
@@ -67,6 +69,8 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
+  const [isTimeImportModalOpen, setIsTimeImportModalOpen] = useState(false);
+  const [importedTimeEntryIds, setImportedTimeEntryIds] = useState<string[]>([]);
 
   // Show warning for sent/overdue invoices in edit mode
   const showEditWarning = isEditMode && shouldWarnOnEdit(existingInvoice.status);
@@ -186,6 +190,31 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
     }
   };
 
+  const handleTimeEntryImport = (importedItems: Array<{
+    description: string;
+    quantity: number;
+    unit_price: number;
+    timeEntryIds: string[];
+  }>) => {
+    // Add imported items to the items list
+    const newItems: ItemState[] = importedItems.map(item => ({
+      description: item.description,
+      quantity: item.quantity.toString(),
+      unit_price: item.unit_price.toString(),
+      discount_percent: '0',
+    }));
+
+    // Remove empty first item if present
+    setItems(prev => {
+      const hasOnlyEmptyItem = prev.length === 1 && !prev[0].description && !prev[0].unit_price;
+      return hasOnlyEmptyItem ? newItems : [...prev, ...newItems];
+    });
+
+    // Collect all time entry IDs for later update
+    const allTimeEntryIds = importedItems.flatMap(item => item.timeEntryIds);
+    setImportedTimeEntryIds(prev => [...prev, ...allTimeEntryIds]);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -219,7 +248,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
           })),
       };
 
-      await onSubmit(invoiceData, { subtotal, vat_amount, total, discountAmount });
+      await onSubmit(invoiceData, { subtotal, vat_amount, total, discountAmount }, importedTimeEntryIds.length > 0 ? importedTimeEntryIds : undefined);
     } catch (error) {
       console.error('Error submitting invoice:', error);
     } finally {
@@ -408,6 +437,17 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-900">Positionen</h3>
             <div className="flex items-center gap-2">
+              {/* Time Entry Import Button - only show when customer is selected */}
+              {customerId && (
+                <button
+                  type="button"
+                  onClick={() => setIsTimeImportModalOpen(true)}
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium bg-freiluft/10 text-freiluft hover:bg-freiluft/20 transition flex items-center gap-2"
+                >
+                  <Clock size={16} />
+                  Zeiten laden
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setShowDiscounts(!showDiscounts)}
@@ -641,6 +681,15 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
           </button>
         </div>
       </form>
+
+      {/* Time Entry Import Modal */}
+      <TimeEntryImportModal
+        isOpen={isTimeImportModalOpen}
+        onClose={() => setIsTimeImportModalOpen(false)}
+        customerId={customerId}
+        projectId={projectId}
+        onImport={handleTimeEntryImport}
+      />
     </div>
   );
 }

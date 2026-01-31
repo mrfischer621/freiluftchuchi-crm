@@ -16,6 +16,7 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
   const [hours, setHours] = useState('');
   const [rate, setRate] = useState('140');
   const [description, setDescription] = useState('');
+  const [billable, setBillable] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
       setHours(editingEntry.hours.toString());
       setRate(editingEntry.rate.toString());
       setDescription(editingEntry.description || '');
+      setBillable(editingEntry.billable ?? true);
     } else {
       resetForm();
     }
@@ -36,6 +38,7 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
     setHours('');
     setRate('140');
     setDescription('');
+    setBillable(true);
   };
 
   const calculateAmount = () => {
@@ -57,6 +60,8 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
         rate: parseFloat(rate),
         description: description || null,
         invoiced: false,
+        billable,
+        invoice_id: null,
       });
       resetForm();
     } catch (error) {
@@ -172,6 +177,34 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
             className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition resize-none"
             placeholder="Tätigkeitsbeschreibung..."
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Verrechenbar <span className="text-red-500">*</span>
+          </label>
+          <div className="flex gap-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="billable"
+                checked={billable === true}
+                onChange={() => setBillable(true)}
+                className="w-4 h-4 text-freiluft border-gray-300 focus:ring-freiluft"
+              />
+              <span className="text-sm text-gray-700">Ja</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="billable"
+                checked={billable === false}
+                onChange={() => setBillable(false)}
+                className="w-4 h-4 text-freiluft border-gray-300 focus:ring-freiluft"
+              />
+              <span className="text-sm text-gray-700">Nein</span>
+            </label>
+          </div>
         </div>
 
         <div className="flex gap-3">

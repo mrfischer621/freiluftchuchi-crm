@@ -510,9 +510,17 @@ const createNewCompany = async (data: CreateCompanyData) => {
 - [ ] QuoteForm analog anpassen (optional, später)
 - [ ] Markdown-Parser (optional, später)
 
-### 3.4 Zeiterfassungs-Import
+### 3.4 Zeiterfassungs-Import ⏳ IN ARBEIT
 
 **Feature:** In InvoiceForm Button "Offene Zeiten laden".
+
+**Database-Änderungen:**
+```sql
+-- Neue Spalten in time_entries
+ALTER TABLE time_entries
+  ADD COLUMN invoice_id uuid REFERENCES invoices(id) ON DELETE SET NULL,
+  ADD COLUMN billable boolean NOT NULL DEFAULT true;
+```
 
 **Logic:**
 ```typescript
@@ -562,11 +570,12 @@ const groupTimeEntries = (entries: TimeEntry[]): InvoiceItem[] => {
 **Nach Rechnung erstellt:** time_entries.invoice_id setzen (Link).
 
 **Checkliste:**
-- [ ] Button "Zeiten laden" in InvoiceForm
-- [ ] Modal: Zeiteinträge auswählen (Checkboxes) - NUR verrechenbare Zeiten anzeigen
-- [ ] Gruppierungs-Logic: Pro Kalenderwoche im Monat
-- [ ] date-fns: `getWeek()` und `format()` für KW-Berechnung
-- [ ] Nach Save: time_entries.invoice_id updaten (Link zur Rechnung)
+- [x] Migration `20260131_time_entries_invoice_link.sql` erstellt
+- [x] TypeScript Type TimeEntry erweitert (invoice_id, billable)
+- [x] Button "Zeiten laden" in InvoiceForm
+- [x] Modal: TimeEntryImportModal.tsx - Zeiteinträge auswählen (Checkboxes)
+- [x] Gruppierungs-Logic: Pro Kalenderwoche (date-fns getWeek mit weekStartsOn: 1)
+- [ ] Nach Save: time_entries.invoice_id updaten (Link zur Rechnung) - NÄCHSTER SCHRITT
 - [ ] Validierung: Zeiten dürfen nicht doppelt verrechnet werden (invoice_id IS NULL check)
 - [ ] UI: Summe der Stunden pro KW prominent anzeigen
 

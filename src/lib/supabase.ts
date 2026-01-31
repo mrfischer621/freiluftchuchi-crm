@@ -91,6 +91,8 @@ export interface TimeEntry {
   rate: number;
   description: string | null;
   invoiced: boolean;
+  billable: boolean; // true = verrechenbar
+  invoice_id: string | null; // Reference to invoice if already invoiced
   created_at: string;
 }
 
