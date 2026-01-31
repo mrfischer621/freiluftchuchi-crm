@@ -920,6 +920,18 @@ export async function downloadInvoicePDF(data: InvoiceData): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Get invoice PDF as Blob URL for preview
+ * IMPORTANT: Caller must call URL.revokeObjectURL() when done!
+ *
+ * @param data - Invoice data with all related entities
+ * @returns Promise<string> - Blob URL for iframe display
+ */
+export async function getInvoicePdfBlobUrl(data: InvoiceData): Promise<string> {
+  const pdfBlob = await generateInvoicePDF(data);
+  return URL.createObjectURL(pdfBlob);
+}
+
 // ============================================================================
 // QUOTE PDF GENERATION (NO QR-Bill)
 // ============================================================================
@@ -1220,4 +1232,16 @@ export async function downloadQuotePDF(data: QuoteData): Promise<void> {
   document.body.removeChild(link);
 
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Get quote PDF as Blob URL for preview
+ * IMPORTANT: Caller must call URL.revokeObjectURL() when done!
+ *
+ * @param data - Quote data with all related entities
+ * @returns Promise<string> - Blob URL for iframe display
+ */
+export async function getQuotePdfBlobUrl(data: QuoteData): Promise<string> {
+  const pdfBlob = await generateQuotePDF(data);
+  return URL.createObjectURL(pdfBlob);
 }

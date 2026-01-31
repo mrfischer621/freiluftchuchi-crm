@@ -1,4 +1,4 @@
-import { Download, Trash2, FileCheck, Pencil } from 'lucide-react';
+import { Download, Trash2, FileCheck, Pencil, Eye } from 'lucide-react';
 import type { Quote, Customer } from '../lib/supabase';
 import { canEditQuote, getEditBlockedReason } from '../utils/quoteUtils';
 
@@ -7,6 +7,7 @@ type QuoteTableProps = {
   customers: Customer[];
   onDelete: (id: string) => Promise<void>;
   onDownloadPDF: (quote: Quote) => Promise<void>;
+  onPreviewPDF: (quote: Quote) => Promise<void>;
   onConvertToInvoice: (quote: Quote) => void;
   onEdit?: (quote: Quote) => void;
 };
@@ -34,6 +35,7 @@ export default function QuoteTable({
   customers,
   onDelete,
   onDownloadPDF,
+  onPreviewPDF,
   onConvertToInvoice,
   onEdit,
 }: QuoteTableProps) {
@@ -138,7 +140,16 @@ export default function QuoteTable({
                       </button>
                     )}
 
-                    {/* 2. PDF Download - always available */}
+                    {/* 2. PDF Preview - always available */}
+                    <button
+                      onClick={() => onPreviewPDF(quote)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                      title="PDF Vorschau"
+                    >
+                      <Eye size={18} />
+                    </button>
+
+                    {/* 3. PDF Download - always available */}
                     <button
                       onClick={() => onDownloadPDF(quote)}
                       className="p-2 text-freiluft hover:bg-teal-50 rounded-lg transition"
@@ -147,7 +158,7 @@ export default function QuoteTable({
                       <Download size={18} />
                     </button>
 
-                    {/* 3. Convert to Invoice - only for akzeptiert */}
+                    {/* 4. Convert to Invoice - only for akzeptiert */}
                     {isConvertible(quote.status) && (
                       <button
                         onClick={() => onConvertToInvoice(quote)}
@@ -158,7 +169,7 @@ export default function QuoteTable({
                       </button>
                     )}
 
-                    {/* 3. Delete - only for offen */}
+                    {/* 5. Delete - only for offen */}
                     {isDeletable(quote.status) && (
                       <button
                         onClick={() => handleDelete(quote.id, quote.quote_number)}

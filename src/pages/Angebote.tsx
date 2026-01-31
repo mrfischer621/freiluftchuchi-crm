@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import type { Quote, QuoteItem, Customer, Project } from '../lib/supabase';
+import type { Quote, QuoteItem, Customer, Project, Company } from '../lib/supabase';
 import QuoteForm from '../components/QuoteForm';
 import QuoteTable from '../components/QuoteTable';
 import QuoteToInvoiceModal from '../components/QuoteToInvoiceModal';
 import Modal from '../components/Modal';
-import { downloadQuotePDF } from '../utils/pdfGenerator';
+import PdfPreviewModal from '../components/PdfPreviewModal';
+import { downloadQuotePDF, getQuotePdfBlobUrl } from '../utils/pdfGenerator';
 import { validateQuoteData } from '../utils/quoteValidation';
 import { canEditQuote, getEditBlockedReason } from '../utils/quoteUtils';
 import { useCompany } from '../context/CompanyContext';
@@ -42,6 +43,17 @@ export default function Angebote() {
   // Edit mode state
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
   const [editingItems, setEditingItems] = useState<QuoteItem[]>([]);
+
+  // PDF Preview state
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
+  const [previewQuote, setPreviewQuote] = useState<Quote | null>(null);
+  const [previewData, setPreviewData] = useState<{
+    quote: Quote;
+    items: QuoteItem[];
+    customer: Customer;
+    company: Company;
+  } | null>(null);
 
   // Get URL params for Sales Pipeline integration
   const initialCustomerId = searchParams.get('customerId') || undefined;
@@ -340,61 +352,105 @@ export default function Angebote() {
     setEditingItems([]);
   };
 
+  // Helper function to prepare PDF data (shared by preview and download)
+  const preparePdfData = async (quote: Quote) => {
+    if (!selectedCompany) {
+      throw new Error('Keine Firma ausgewählt');
+    }
+
+    // Fetch quote items and fresh company data in parallel
+    const [itemsResult, companyResult] = await Promise.all([
+      supabase
+        .from('quote_items')
+        .select('*')
+        .eq('quote_id', quote.id)
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('companies')
+        .select('*')
+        .eq('id', selectedCompany.id)
+        .single()
+    ]);
+
+    if (itemsResult.error) throw itemsResult.error;
+    if (companyResult.error) throw companyResult.error;
+
+    const items = itemsResult.data;
+    const freshCompanyData = companyResult.data;
+
+    // Get customer
+    const customer = customers.find((c) => c.id === quote.customer_id);
+    if (!customer) {
+      throw new Error('Kunde nicht gefunden');
+    }
+
+    // Validate data
+    const validation = validateQuoteData(
+      { ...quote, items: items || [] },
+      freshCompanyData,
+      customer
+    );
+
+    if (!validation.valid) {
+      throw new Error(validation.errors.join(' • '));
+    }
+
+    return {
+      quote,
+      items: items || [],
+      customer,
+      company: freshCompanyData,
+    };
+  };
+
+  const handlePreviewPDF = async (quote: Quote) => {
+    try {
+      const data = await preparePdfData(quote);
+      const blobUrl = await getQuotePdfBlobUrl(data);
+
+      setPreviewQuote(quote);
+      setPreviewData(data);
+      setPreviewBlobUrl(blobUrl);
+      setIsPreviewOpen(true);
+    } catch (err) {
+      console.error('Error generating PDF preview:', err);
+      setToast({
+        type: 'error',
+        message: `Fehler beim Erstellen der Vorschau: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`,
+      });
+    }
+  };
+
+  const handlePreviewClose = () => {
+    // Cleanup blob URL to prevent memory leaks
+    if (previewBlobUrl) {
+      URL.revokeObjectURL(previewBlobUrl);
+    }
+    setIsPreviewOpen(false);
+    setPreviewBlobUrl(null);
+    setPreviewQuote(null);
+    setPreviewData(null);
+  };
+
+  const handlePreviewDownload = async () => {
+    if (!previewData) return;
+
+    try {
+      await downloadQuotePDF(previewData);
+      setToast({ type: 'success', message: 'PDF erfolgreich heruntergeladen' });
+    } catch (err) {
+      console.error('Error downloading PDF:', err);
+      setToast({
+        type: 'error',
+        message: `Fehler beim Herunterladen: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`,
+      });
+    }
+  };
+
   const handleDownloadPDF = async (quote: Quote) => {
     try {
-      if (!selectedCompany) {
-        setToast({ type: 'error', message: 'Keine Firma ausgewählt' });
-        return;
-      }
-
-      // Fetch quote items and fresh company data in parallel
-      const [itemsResult, companyResult] = await Promise.all([
-        supabase
-          .from('quote_items')
-          .select('*')
-          .eq('quote_id', quote.id)
-          .order('sort_order', { ascending: true }),
-        supabase
-          .from('companies')
-          .select('*')
-          .eq('id', selectedCompany.id)
-          .single()
-      ]);
-
-      if (itemsResult.error) throw itemsResult.error;
-      if (companyResult.error) throw companyResult.error;
-
-      const items = itemsResult.data;
-      const freshCompanyData = companyResult.data;
-
-      // Get customer
-      const customer = customers.find((c) => c.id === quote.customer_id);
-      if (!customer) {
-        setToast({ type: 'error', message: 'Kunde nicht gefunden' });
-        return;
-      }
-
-      // VALIDATE DATA BEFORE PDF GENERATION
-      const validation = validateQuoteData(
-        { ...quote, items: items || [] },
-        freshCompanyData,
-        customer
-      );
-
-      if (!validation.valid) {
-        const errorMessage = validation.errors.join(' • ');
-        setToast({ type: 'error', message: errorMessage });
-        return;
-      }
-
-      // Generate and download PDF
-      await downloadQuotePDF({
-        quote,
-        items: items || [],
-        customer,
-        company: freshCompanyData,
-      });
-
+      const data = await preparePdfData(quote);
+      await downloadQuotePDF(data);
       setToast({ type: 'success', message: 'PDF erfolgreich erstellt' });
     } catch (err) {
       console.error('Error generating PDF:', err);
@@ -552,6 +608,7 @@ export default function Angebote() {
           customers={customers}
           onDelete={handleDelete}
           onDownloadPDF={handleDownloadPDF}
+          onPreviewPDF={handlePreviewPDF}
           onConvertToInvoice={handleConvertToInvoice}
           onEdit={handleEdit}
         />
@@ -602,6 +659,16 @@ export default function Angebote() {
           />
         )}
       </Modal>
+
+      {/* PDF Preview Modal */}
+      <PdfPreviewModal
+        isOpen={isPreviewOpen}
+        onClose={handlePreviewClose}
+        pdfBlobUrl={previewBlobUrl}
+        onDownload={handlePreviewDownload}
+        title="Angebots-Vorschau"
+        fileName={previewQuote ? `Angebot_${previewQuote.quote_number}.pdf` : ''}
+      />
 
       {/* Toast Notification */}
       {toast && (

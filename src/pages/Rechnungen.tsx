@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Invoice, InvoiceItem, Customer, Project } from '../lib/supabase';
+import type { Invoice, InvoiceItem, Customer, Project, Company } from '../lib/supabase';
 import InvoiceForm from '../components/InvoiceForm';
 import InvoiceTable from '../components/InvoiceTable';
 import Modal from '../components/Modal';
-import { downloadInvoicePDF } from '../utils/pdfGenerator';
+import PdfPreviewModal from '../components/PdfPreviewModal';
+import { downloadInvoicePDF, getInvoicePdfBlobUrl } from '../utils/pdfGenerator';
 import { validateInvoiceData } from '../utils/invoiceValidation';
 import { canEditInvoice, getEditBlockedReason } from '../utils/invoiceUtils';
 import { useCompany } from '../context/CompanyContext';
@@ -35,6 +36,17 @@ export default function Rechnungen() {
   // Edit mode state
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [editingItems, setEditingItems] = useState<InvoiceItem[]>([]);
+
+  // PDF Preview state
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
+  const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
+  const [previewData, setPreviewData] = useState<{
+    invoice: Invoice;
+    items: InvoiceItem[];
+    customer: Customer;
+    company: Company;
+  } | null>(null);
 
   useEffect(() => {
     console.log('[Rechnungen] useEffect triggered, selectedCompany:', selectedCompany?.name);
@@ -318,62 +330,104 @@ export default function Rechnungen() {
     setEditingItems([]);
   };
 
+  // Helper function to prepare PDF data (shared by preview and download)
+  const preparePdfData = async (invoice: Invoice) => {
+    if (!selectedCompany) {
+      throw new Error('Keine Firma ausgewählt');
+    }
+
+    // Fetch invoice items and fresh company data in parallel
+    const [itemsResult, companyResult] = await Promise.all([
+      supabase
+        .from('invoice_items')
+        .select('*')
+        .eq('invoice_id', invoice.id),
+      supabase
+        .from('companies')
+        .select('*')
+        .eq('id', selectedCompany.id)
+        .single()
+    ]);
+
+    if (itemsResult.error) throw itemsResult.error;
+    if (companyResult.error) throw companyResult.error;
+
+    const items = itemsResult.data;
+    const freshCompanyData = companyResult.data;
+
+    // Get customer
+    const customer = customers.find((c) => c.id === invoice.customer_id);
+    if (!customer) {
+      throw new Error('Kunde nicht gefunden');
+    }
+
+    // Validate data
+    const validation = validateInvoiceData(
+      { ...invoice, items: items || [] },
+      freshCompanyData,
+      customer
+    );
+
+    if (!validation.valid) {
+      throw new Error(validation.errors.join(' • '));
+    }
+
+    return {
+      invoice,
+      items: items || [],
+      customer,
+      company: freshCompanyData,
+    };
+  };
+
+  const handlePreviewPDF = async (invoice: Invoice) => {
+    try {
+      const data = await preparePdfData(invoice);
+      const blobUrl = await getInvoicePdfBlobUrl(data);
+
+      setPreviewInvoice(invoice);
+      setPreviewData(data);
+      setPreviewBlobUrl(blobUrl);
+      setIsPreviewOpen(true);
+    } catch (err) {
+      console.error('Error generating PDF preview:', err);
+      setToast({
+        type: 'error',
+        message: `Fehler beim Erstellen der Vorschau: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`,
+      });
+    }
+  };
+
+  const handlePreviewClose = () => {
+    // Cleanup blob URL to prevent memory leaks
+    if (previewBlobUrl) {
+      URL.revokeObjectURL(previewBlobUrl);
+    }
+    setIsPreviewOpen(false);
+    setPreviewBlobUrl(null);
+    setPreviewInvoice(null);
+    setPreviewData(null);
+  };
+
+  const handlePreviewDownload = async () => {
+    if (!previewData) return;
+
+    try {
+      await downloadInvoicePDF(previewData);
+      setToast({ type: 'success', message: 'PDF erfolgreich heruntergeladen' });
+    } catch (err) {
+      console.error('Error downloading PDF:', err);
+      setToast({
+        type: 'error',
+        message: `Fehler beim Herunterladen: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`,
+      });
+    }
+  };
+
   const handleDownloadPDF = async (invoice: Invoice) => {
     try {
-      // Validate company data
-      if (!selectedCompany) {
-        setToast({ type: 'error', message: 'Keine Firma ausgewählt' });
-        return;
-      }
-
-      // Fetch invoice items and fresh company data (including text templates) in parallel
-      const [itemsResult, companyResult] = await Promise.all([
-        supabase
-          .from('invoice_items')
-          .select('*')
-          .eq('invoice_id', invoice.id),
-        supabase
-          .from('companies')
-          .select('*')
-          .eq('id', selectedCompany.id)
-          .single()
-      ]);
-
-      if (itemsResult.error) throw itemsResult.error;
-      if (companyResult.error) throw companyResult.error;
-
-      const items = itemsResult.data;
-      const freshCompanyData = companyResult.data;
-
-      // Get customer
-      const customer = customers.find((c) => c.id === invoice.customer_id);
-      if (!customer) {
-        setToast({ type: 'error', message: 'Kunde nicht gefunden' });
-        return;
-      }
-
-      // VALIDATE DATA BEFORE PDF GENERATION
-      const validation = validateInvoiceData(
-        { ...invoice, items: items || [] },
-        freshCompanyData,
-        customer
-      );
-
-      if (!validation.valid) {
-        // Show all validation errors
-        const errorMessage = validation.errors.join(' • ');
-        setToast({ type: 'error', message: errorMessage });
-        return;
-      }
-
-      // Generate and download PDF with fresh company data (includes text templates)
-      await downloadInvoicePDF({
-        invoice,
-        items: items || [],
-        customer,
-        company: freshCompanyData,
-      });
-
+      const data = await preparePdfData(invoice);
+      await downloadInvoicePDF(data);
       setToast({ type: 'success', message: 'PDF erfolgreich erstellt' });
     } catch (err) {
       console.error('Error generating PDF:', err);
@@ -426,11 +480,12 @@ export default function Rechnungen() {
           customers={customers}
           onDelete={handleDelete}
           onDownloadPDF={handleDownloadPDF}
+          onPreviewPDF={handlePreviewPDF}
           onEdit={handleEdit}
         />
       )}
 
-      {/* Modal */}
+      {/* Create/Edit Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
@@ -446,6 +501,16 @@ export default function Rechnungen() {
           existingItems={editingItems.length > 0 ? editingItems : undefined}
         />
       </Modal>
+
+      {/* PDF Preview Modal */}
+      <PdfPreviewModal
+        isOpen={isPreviewOpen}
+        onClose={handlePreviewClose}
+        pdfBlobUrl={previewBlobUrl}
+        onDownload={handlePreviewDownload}
+        title="Rechnungs-Vorschau"
+        fileName={previewInvoice ? `Rechnung_${previewInvoice.invoice_number}.pdf` : ''}
+      />
 
       {/* Toast Notification */}
       {toast && (

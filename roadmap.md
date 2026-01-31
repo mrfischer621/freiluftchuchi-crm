@@ -475,26 +475,21 @@ const createNewCompany = async (data: CreateCompanyData) => {
 - `Angebote.tsx` - Update-Logik mit sicherer Item-Synchronisation
 - Warnung bei 'versendet'/'akzeptiert'/'abgelehnt' Status
 
-### 3.2 PDF-Vorschau Modal
+### 3.2 PDF-Vorschau Modal ✅ ERLEDIGT
 
-**UI-Konzept:**
-```tsx
-<Modal size="xl" title="PDF-Vorschau">
-  <iframe src={pdfBlobUrl} width="100%" height="600px" />
-  <div className="modal-footer">
-    <Button variant="secondary" onClick={handleClose}>Schliessen</Button>
-    <Button variant="primary" onClick={handleDownload}>
-      <Download /> Herunterladen
-    </Button>
-  </div>
-</Modal>
-```
+**Implementiert:**
+- `src/components/PdfPreviewModal.tsx` - Wiederverwendbare Modal-Komponente mit iframe
+- `src/utils/pdfGenerator.ts` - Neue Funktionen `getInvoicePdfBlobUrl()` und `getQuotePdfBlobUrl()`
+- Eye-Icon (Auge) neben Bearbeiten-Button in Tabellen für Vorschau
+- Download-Button im Modal-Footer
 
 **Checkliste:**
-- [ ] PDF-Vorschau Modal-Component erstellen
-- [ ] Blob URL generieren (ohne Download-Trigger)
-- [ ] Button "PDF anzeigen" in InvoiceTable
-- [ ] Modal schliessen & Download-Funktion
+- [x] PDF-Vorschau Modal-Component erstellen
+- [x] Blob URL generieren (ohne Download-Trigger)
+- [x] Button "PDF anzeigen" (Eye-Icon) in InvoiceTable
+- [x] Button "PDF anzeigen" (Eye-Icon) in QuoteTable
+- [x] Modal schliessen & Download-Funktion
+- [x] Memory Leak Prevention (URL.revokeObjectURL bei close)
 
 ### 3.3 Zusätzliche Felder
 
@@ -1398,13 +1393,14 @@ supabase db push
 - Phase 2 - Offerten-Modul komplett ✅
 - Phase 3.1 - Rechnungen bearbeiten ✅
 - Phase 3.1b - Offerten bearbeiten ✅
+- Phase 3.2 - PDF-Vorschau Modal ✅
 - Phase 3.6 - Textvorlagen ✅
 
-**Next:** Phase 3.2 - PDF-Vorschau Modal
+**Next:** Phase 3.3 - Zusätzliche Felder (Title, Intro, Footer, Discounts)
 **Alt:** Phase 3.4 - Zeiterfassungs-Import (KW-Gruppierung in Rechnung)
 
 ---
 
-**Version:** 1.3
-**Aktualisiert:** 2026-01-30
-**Status:** Phase 3.1 (Bearbeitung) abgeschlossen → Weiter mit Phase 3.2 oder 3.4
+**Version:** 1.4
+**Aktualisiert:** 2026-01-31
+**Status:** Phase 3.2 (PDF-Vorschau) abgeschlossen → Weiter mit Phase 3.3 oder 3.4

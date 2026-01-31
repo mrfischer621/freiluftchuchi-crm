@@ -1,4 +1,4 @@
-import { Download, Trash2, Pencil } from 'lucide-react';
+import { Download, Trash2, Pencil, Eye } from 'lucide-react';
 import type { Invoice, Customer } from '../lib/supabase';
 import { canEditInvoice, getEditBlockedReason } from '../utils/invoiceUtils';
 
@@ -7,6 +7,7 @@ type InvoiceTableProps = {
   customers: Customer[];
   onDelete: (id: string) => Promise<void>;
   onDownloadPDF: (invoice: Invoice) => Promise<void>;
+  onPreviewPDF: (invoice: Invoice) => Promise<void>;
   onEdit: (invoice: Invoice) => void;
 };
 
@@ -24,7 +25,7 @@ const statusLabels = {
   überfällig: 'Überfällig',
 };
 
-export default function InvoiceTable({ invoices, customers, onDelete, onDownloadPDF, onEdit }: InvoiceTableProps) {
+export default function InvoiceTable({ invoices, customers, onDelete, onDownloadPDF, onPreviewPDF, onEdit }: InvoiceTableProps) {
   const getCustomerName = (customerId: string) => {
     const customer = customers.find((c) => c.id === customerId);
     return customer?.name || 'Unbekannt';
@@ -111,6 +112,13 @@ export default function InvoiceTable({ invoices, customers, onDelete, onDownload
                       title={canEditInvoice(invoice.status) ? 'Bearbeiten' : getEditBlockedReason(invoice.status)}
                     >
                       <Pencil size={18} />
+                    </button>
+                    <button
+                      onClick={() => onPreviewPDF(invoice)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                      title="PDF Vorschau"
+                    >
+                      <Eye size={18} />
                     </button>
                     <button
                       onClick={() => onDownloadPDF(invoice)}
