@@ -171,6 +171,52 @@ await downloadInvoicePDF({
 // Browser downloads: Rechnung_2024-001.pdf
 ```
 
+#### `getInvoicePdfBlobUrl(data: InvoiceData): Promise<string>`
+Generates invoice PDF and returns a Blob URL for preview.
+
+**⚠️ Important:** Caller MUST call `URL.revokeObjectURL()` when done to prevent memory leaks!
+
+**Example:**
+```typescript
+import { getInvoicePdfBlobUrl } from '../utils/pdfGenerator';
+
+const blobUrl = await getInvoicePdfBlobUrl({
+  invoice: invoiceData,
+  items: invoiceItems,
+  customer: customerData,
+  company: companyData
+});
+
+// Use in iframe for preview
+<iframe src={blobUrl} />
+
+// Clean up when done
+URL.revokeObjectURL(blobUrl);
+```
+
+#### `getQuotePdfBlobUrl(data: QuoteData): Promise<string>`
+Generates quote PDF and returns a Blob URL for preview.
+
+**⚠️ Important:** Caller MUST call `URL.revokeObjectURL()` when done to prevent memory leaks!
+
+**Example:**
+```typescript
+import { getQuotePdfBlobUrl } from '../utils/pdfGenerator';
+
+const blobUrl = await getQuotePdfBlobUrl({
+  quote: quoteData,
+  items: quoteItems,
+  customer: customerData,
+  company: companyData
+});
+
+// Use in iframe for preview
+<iframe src={blobUrl} />
+
+// Clean up when done
+URL.revokeObjectURL(blobUrl);
+```
+
 ### Internal Functions
 
 #### `drawSwissCross(doc, x, y, size)`
@@ -367,7 +413,7 @@ async function saveInvoicePDF(invoiceData) {
 }
 ```
 
-### Example 3: Display PDF in Browser
+### Example 3: Display PDF in Browser (Simple)
 ```typescript
 import { generateInvoicePDF } from '../utils/pdfGenerator';
 
@@ -380,6 +426,68 @@ async function previewInvoice() {
 
   // Clean up
   setTimeout(() => URL.revokeObjectURL(pdfUrl), 1000);
+}
+```
+
+### Example 4: PDF Preview Modal (Recommended)
+```typescript
+import { useState } from 'react';
+import { getInvoicePdfBlobUrl, downloadInvoicePDF } from '../utils/pdfGenerator';
+import PdfPreviewModal from '../components/PdfPreviewModal';
+
+function InvoicePage() {
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
+  const [previewData, setPreviewData] = useState(null);
+
+  const handlePreview = async (invoice) => {
+    const data = {
+      invoice,
+      items: invoiceItems,
+      customer: selectedCustomer,
+      company: selectedCompany
+    };
+
+    const blobUrl = await getInvoicePdfBlobUrl(data);
+    setPreviewData(data);
+    setPreviewBlobUrl(blobUrl);
+    setIsPreviewOpen(true);
+  };
+
+  const handleClosePreview = () => {
+    // IMPORTANT: Clean up blob URL to prevent memory leaks
+    if (previewBlobUrl) {
+      URL.revokeObjectURL(previewBlobUrl);
+    }
+    setIsPreviewOpen(false);
+    setPreviewBlobUrl(null);
+    setPreviewData(null);
+  };
+
+  const handleDownloadFromPreview = async () => {
+    if (previewData) {
+      await downloadInvoicePDF(previewData);
+    }
+  };
+
+  return (
+    <>
+      {/* Table with Eye icon for preview */}
+      <button onClick={() => handlePreview(invoice)}>
+        <Eye size={18} />
+      </button>
+
+      {/* Preview Modal */}
+      <PdfPreviewModal
+        isOpen={isPreviewOpen}
+        onClose={handleClosePreview}
+        pdfBlobUrl={previewBlobUrl}
+        onDownload={handleDownloadFromPreview}
+        title="Rechnungs-Vorschau"
+        fileName={`Rechnung_${invoice.invoice_number}.pdf`}
+      />
+    </>
+  );
 }
 ```
 
@@ -406,6 +514,125 @@ async function generateWithValidation() {
 }
 ```
 
+## PDF Preview Modal Component
+
+### Overview
+
+Das `PdfPreviewModal` ist eine wiederverwendbare React-Komponente, die PDFs in einem modalen Dialog anzeigt. Es verwendet ein iframe zur Darstellung des PDFs und bietet einen Download-Button.
+
+### Komponente: `PdfPreviewModal`
+
+**Datei:** `src/components/PdfPreviewModal.tsx`
+
+**Props:**
+```typescript
+interface PdfPreviewModalProps {
+  isOpen: boolean;           // Modal anzeigen/verstecken
+  onClose: () => void;       // Callback beim Schliessen
+  pdfBlobUrl: string | null; // Blob URL des PDFs
+  onDownload: () => void;    // Callback für Download-Button
+  title: string;             // Modal-Titel (z.B. "Rechnungs-Vorschau")
+  fileName: string;          // Angezeigter Dateiname
+}
+```
+
+**Verwendung:**
+```tsx
+import PdfPreviewModal from '../components/PdfPreviewModal';
+
+<PdfPreviewModal
+  isOpen={isPreviewOpen}
+  onClose={handleClosePreview}
+  pdfBlobUrl={previewBlobUrl}
+  onDownload={handleDownloadFromPreview}
+  title="Rechnungs-Vorschau"
+  fileName="Rechnung_RE-2026-001.pdf"
+/>
+```
+
+### UI-Elemente
+
+```
+┌──────────────────────────────────────────────────────┐
+│  Rechnungs-Vorschau                              [X] │  ← Header mit Titel und Schliessen-Button
+│  Rechnung_RE-2026-001.pdf                            │  ← Dateiname als Subtitle
+├──────────────────────────────────────────────────────┤
+│                                                      │
+│  ┌────────────────────────────────────────────────┐  │
+│  │                                                │  │
+│  │           PDF-Inhalt (iframe)                  │  │  ← 70vh Höhe
+│  │                                                │  │
+│  └────────────────────────────────────────────────┘  │
+│                                                      │
+├──────────────────────────────────────────────────────┤
+│                        [Schliessen] [⬇ Herunterladen]│  ← Footer mit Aktionen
+└──────────────────────────────────────────────────────┘
+```
+
+### Features
+
+1. **Responsive Design:** Modal passt sich der Bildschirmgrösse an (max-w-5xl)
+2. **Backdrop:** Klick ausserhalb des Modals schliesst es
+3. **Keyboard-freundlich:** Buttons sind fokussierbar
+4. **Memory Management:** Blob URL muss vom Aufrufer freigegeben werden
+
+### Integration in Tabellen
+
+Das Eye-Icon (Auge) wird neben dem Bearbeiten-Symbol in den Tabellen angezeigt:
+
+**InvoiceTable.tsx:**
+```tsx
+import { Eye } from 'lucide-react';
+
+<button
+  onClick={() => onPreviewPDF(invoice)}
+  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+  title="PDF Vorschau"
+>
+  <Eye size={18} />
+</button>
+```
+
+**QuoteTable.tsx:**
+```tsx
+import { Eye } from 'lucide-react';
+
+<button
+  onClick={() => onPreviewPDF(quote)}
+  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+  title="PDF Vorschau"
+>
+  <Eye size={18} />
+</button>
+```
+
+### Reihenfolge der Icons in Tabellen
+
+| Position | Icon | Farbe | Funktion |
+|----------|------|-------|----------|
+| 1 | Pencil | Grau | Bearbeiten |
+| 2 | Eye | Blau | PDF Vorschau |
+| 3 | Download | Teal | PDF Download |
+| 4 | FileCheck | Grün | Als Rechnung (nur Angebote) |
+| 5 | Trash2 | Rot | Löschen |
+
+### Memory Leak Prevention
+
+**⚠️ Wichtig:** Blob URLs müssen manuell freigegeben werden!
+
+```typescript
+const handleClosePreview = () => {
+  // IMMER aufrufen beim Schliessen!
+  if (previewBlobUrl) {
+    URL.revokeObjectURL(previewBlobUrl);
+  }
+  setIsPreviewOpen(false);
+  setPreviewBlobUrl(null);
+};
+```
+
+Ohne `URL.revokeObjectURL()` bleibt der Blob im Speicher, was bei wiederholter Nutzung zu Memory Leaks führt.
+
 ## Dependencies
 
 The PDF generator requires these npm packages:
@@ -427,6 +654,7 @@ npm install --save-dev @types/qrcode
 
 ## Testing Checklist
 
+### PDF Generation
 - [ ] PDF generates without errors
 - [ ] Company address displays correctly (combined street + number)
 - [ ] Customer address displays correctly (combined street + number)
@@ -447,6 +675,20 @@ npm install --save-dev @types/qrcode
 - [ ] Error handling works for missing address fields
 - [ ] PDF downloads with correct filename
 - [ ] Multiple invoices can be generated sequentially
+
+### PDF Preview Modal
+- [ ] Eye-Icon ist in InvoiceTable sichtbar (neben Pencil-Icon)
+- [ ] Eye-Icon ist in QuoteTable sichtbar (neben Pencil-Icon)
+- [ ] Klick auf Eye-Icon öffnet Modal
+- [ ] PDF wird korrekt im iframe angezeigt
+- [ ] Modal-Titel zeigt "Rechnungs-Vorschau" bzw. "Angebots-Vorschau"
+- [ ] Dateiname wird korrekt angezeigt
+- [ ] "Schliessen"-Button schliesst Modal
+- [ ] Klick auf Backdrop schliesst Modal
+- [ ] "Herunterladen"-Button lädt PDF herunter
+- [ ] Nach Schliessen: Keine Memory Leaks (Blob URL freigegeben)
+- [ ] Wiederholtes Öffnen/Schliessen funktioniert ohne Fehler
+- [ ] Validierungsfehler werden als Toast angezeigt (nicht im Modal)
 
 ## Common Issues & Solutions
 
