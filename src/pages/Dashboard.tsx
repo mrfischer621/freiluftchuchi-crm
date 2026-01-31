@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Invoice, Customer } from '../lib/supabase';
-import { AlertCircle, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { AlertCircle, TrendingUp, TrendingDown, Wallet, Calendar } from 'lucide-react';
 import FinancialChart from '../components/FinancialChart';
 import { useCompany } from '../context/CompanyContext';
 import { PageHeader, Card, KPICard, Button } from '../components/ui';
 
 type TimeFilter = 7 | 30 | 90;
+type ViewMode = 'days' | 'year';
 
 interface InvoiceWithCustomer extends Invoice {
   customer?: Customer;
@@ -20,18 +21,24 @@ interface ChartData {
 
 export default function Dashboard() {
   const { selectedCompany } = useCompany();
+  const [viewMode, setViewMode] = useState<ViewMode>('days');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>(30);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [revenue, setRevenue] = useState(0);
   const [expenses, setExpenses] = useState(0);
   const [openInvoices, setOpenInvoices] = useState<InvoiceWithCustomer[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Generate year options (last 3 years + current year)
+  const currentYear = new Date().getFullYear();
+  const yearOptions = [currentYear - 2, currentYear - 1, currentYear];
+
   useEffect(() => {
     if (selectedCompany) {
       loadFinancialData();
     }
-  }, [timeFilter, selectedCompany]);
+  }, [viewMode, timeFilter, selectedYear, selectedCompany]);
 
   // Early return if no company selected
   if (!selectedCompany) {
@@ -54,10 +61,6 @@ export default function Dashboard() {
       setOpenInvoices([]);
       setChartData([]);
 
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - timeFilter);
-      const cutoffDateStr = cutoffDate.toISOString();
-
       // Load ALL paid invoices for this company (we'll filter client-side)
       const { data: allPaidInvoices } = await supabase
         .from('invoices')
@@ -72,32 +75,75 @@ export default function Dashboard() {
         .eq('company_id', selectedCompany.id)
         .eq('type', 'ausgabe');
 
-      // Generate chart data based on timeFilter
-      const chartData = generateChartData(
-        allPaidInvoices || [],
-        allExpenseTransactions || [],
-        cutoffDate,
-        timeFilter
-      );
-      setChartData(chartData);
+      if (viewMode === 'year') {
+        // Year view: filter by selected year
+        const yearStart = new Date(selectedYear, 0, 1);
+        const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59);
 
-      // Calculate KPIs (use paid_at if available, otherwise issue_date)
-      const totalRevenue = allPaidInvoices?.reduce((sum, inv) => {
-        const dateToCheck = inv.paid_at || inv.issue_date;
-        if (dateToCheck && new Date(dateToCheck) >= new Date(cutoffDateStr)) {
-          return sum + (inv.total || 0);
-        }
-        return sum;
-      }, 0) || 0;
-      setRevenue(totalRevenue);
+        // Generate monthly chart data
+        const chartData = generateMonthlyData(
+          allPaidInvoices || [],
+          allExpenseTransactions || [],
+          selectedYear
+        );
+        setChartData(chartData);
 
-      const totalExpenses = allExpenseTransactions?.reduce((sum, t) => {
-        if (t.date && new Date(t.date) >= new Date(cutoffDateStr)) {
-          return sum + (t.amount || 0);
-        }
-        return sum;
-      }, 0) || 0;
-      setExpenses(totalExpenses);
+        // Calculate KPIs for the year
+        const totalRevenue = allPaidInvoices?.reduce((sum, inv) => {
+          const dateToCheck = inv.paid_at || inv.issue_date;
+          if (dateToCheck) {
+            const date = new Date(dateToCheck);
+            if (date >= yearStart && date <= yearEnd) {
+              return sum + (inv.total || 0);
+            }
+          }
+          return sum;
+        }, 0) || 0;
+        setRevenue(totalRevenue);
+
+        const totalExpenses = allExpenseTransactions?.reduce((sum, t) => {
+          if (t.date) {
+            const date = new Date(t.date);
+            if (date >= yearStart && date <= yearEnd) {
+              return sum + (t.amount || 0);
+            }
+          }
+          return sum;
+        }, 0) || 0;
+        setExpenses(totalExpenses);
+      } else {
+        // Days view: filter by timeFilter days
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - timeFilter);
+        const cutoffDateStr = cutoffDate.toISOString();
+
+        // Generate chart data based on timeFilter
+        const chartData = generateChartData(
+          allPaidInvoices || [],
+          allExpenseTransactions || [],
+          cutoffDate,
+          timeFilter
+        );
+        setChartData(chartData);
+
+        // Calculate KPIs (use paid_at if available, otherwise issue_date)
+        const totalRevenue = allPaidInvoices?.reduce((sum, inv) => {
+          const dateToCheck = inv.paid_at || inv.issue_date;
+          if (dateToCheck && new Date(dateToCheck) >= new Date(cutoffDateStr)) {
+            return sum + (inv.total || 0);
+          }
+          return sum;
+        }, 0) || 0;
+        setRevenue(totalRevenue);
+
+        const totalExpenses = allExpenseTransactions?.reduce((sum, t) => {
+          if (t.date && new Date(t.date) >= new Date(cutoffDateStr)) {
+            return sum + (t.amount || 0);
+          }
+          return sum;
+        }, 0) || 0;
+        setExpenses(totalExpenses);
+      }
 
       // Load open invoices (status = 'versendet') for this company
       const { data: openInvoicesData } = await supabase
@@ -113,6 +159,56 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const generateMonthlyData = (
+    invoices: any[],
+    transactions: any[],
+    year: number
+  ): ChartData[] => {
+    const monthlyMap = new Map<number, { revenue: number; expenses: number }>();
+
+    // Initialize all 12 months
+    for (let month = 0; month < 12; month++) {
+      monthlyMap.set(month, { revenue: 0, expenses: 0 });
+    }
+
+    // Aggregate invoices by month
+    invoices.forEach((inv) => {
+      const dateToCheck = inv.paid_at || inv.issue_date;
+      if (dateToCheck) {
+        const date = new Date(dateToCheck);
+        if (date.getFullYear() === year) {
+          const month = date.getMonth();
+          const existing = monthlyMap.get(month)!;
+          monthlyMap.set(month, { ...existing, revenue: existing.revenue + (inv.total || 0) });
+        }
+      }
+    });
+
+    // Aggregate transactions by month
+    transactions.forEach((trans) => {
+      if (trans.date) {
+        const date = new Date(trans.date);
+        if (date.getFullYear() === year) {
+          const month = date.getMonth();
+          const existing = monthlyMap.get(month)!;
+          monthlyMap.set(month, { ...existing, expenses: existing.expenses + (trans.amount || 0) });
+        }
+      }
+    });
+
+    // Month names in German
+    const monthNames = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+
+    // Convert to array
+    return Array.from(monthlyMap.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([month, values]) => ({
+        period: monthNames[month],
+        revenue: values.revenue,
+        expenses: values.expenses,
+      }));
   };
 
   const generateChartData = (
@@ -279,19 +375,66 @@ export default function Dashboard() {
       {/* Page Header with Time Filter */}
       <PageHeader
         title="Dashboard"
-        description={`Finanzübersicht der letzten ${timeFilter} Tage`}
+        description={viewMode === 'year' ? `Finanzübersicht ${selectedYear}` : `Finanzübersicht der letzten ${timeFilter} Tage`}
         actions={
-          <div className="flex gap-2">
-            {timeFilters.map((filter) => (
-              <Button
-                key={filter.value}
-                variant={timeFilter === filter.value ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => setTimeFilter(filter.value)}
+          <div className="flex items-center gap-4">
+            {/* View Mode Toggle */}
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+              <button
+                onClick={() => setViewMode('days')}
+                className={`px-3 py-1.5 text-sm font-medium transition ${
+                  viewMode === 'days'
+                    ? 'bg-freiluft text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
               >
-                {filter.label}
-              </Button>
-            ))}
+                Tage
+              </button>
+              <button
+                onClick={() => setViewMode('year')}
+                className={`px-3 py-1.5 text-sm font-medium transition ${
+                  viewMode === 'year'
+                    ? 'bg-freiluft text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Jahr
+              </button>
+            </div>
+
+            {/* Year Dropdown (only shown in year mode) */}
+            {viewMode === 'year' && (
+              <div className="flex items-center gap-2">
+                <Calendar size={16} className="text-gray-500" />
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                  className="px-3 py-1.5 text-sm font-medium border border-gray-200 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-freiluft focus:border-transparent"
+                >
+                  {yearOptions.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Time Filter (only shown in days mode) */}
+            {viewMode === 'days' && (
+              <div className="flex gap-2">
+                {timeFilters.map((filter) => (
+                  <Button
+                    key={filter.value}
+                    variant={timeFilter === filter.value ? 'primary' : 'secondary'}
+                    size="sm"
+                    onClick={() => setTimeFilter(filter.value)}
+                  >
+                    {filter.label}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
         }
       />
@@ -326,8 +469,8 @@ export default function Dashboard() {
       {/* Financial Chart */}
       <Card padding="md" hover>
         <Card.Header
-          title={`Einnahmen vs. Ausgaben`}
-          subtitle={`Letzte ${timeFilter} Tage`}
+          title="Einnahmen vs. Ausgaben"
+          subtitle={viewMode === 'year' ? `Jahr ${selectedYear}` : `Letzte ${timeFilter} Tage`}
         />
         <Card.Content>
           {loading ? (

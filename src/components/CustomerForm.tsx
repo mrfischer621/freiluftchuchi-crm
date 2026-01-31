@@ -98,6 +98,7 @@ export default function CustomerForm({ onSubmit, editingCustomer, onCancelEdit }
         department: department || null,
         phone: phone || null,
         website: website || null,
+        is_active: editingCustomer?.is_active ?? true,
       });
       resetForm();
     } catch (error) {

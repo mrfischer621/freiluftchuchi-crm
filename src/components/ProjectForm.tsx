@@ -56,6 +56,7 @@ export default function ProjectForm({ onSubmit, editingProject, onCancelEdit, cu
         description: description || null,
         status,
         budget: budget ? parseFloat(budget) : null,
+        is_active: editingProject?.is_active ?? true,
       });
       resetForm();
     } catch (error) {

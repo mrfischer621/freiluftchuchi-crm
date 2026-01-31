@@ -5,19 +5,37 @@ import CustomerForm from '../components/CustomerForm';
 import CustomerTable from '../components/CustomerTable';
 import Modal from '../components/Modal';
 import { useCompany } from '../context/CompanyContext';
-import { Plus } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+// Extended customer type with computed fields
+export interface CustomerWithStats extends Customer {
+  open_invoice_amount: number;
+  contacts_count: number;
+}
+
+type FilterType = 'alle' | 'aktiv' | 'archiviert';
 
 export default function Kunden() {
   const { selectedCompany } = useCompany();
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers, setCustomers] = useState<CustomerWithStats[]>([]);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<FilterType>('aktiv');
+  const [searchTerm, setSearchTerm] = useState('');
   const isFetchingRef = useRef(false);
 
+  // Filter customers by search term
+  const filteredCustomers = customers.filter(c =>
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (c.contact_person?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (c.email?.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
   const fetchCustomers = useCallback(async () => {
-    console.log('[Kunden] fetchCustomers called for company:', selectedCompany?.name);
+    console.log('[Kunden] fetchCustomers called for company:', selectedCompany?.name, 'filter:', filter);
     if (!selectedCompany) return;
 
     // Prevent concurrent fetches
@@ -33,15 +51,56 @@ export default function Kunden() {
 
       console.log('[Kunden] Fetching customers...');
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('customers')
         .select('*')
-        .eq('company_id', selectedCompany.id)
-        .order('created_at', { ascending: false });
+        .eq('company_id', selectedCompany.id);
 
-      if (error) throw error;
-      setCustomers(data || []);
-      console.log('[Kunden] Customers fetched successfully:', data?.length || 0);
+      // Apply filter
+      if (filter === 'aktiv') {
+        query = query.eq('is_active', true);
+      } else if (filter === 'archiviert') {
+        query = query.eq('is_active', false);
+      }
+      // 'alle' shows all customers
+
+      const { data: customersData, error: customersError } = await query.order('created_at', { ascending: false });
+
+      if (customersError) throw customersError;
+
+      // Fetch open invoice amounts for all customers (status: versendet or überfällig)
+      const { data: invoicesData } = await supabase
+        .from('invoices')
+        .select('customer_id, total')
+        .eq('company_id', selectedCompany.id)
+        .in('status', ['versendet', 'überfällig']);
+
+      // Fetch contact counts for all customers
+      const { data: contactsData } = await supabase
+        .from('customer_contacts')
+        .select('customer_id');
+
+      // Calculate open amounts per customer
+      const openAmountsByCustomer: Record<string, number> = {};
+      invoicesData?.forEach(inv => {
+        openAmountsByCustomer[inv.customer_id] = (openAmountsByCustomer[inv.customer_id] || 0) + (inv.total || 0);
+      });
+
+      // Calculate contact counts per customer
+      const contactCountsByCustomer: Record<string, number> = {};
+      contactsData?.forEach(contact => {
+        contactCountsByCustomer[contact.customer_id] = (contactCountsByCustomer[contact.customer_id] || 0) + 1;
+      });
+
+      // Merge data
+      const customersWithStats: CustomerWithStats[] = (customersData || []).map(customer => ({
+        ...customer,
+        open_invoice_amount: openAmountsByCustomer[customer.id] || 0,
+        contacts_count: contactCountsByCustomer[customer.id] || 0
+      }));
+
+      setCustomers(customersWithStats);
+      console.log('[Kunden] Customers fetched successfully:', customersWithStats.length);
     } catch (err) {
       console.error('Error fetching customers:', err);
       setError('Fehler beim Laden der Kunden. Bitte überprüfen Sie Ihre Supabase-Konfiguration.');
@@ -49,7 +108,7 @@ export default function Kunden() {
       setIsLoading(false);
       isFetchingRef.current = false;
     }
-  }, [selectedCompany]);
+  }, [selectedCompany, filter]);
 
   useEffect(() => {
     console.log('[Kunden] useEffect triggered, selectedCompany:', selectedCompany?.name);
@@ -103,20 +162,37 @@ export default function Kunden() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Möchten Sie diesen Kunden wirklich löschen?')) return;
+  const handleArchive = async (id: string) => {
+    if (!confirm('Möchten Sie diesen Kunden wirklich archivieren?')) return;
 
     try {
       const { error } = await supabase
         .from('customers')
-        .delete()
+        .update({ is_active: false })
         .eq('id', id);
 
       if (error) throw error;
+      toast.success('Kunde archiviert');
       await fetchCustomers();
     } catch (err) {
-      console.error('Error deleting customer:', err);
-      alert('Fehler beim Löschen des Kunden.');
+      console.error('Error archiving customer:', err);
+      toast.error('Fehler beim Archivieren des Kunden.');
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .update({ is_active: true })
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('Kunde wiederhergestellt');
+      await fetchCustomers();
+    } catch (err) {
+      console.error('Error restoring customer:', err);
+      toast.error('Fehler beim Wiederherstellen des Kunden.');
     }
   };
 
@@ -147,6 +223,55 @@ export default function Kunden() {
         </button>
       </div>
 
+      {/* Search and Filter */}
+      <div className="flex items-center gap-4">
+        {/* Search */}
+        <div className="relative flex-1 max-w-md">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Kunde suchen..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-freiluft focus:border-transparent"
+          />
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="flex gap-2">
+        <button
+          onClick={() => setFilter('alle')}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'alle'
+              ? 'bg-freiluft text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          Alle
+        </button>
+        <button
+          onClick={() => setFilter('aktiv')}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'aktiv'
+              ? 'bg-freiluft text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          Aktiv
+        </button>
+        <button
+          onClick={() => setFilter('archiviert')}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'archiviert'
+              ? 'bg-freiluft text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          Archiviert
+        </button>
+        </div>
+      </div>
+
       {/* Error Message */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
@@ -161,9 +286,10 @@ export default function Kunden() {
         </div>
       ) : (
         <CustomerTable
-          customers={customers}
+          customers={filteredCustomers}
           onEdit={handleEdit}
-          onDelete={handleDelete}
+          onArchive={handleArchive}
+          onRestore={handleRestore}
         />
       )}
 

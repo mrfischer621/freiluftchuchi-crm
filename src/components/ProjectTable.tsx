@@ -1,11 +1,12 @@
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Archive, RotateCcw } from 'lucide-react';
 import type { Project, Customer } from '../lib/supabase';
 
 type ProjectTableProps = {
   projects: Project[];
   customers: Customer[];
   onEdit: (project: Project) => void;
-  onDelete: (id: string) => Promise<void>;
+  onArchive: (id: string) => Promise<void>;
+  onRestore: (id: string) => Promise<void>;
 };
 
 const statusColors = {
@@ -20,16 +21,10 @@ const statusLabels = {
   abgeschlossen: 'Abgeschlossen',
 };
 
-export default function ProjectTable({ projects, customers, onEdit, onDelete }: ProjectTableProps) {
+export default function ProjectTable({ projects, customers, onEdit, onArchive, onRestore }: ProjectTableProps) {
   const getCustomerName = (customerId: string) => {
     const customer = customers.find((c) => c.id === customerId);
     return customer?.name || 'Unbekannt';
-  };
-
-  const handleDelete = async (id: string, name: string) => {
-    if (window.confirm(`Möchten Sie das Projekt "${name}" wirklich löschen?`)) {
-      await onDelete(id);
-    }
   };
 
   if (projects.length === 0) {
@@ -63,6 +58,9 @@ export default function ProjectTable({ projects, customers, onEdit, onDelete }: 
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Erstellt am
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Aktiv
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Aktionen
@@ -98,6 +96,15 @@ export default function ProjectTable({ projects, customers, onEdit, onDelete }: 
                     {new Date(project.created_at).toLocaleDateString('de-CH')}
                   </div>
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    project.is_active
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {project.is_active ? 'Aktiv' : 'Archiviert'}
+                  </span>
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
                   <div className="flex justify-end gap-2">
                     <button
@@ -107,13 +114,23 @@ export default function ProjectTable({ projects, customers, onEdit, onDelete }: 
                     >
                       <Pencil size={18} />
                     </button>
-                    <button
-                      onClick={() => handleDelete(project.id, project.name)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                      title="Löschen"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    {project.is_active ? (
+                      <button
+                        onClick={() => onArchive(project.id)}
+                        className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition"
+                        title="Archivieren"
+                      >
+                        <Archive size={18} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onRestore(project.id)}
+                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
+                        title="Wiederherstellen"
+                      >
+                        <RotateCcw size={18} />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

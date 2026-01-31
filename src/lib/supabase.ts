@@ -68,7 +68,20 @@ export interface Customer {
   department: string | null;
   phone: string | null;
   website: string | null;
+  is_active: boolean;
   created_at: string;
+}
+
+export interface CustomerContact {
+  id: string;
+  customer_id: string;
+  name: string;
+  role: string | null;
+  email: string | null;
+  phone: string | null;
+  is_primary: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Project {
@@ -79,6 +92,7 @@ export interface Project {
   description: string | null;
   status: 'offen' | 'laufend' | 'abgeschlossen';
   budget: number | null;
+  is_active: boolean;
   created_at: string;
 }
 

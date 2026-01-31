@@ -6,6 +6,9 @@ import ProductTable from '../components/ProductTable';
 import Modal from '../components/Modal';
 import { useCompany } from '../context/CompanyContext';
 import { Plus } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+type FilterType = 'alle' | 'aktiv' | 'archiviert';
 
 export default function Produkte() {
   const { selectedCompany } = useCompany();
@@ -14,12 +17,13 @@ export default function Produkte() {
   const [error, setError] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | undefined>();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [filter, setFilter] = useState<FilterType>('aktiv');
 
   useEffect(() => {
     if (selectedCompany) {
       fetchProducts();
     }
-  }, [selectedCompany]);
+  }, [selectedCompany, filter]);
 
   const fetchProducts = async () => {
     if (!selectedCompany) return;
@@ -31,11 +35,19 @@ export default function Produkte() {
       // Clear existing data to force React re-render
       setProducts([]);
 
-      const { data, error: fetchError } = await supabase
+      let query = supabase
         .from('products')
         .select('*')
-        .eq('company_id', selectedCompany.id)
-        .order('name', { ascending: true });
+        .eq('company_id', selectedCompany.id);
+
+      // Apply filter
+      if (filter === 'aktiv') {
+        query = query.eq('is_active', true);
+      } else if (filter === 'archiviert') {
+        query = query.eq('is_active', false);
+      }
+
+      const { data, error: fetchError } = await query.order('name', { ascending: true });
 
       if (fetchError) throw fetchError;
 
@@ -87,22 +99,39 @@ export default function Produkte() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Möchten Sie dieses Produkt wirklich löschen?')) return;
+  const handleArchive = async (id: string) => {
+    if (!confirm('Möchten Sie dieses Produkt wirklich archivieren?')) return;
 
     try {
-      // Soft delete - set is_active to false
-      const { error: deleteError } = await supabase
+      const { error: archiveError } = await supabase
         .from('products')
         .update({ is_active: false } as any)
         .eq('id', id);
 
-      if (deleteError) throw deleteError;
+      if (archiveError) throw archiveError;
 
+      toast.success('Produkt archiviert');
       await fetchProducts();
     } catch (err) {
-      console.error('Error deleting product:', err);
-      setError('Fehler beim Löschen des Produkts');
+      console.error('Error archiving product:', err);
+      toast.error('Fehler beim Archivieren des Produkts');
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    try {
+      const { error: restoreError } = await supabase
+        .from('products')
+        .update({ is_active: true } as any)
+        .eq('id', id);
+
+      if (restoreError) throw restoreError;
+
+      toast.success('Produkt wiederhergestellt');
+      await fetchProducts();
+    } catch (err) {
+      console.error('Error restoring product:', err);
+      toast.error('Fehler beim Wiederherstellen des Produkts');
     }
   };
 
@@ -141,6 +170,40 @@ export default function Produkte() {
         </button>
       </div>
 
+      {/* Filter Tabs */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setFilter('alle')}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'alle'
+              ? 'bg-freiluft text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          Alle
+        </button>
+        <button
+          onClick={() => setFilter('aktiv')}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'aktiv'
+              ? 'bg-freiluft text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          Aktiv
+        </button>
+        <button
+          onClick={() => setFilter('archiviert')}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'archiviert'
+              ? 'bg-freiluft text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          Archiviert
+        </button>
+      </div>
+
       {/* Error Message */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
@@ -157,7 +220,8 @@ export default function Produkte() {
         <ProductTable
           products={products}
           onEdit={handleEdit}
-          onDelete={handleDelete}
+          onArchive={handleArchive}
+          onRestore={handleRestore}
         />
       )}
 

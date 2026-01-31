@@ -3,6 +3,9 @@ import BentoLayout from './components/BentoLayout';
 import Dashboard from './pages/Dashboard';
 import Sales from './pages/Sales';
 import Kunden from './pages/Kunden';
+import KundenKontakte from './pages/KundenKontakte';
+import KundenDetail from './pages/KundenDetail';
+import AlleKontakte from './pages/AlleKontakte';
 import Projekte from './pages/Projekte';
 import Zeiterfassung from './pages/Zeiterfassung';
 import Angebote from './pages/Angebote';
@@ -36,6 +39,9 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="sales" element={<Sales />} />
           <Route path="kunden" element={<Kunden />} />
+          <Route path="kunden/:id" element={<KundenDetail />} />
+          <Route path="kunden/:id/kontakte" element={<KundenKontakte />} />
+          <Route path="kontakte" element={<AlleKontakte />} />
           <Route path="projekte" element={<Projekte />} />
           <Route path="produkte" element={<Produkte />} />
           <Route path="zeiterfassung" element={<Zeiterfassung />} />

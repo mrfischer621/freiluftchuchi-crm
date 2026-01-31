@@ -1038,16 +1038,16 @@ const restoreItem = async (id: string) => {
 ```
 
 **Checkliste:**
-- [ ] Migration: `is_active` in customers, projects (products hat bereits!)
-- [ ] Migration: time_entries braucht KEIN is_active (Filter: verrechenbar/nicht)
-- [ ] Filter-Tabs in:
-  - [ ] [Kunden.tsx](src/pages/Kunden.tsx) - Alle/Aktiv/Archiviert
-  - [ ] [Projekte.tsx](src/pages/Projekte.tsx) - Alle/Aktiv/Archiviert
-  - [ ] [Produkte.tsx](src/pages/Produkte.tsx) (existiert schon!)
-  - [ ] [Zeiterfassung.tsx](src/pages/Zeiterfassung.tsx) - Verrechenbar/Nicht-verrechenbar (kein Archiv)
-- [ ] Archivieren-Action in Tables (statt hartem Löschen)
-- [ ] Wiederherstellen-Button in Archiv-Ansicht
-- [ ] Confirm-Dialog für Archivieren ("Wirklich archivieren?")
+- [x] Migration: `is_active` in customers, projects (products hat bereits!) - `20260131_is_active_flags.sql`
+- [x] Migration: time_entries braucht KEIN is_active (Filter: verrechenbar/nicht)
+- [x] Filter-Tabs in:
+  - [x] [Kunden.tsx](src/pages/Kunden.tsx) - Alle/Aktiv/Archiviert
+  - [x] [Projekte.tsx](src/pages/Projekte.tsx) - Alle/Aktiv/Archiviert
+  - [x] [Produkte.tsx](src/pages/Produkte.tsx) - Alle/Aktiv/Archiviert
+  - [ ] [Zeiterfassung.tsx](src/pages/Zeiterfassung.tsx) - Verrechenbar/Nicht-verrechenbar (optional)
+- [x] Archivieren-Action in Tables (statt hartem Löschen) - CustomerTable, ProjectTable
+- [x] Wiederherstellen-Button in Archiv-Ansicht
+- [x] Confirm-Dialog für Archivieren ("Wirklich archivieren?")
 
 ### 5.2 Kundenübersicht - Erweiterungen
 
@@ -1115,14 +1115,14 @@ CREATE POLICY "Tenant Isolation via Parent" ON customer_contacts
 ```
 
 **Checkliste:**
-- [ ] Query für offene Rechnungen in [Kunden.tsx](src/pages/Kunden.tsx)
-- [ ] Spalte "Offener Betrag" in CustomerTable
-- [ ] Suchfeld implementieren
-- [ ] Migration `20260128_customer_contacts.sql` mit RLS
-- [ ] Neue Page [KundenKontakte.tsx](src/pages/KundenKontakte.tsx)
-- [ ] Route /kunden/:id/kontakte in [App.tsx](src/App.tsx)
-- [ ] CRUD für Kontakte (ContactForm + ContactTable)
-- [ ] "Zurück zu Kunden" Breadcrumb
+- [x] Query für offene Rechnungen in [Kunden.tsx](src/pages/Kunden.tsx)
+- [x] Spalte "Offener Betrag" in CustomerTable
+- [x] Suchfeld implementieren (bereits vorhanden)
+- [x] Migration `20260131_customer_contacts.sql` mit RLS
+- [x] Neue Page [KundenKontakte.tsx](src/pages/KundenKontakte.tsx)
+- [x] Route /kunden/:id/kontakte in [App.tsx](src/App.tsx)
+- [x] CRUD für Kontakte (integriert in KundenKontakte.tsx)
+- [x] "Zurück zu Kunden" Breadcrumb
 
 ### 5.3 Projektübersicht - Offene Stunden
 
@@ -1189,13 +1189,13 @@ const aggregateByMonth = (invoices: Invoice[], year: number) => {
 ```
 
 **Checkliste:**
-- [ ] Jahr-Dropdown in [Dashboard.tsx](src/pages/Dashboard.tsx) (2024-2026, dynamisch)
-- [ ] Toggle Monat/Jahr View
-- [ ] useAnalytics: Jahres-Aggregation (12 Monate)
-- [ ] Chart X-Achse: Monate (Jan, Feb, Mär...)
-- [ ] KPI-Cards: Jahres-Totale für gewähltes Jahr
-- [ ] Datum-Range automatisch setzen (z.B. Jahr 2025 → 01.01. - 31.12.)
-- [ ] Default: Aktuelles Jahr
+- [x] Jahr-Dropdown in [Dashboard.tsx](src/pages/Dashboard.tsx) (dynamisch: letzte 3 Jahre)
+- [x] Toggle Tage/Jahr View
+- [x] Jahres-Aggregation (12 Monate) - `generateMonthlyData()` Funktion
+- [x] Chart X-Achse: Monate (Jan, Feb, Mär...)
+- [x] KPI-Cards: Jahres-Totale für gewähltes Jahr
+- [x] Datum-Range automatisch setzen (1.1. - 31.12. des gewählten Jahres)
+- [x] Default: Aktuelles Jahr
 
 ### 5.5 Design Polish
 
@@ -1374,11 +1374,14 @@ supabase db push
 - Phase 4.2 - Tabellen-Erweiterungen (KW, Kunde, Gruppierung) ✅
 - Phase 4.3 - Pflichtfeld Verrechenbar ✅
 - Phase 4.4 - Reporting-Submodul ✅
+- Phase 5.1 - Globale Filter (Kunden, Projekte, Produkte) ✅
+- Phase 5.2 - Kundenübersicht (Offene Rechnungen, Kontakte-Page) ✅
+- Phase 5.4 - Dashboard Jahresansicht ✅
 
-**Next:** Phase 5 - UI/UX & Globale Filter
+**Next:** Phase 5.3 (Projektübersicht), Phase 5.5 (Design Polish - optional)
 
 ---
 
-**Version:** 1.8
+**Version:** 1.9
 **Aktualisiert:** 2026-01-31
-**Status:** Phase 4 (Zeiterfassung & Reporting) vollständig abgeschlossen → Weiter mit Phase 5
+**Status:** Phase 5.1 und 5.4 abgeschlossen → Weiter mit Phase 5.2/5.3

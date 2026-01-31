@@ -8,7 +8,7 @@ export default {
   theme: {
     extend: {
       // ==========================================
-      // Swiss Modern Design System 2026
+      // Swiss Modern Design System 2026 (Updated Phase 5.5)
       // ==========================================
       colors: {
         // Legacy support
@@ -39,28 +39,32 @@ export default {
 
         // Swiss Modern: Brand/Accent (High Contrast Active States)
         brand: {
-          light: '#dbeafe',        // blue-100 (subtle backgrounds)
-          DEFAULT: '#2563eb',      // blue-600 (primary action, active nav)
-          dark: '#1d4ed8',         // blue-700 (hover)
-          darker: '#1e40af',       // blue-800 (pressed)
+          light: '#dbeafe',        // blue-100
+          DEFAULT: '#2563eb',      // blue-600 (primary action)
+          dark: '#1d4ed8',         // blue-700
+          darker: '#1e40af',       // blue-800
         },
 
-        // Swiss Modern: Semantic Colors
+        // -----------------------------------------------------------------
+        // UPDATED: Entsättigte Palette (Roadmap Phase 5.5)
+        // Weicher, weniger "Neon", mehr "Pastell/Modern"
+        // -----------------------------------------------------------------
         success: {
-          light: '#dcfce7',
-          DEFAULT: '#16a34a',      // green-600
-          dark: '#15803d',
+          light: '#d1fae5',        // Pastell Grün (Emerald-100)
+          DEFAULT: '#10b981',      // Smaragd (Emerald-500) - war vorher #16a34a
+          dark: '#059669',         // Emerald-700
         },
         warning: {
-          light: '#fef3c7',
-          DEFAULT: '#d97706',      // amber-600
-          dark: '#b45309',
+          light: '#fef3c7',        // Pastell Gelb (Amber-100)
+          DEFAULT: '#f59e0b',      // Bernstein (Amber-500) - war vorher #d97706
+          dark: '#b45309',         // Amber-700
         },
         danger: {
-          light: '#fee2e2',
-          DEFAULT: '#dc2626',      // red-600
-          dark: '#b91c1c',
+          light: '#fee2e2',        // Pastell Rot (Red-100)
+          DEFAULT: '#ef4444',      // Weiches Rot (Red-500) - war vorher #dc2626
+          dark: '#b91c1c',         // Red-700
         },
+        // -----------------------------------------------------------------
 
         // Swiss Modern: Text Palette
         text: {
@@ -77,10 +81,10 @@ export default {
         'hover': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
         'elevated': '0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04)',
         'floating': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        // Swiss Modern: Glow effect for active elements
+        // Glow effects angepasst auf die neuen Farben (automatische Transparenz)
         'glow-brand': '0 0 0 3px rgba(37, 99, 235, 0.15)',
-        'glow-success': '0 0 0 3px rgba(22, 163, 74, 0.15)',
-        'glow-danger': '0 0 0 3px rgba(220, 38, 38, 0.15)',
+        'glow-success': '0 0 0 3px rgba(16, 185, 129, 0.15)', // Updated to match Emerald-500
+        'glow-danger': '0 0 0 3px rgba(239, 68, 68, 0.15)',   // Updated to match Red-500
       },
 
       // Typography (Neo-Grotesk)

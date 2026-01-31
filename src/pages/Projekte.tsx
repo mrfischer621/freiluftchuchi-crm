@@ -6,6 +6,9 @@ import ProjectTable from '../components/ProjectTable';
 import Modal from '../components/Modal';
 import { useCompany } from '../context/CompanyContext';
 import { Plus } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+type FilterType = 'alle' | 'aktiv' | 'archiviert';
 
 export default function Projekte() {
   const { selectedCompany } = useCompany();
@@ -15,12 +18,13 @@ export default function Projekte() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<FilterType>('aktiv');
 
   useEffect(() => {
     if (selectedCompany) {
       fetchData();
     }
-  }, [selectedCompany]);
+  }, [selectedCompany, filter]);
 
   // Early return if no company selected
   if (!selectedCompany) {
@@ -42,16 +46,26 @@ export default function Projekte() {
       setProjects([]);
       setCustomers([]);
 
+      // Build projects query with filter
+      let projectsQuery = supabase
+        .from('projects')
+        .select('*')
+        .eq('company_id', selectedCompany.id);
+
+      // Apply filter
+      if (filter === 'aktiv') {
+        projectsQuery = projectsQuery.eq('is_active', true);
+      } else if (filter === 'archiviert') {
+        projectsQuery = projectsQuery.eq('is_active', false);
+      }
+
       const [projectsResult, customersResult] = await Promise.all([
-        supabase
-          .from('projects')
-          .select('*')
-          .eq('company_id', selectedCompany.id)
-          .order('created_at', { ascending: false }),
+        projectsQuery.order('created_at', { ascending: false }),
         supabase
           .from('customers')
           .select('*')
           .eq('company_id', selectedCompany.id)
+          .eq('is_active', true) // Only show active customers in dropdown
           .order('name', { ascending: true }),
       ]);
 
@@ -104,20 +118,37 @@ export default function Projekte() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Möchten Sie dieses Projekt wirklich löschen?')) return;
+  const handleArchive = async (id: string) => {
+    if (!confirm('Möchten Sie dieses Projekt wirklich archivieren?')) return;
 
     try {
       const { error } = await supabase
         .from('projects')
-        .delete()
+        .update({ is_active: false })
         .eq('id', id);
 
       if (error) throw error;
+      toast.success('Projekt archiviert');
       await fetchData();
     } catch (err) {
-      console.error('Error deleting project:', err);
-      alert('Fehler beim Löschen des Projekts.');
+      console.error('Error archiving project:', err);
+      toast.error('Fehler beim Archivieren des Projekts.');
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ is_active: true })
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('Projekt wiederhergestellt');
+      await fetchData();
+    } catch (err) {
+      console.error('Error restoring project:', err);
+      toast.error('Fehler beim Wiederherstellen des Projekts.');
     }
   };
 
@@ -148,6 +179,40 @@ export default function Projekte() {
         </button>
       </div>
 
+      {/* Filter Tabs */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setFilter('alle')}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'alle'
+              ? 'bg-freiluft text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          Alle
+        </button>
+        <button
+          onClick={() => setFilter('aktiv')}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'aktiv'
+              ? 'bg-freiluft text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          Aktiv
+        </button>
+        <button
+          onClick={() => setFilter('archiviert')}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'archiviert'
+              ? 'bg-freiluft text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          Archiviert
+        </button>
+      </div>
+
       {/* Error Message */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
@@ -172,7 +237,8 @@ export default function Projekte() {
           projects={projects}
           customers={customers}
           onEdit={handleEdit}
-          onDelete={handleDelete}
+          onArchive={handleArchive}
+          onRestore={handleRestore}
         />
       )}
 
