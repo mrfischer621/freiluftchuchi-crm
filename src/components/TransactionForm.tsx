@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { Transaction, Customer, Project } from '../lib/supabase';
+import type { Transaction, Customer, Project, ExpenseAccount } from '../lib/supabase';
 
 interface TransactionFormProps {
   transaction?: Transaction;
@@ -7,14 +7,20 @@ interface TransactionFormProps {
   onCancel: () => void;
   customers: Customer[];
   projects: Project[];
+  expenseAccounts?: ExpenseAccount[];
 }
 
-export default function TransactionForm({ transaction, onSubmit, onCancel, customers, projects }: TransactionFormProps) {
+export default function TransactionForm({ transaction, onSubmit, onCancel, customers, projects, expenseAccounts = [] }: TransactionFormProps) {
+  // Fallback categories if no expense accounts are configured
+  const defaultCategories = ['Materialaufwand', 'Personalkosten', 'Miete', 'Marketing', 'Sonstige'];
+  const categoryOptions = expenseAccounts.length > 0
+    ? expenseAccounts.map(a => a.name)
+    : defaultCategories;
   const [activeTab, setActiveTab] = useState<'einnahme' | 'ausgabe'>(transaction?.type || 'ausgabe');
   const [transactionNumber, setTransactionNumber] = useState(transaction?.transaction_number || '');
   const [date, setDate] = useState(transaction?.date || new Date().toISOString().split('T')[0]);
   const [amount, setAmount] = useState(transaction?.amount.toString() || '');
-  const [category, setCategory] = useState(transaction?.category || 'Materialaufwand');
+  const [category, setCategory] = useState(transaction?.category || categoryOptions[0] || 'Sonstige');
   const [description, setDescription] = useState(transaction?.description || '');
   const [customerId, setCustomerId] = useState(transaction?.customer_id || '');
   const [projectId, setProjectId] = useState(transaction?.project_id || '');
@@ -55,7 +61,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
         setTransactionNumber('');
         setAmount('');
         setDescription('');
-        setCategory('Materialaufwand');
+        setCategory(categoryOptions[0] || 'Sonstige');
         setCustomerId('');
         setProjectId('');
         setTags([]);
@@ -159,18 +165,16 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Aufwand
+                  Kategorie
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent"
                 >
-                  <option value="Materialaufwand">Materialaufwand</option>
-                  <option value="Sonstige">Sonstige</option>
-                  <option value="Personalkosten">Personalkosten</option>
-                  <option value="Miete">Miete</option>
-                  <option value="Marketing">Marketing</option>
+                  {categoryOptions.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
                 </select>
               </div>
             </div>

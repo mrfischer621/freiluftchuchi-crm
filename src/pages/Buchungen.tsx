@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Filter } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import type { Transaction, Customer, Project } from '../lib/supabase';
+import type { Transaction, Customer, Project, ExpenseAccount } from '../lib/supabase';
 import TransactionForm from '../components/TransactionForm';
 import TransactionTable from '../components/TransactionTable';
 import Modal from '../components/Modal';
@@ -13,6 +13,7 @@ export default function Buchungen() {
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [expenseAccounts, setExpenseAccounts] = useState<ExpenseAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -101,9 +102,23 @@ export default function Buchungen() {
 
       if (projectsError) throw projectsError;
 
+      // Fetch expense accounts for this company
+      const { data: accountsData, error: accountsError } = await supabase
+        .from('expense_accounts')
+        .select('*')
+        .eq('company_id', selectedCompany.id)
+        .eq('is_active', true)
+        .order('sort_order');
+
+      if (accountsError) {
+        console.warn('Expense accounts not available:', accountsError);
+        // Don't throw - table might not exist yet
+      }
+
       setTransactions(allTransactions);
       setCustomers(customersData || []);
       setProjects(projectsData || []);
+      setExpenseAccounts(accountsData || []);
     } catch (err) {
       console.error('Error fetching data:', err);
       setError('Fehler beim Laden der Daten');
@@ -311,6 +326,7 @@ export default function Buchungen() {
           onCancel={handleCloseModal}
           customers={customers}
           projects={projects}
+          expenseAccounts={expenseAccounts}
         />
       </Modal>
     </div>

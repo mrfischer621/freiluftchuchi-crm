@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import type { PipelineStage } from '../lib/supabase';
+import type { PipelineStage, ExpenseAccount } from '../lib/supabase';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthProvider';
-import { Building2, Save, AlertCircle, CheckCircle, TrendingUp, Edit2, Check, X, Trash2, Plus, User, FileText } from 'lucide-react';
+import { Building2, Save, AlertCircle, CheckCircle, TrendingUp, Edit2, Check, X, Trash2, Plus, User, FileText, Layers } from 'lucide-react';
 
 interface CompanyFormData {
   name: string;
@@ -24,7 +24,7 @@ interface Toast {
   message: string;
 }
 
-type TabType = 'company' | 'profile' | 'templates' | 'pipeline';
+type TabType = 'company' | 'profile' | 'templates' | 'pipeline' | 'accounts';
 
 export default function Settings() {
   const { selectedCompany, refreshCompanies } = useCompany();
@@ -68,6 +68,13 @@ export default function Settings() {
   const [editStageColor, setEditStageColor] = useState('');
   const [isLoadingStages, setIsLoadingStages] = useState(false);
 
+  // Expense accounts (Kontenplan) state
+  const [expenseAccounts, setExpenseAccounts] = useState<ExpenseAccount[]>([]);
+  const [newAccountName, setNewAccountName] = useState('');
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
+  const [editAccountName, setEditAccountName] = useState('');
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(false);
+
   // Load company data
   useEffect(() => {
     if (selectedCompany) {
@@ -103,6 +110,13 @@ export default function Settings() {
   useEffect(() => {
     if (activeTab === 'pipeline' && selectedCompany) {
       fetchStages();
+    }
+  }, [activeTab, selectedCompany]);
+
+  // Load expense accounts when accounts tab is active
+  useEffect(() => {
+    if (activeTab === 'accounts' && selectedCompany) {
+      fetchExpenseAccounts();
     }
   }, [activeTab, selectedCompany]);
 
@@ -143,6 +157,111 @@ export default function Settings() {
     } finally {
       setIsLoadingStages(false);
     }
+  };
+
+  const fetchExpenseAccounts = async () => {
+    if (!selectedCompany) return;
+
+    try {
+      setIsLoadingAccounts(true);
+      const { data, error } = await supabase
+        .from('expense_accounts')
+        .select('*')
+        .eq('company_id', selectedCompany.id)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+      setExpenseAccounts(data || []);
+    } catch (err) {
+      console.error('Error fetching expense accounts:', err);
+      showToast('error', 'Fehler beim Laden der Aufwandskonten.');
+    } finally {
+      setIsLoadingAccounts(false);
+    }
+  };
+
+  const handleAddAccount = async () => {
+    if (!newAccountName.trim() || !selectedCompany) return;
+
+    try {
+      setIsLoadingAccounts(true);
+      const maxSortOrder = Math.max(0, ...expenseAccounts.map(a => a.sort_order));
+
+      const { data, error } = await supabase
+        .from('expense_accounts')
+        .insert({
+          company_id: selectedCompany.id,
+          name: newAccountName.trim(),
+          sort_order: maxSortOrder + 1,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setExpenseAccounts([...expenseAccounts, data]);
+      setNewAccountName('');
+      showToast('success', 'Aufwandskonto hinzugefügt.');
+    } catch (err) {
+      console.error('Error adding expense account:', err);
+      showToast('error', 'Fehler beim Hinzufügen des Kontos.');
+    } finally {
+      setIsLoadingAccounts(false);
+    }
+  };
+
+  const handleUpdateAccount = async (accountId: string) => {
+    if (!editAccountName.trim()) return;
+
+    try {
+      const { error } = await supabase
+        .from('expense_accounts')
+        .update({ name: editAccountName.trim() })
+        .eq('id', accountId);
+
+      if (error) throw error;
+
+      setExpenseAccounts(expenseAccounts.map(a =>
+        a.id === accountId ? { ...a, name: editAccountName.trim() } : a
+      ));
+      setEditingAccountId(null);
+      setEditAccountName('');
+      showToast('success', 'Konto aktualisiert.');
+    } catch (err) {
+      console.error('Error updating expense account:', err);
+      showToast('error', 'Fehler beim Aktualisieren des Kontos.');
+    }
+  };
+
+  const handleDeleteAccount = async (accountId: string) => {
+    if (!confirm('Möchten Sie dieses Konto wirklich deaktivieren?')) return;
+
+    try {
+      // Soft delete - set is_active to false
+      const { error } = await supabase
+        .from('expense_accounts')
+        .update({ is_active: false })
+        .eq('id', accountId);
+
+      if (error) throw error;
+
+      setExpenseAccounts(expenseAccounts.filter(a => a.id !== accountId));
+      showToast('success', 'Konto deaktiviert.');
+    } catch (err) {
+      console.error('Error deleting expense account:', err);
+      showToast('error', 'Fehler beim Deaktivieren des Kontos.');
+    }
+  };
+
+  const startEditAccount = (account: ExpenseAccount) => {
+    setEditingAccountId(account.id);
+    setEditAccountName(account.name);
+  };
+
+  const cancelEditAccount = () => {
+    setEditingAccountId(null);
+    setEditAccountName('');
   };
 
   const validateCompanyForm = (): boolean => {
@@ -404,6 +523,7 @@ export default function Settings() {
     { id: 'company' as TabType, label: 'Firmenprofil', icon: Building2 },
     { id: 'profile' as TabType, label: 'Benutzerprofil', icon: User },
     { id: 'templates' as TabType, label: 'Textvorlagen', icon: FileText },
+    { id: 'accounts' as TabType, label: 'Kontenplan', icon: Layers },
     { id: 'pipeline' as TabType, label: 'Sales Pipeline', icon: TrendingUp },
   ];
 
@@ -976,6 +1096,124 @@ export default function Settings() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Tab Content: Expense Accounts (Kontenplan) */}
+      {activeTab === 'accounts' && (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Aufwandskonten verwalten</h2>
+            <p className="text-sm text-gray-600">
+              Definieren Sie Kategorien für Ihre Buchungen. Diese erscheinen als Dropdown bei der Erfassung von Ausgaben.
+            </p>
+          </div>
+
+          {/* Add New Account */}
+          <div className="flex gap-2 mb-6">
+            <input
+              type="text"
+              value={newAccountName}
+              onChange={(e) => setNewAccountName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddAccount();
+                }
+              }}
+              placeholder="Neues Konto hinzufügen..."
+              className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+            />
+            <button
+              onClick={handleAddAccount}
+              disabled={!newAccountName.trim() || isLoadingAccounts}
+              className="px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Plus size={18} />
+              Hinzufügen
+            </button>
+          </div>
+
+          {isLoadingAccounts ? (
+            <div className="flex items-center justify-center h-32">
+              <p className="text-gray-500">Lädt...</p>
+            </div>
+          ) : expenseAccounts.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Layers size={48} className="mx-auto mb-4 opacity-50" />
+              <p>Noch keine Aufwandskonten vorhanden.</p>
+              <p className="text-sm">Fügen Sie oben Ihr erstes Konto hinzu.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {expenseAccounts.map((account) => (
+                <div
+                  key={account.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                >
+                  {editingAccountId === account.id ? (
+                    <>
+                      <input
+                        type="text"
+                        value={editAccountName}
+                        onChange={(e) => setEditAccountName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleUpdateAccount(account.id);
+                          } else if (e.key === 'Escape') {
+                            cancelEditAccount();
+                          }
+                        }}
+                        className="flex-1 px-3 py-1 border border-gray-300 rounded focus:border-freiluft focus:ring-1 focus:ring-freiluft/20 outline-none"
+                        autoFocus
+                      />
+                      <div className="flex items-center gap-1 ml-2">
+                        <button
+                          onClick={() => handleUpdateAccount(account.id)}
+                          className="p-2 hover:bg-green-100 rounded transition"
+                          title="Speichern"
+                        >
+                          <Check size={18} className="text-green-600" />
+                        </button>
+                        <button
+                          onClick={cancelEditAccount}
+                          className="p-2 hover:bg-red-100 rounded transition"
+                          title="Abbrechen"
+                        >
+                          <X size={18} className="text-red-600" />
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-medium text-gray-900">{account.name}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => startEditAccount(account)}
+                          className="p-2 hover:bg-gray-200 rounded transition"
+                          title="Bearbeiten"
+                        >
+                          <Edit2 size={18} className="text-gray-600" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAccount(account.id)}
+                          className="p-2 hover:bg-red-100 rounded transition"
+                          title="Deaktivieren"
+                        >
+                          <Trash2 size={18} className="text-red-600" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="text-xs text-gray-500 mt-4">
+            Hinweis: Deaktivierte Konten werden aus dem Dropdown entfernt, bestehende Buchungen bleiben erhalten.
+          </p>
         </div>
       )}
     </div>

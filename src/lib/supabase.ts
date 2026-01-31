@@ -201,6 +201,28 @@ export interface Product {
   updated_at: string;
 }
 
+// Expense Account Types (Kontenplan)
+export interface ExpenseAccount {
+  id: string;
+  company_id: string;
+  name: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Transaction Attachment Types (Belege)
+export interface TransactionAttachment {
+  id: string;
+  transaction_id: string;
+  file_name: string;
+  file_type: string; // application/pdf, image/jpeg, image/png
+  file_size: number | null;
+  file_url: string;
+  uploaded_at: string;
+}
+
 // Year-End Closing Types
 export interface Asset {
   name: string;
@@ -349,6 +371,16 @@ export interface Database {
         Row: Opportunity;
         Insert: Omit<Opportunity, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Opportunity, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      expense_accounts: {
+        Row: ExpenseAccount;
+        Insert: Omit<ExpenseAccount, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<ExpenseAccount, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      transaction_attachments: {
+        Row: TransactionAttachment;
+        Insert: Omit<TransactionAttachment, 'id' | 'uploaded_at'>;
+        Update: Partial<Omit<TransactionAttachment, 'id' | 'uploaded_at'>>;
       };
     };
   };

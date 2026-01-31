@@ -746,14 +746,14 @@ CREATE POLICY "Tenant Isolation" ON expense_accounts
 ```
 
 **Checkliste:**
-- [ ] Migration `20260128_transaction_attachments.sql`
-- [ ] Migration `20260128_expense_accounts.sql`
-- [ ] Supabase Storage Bucket "transaction-receipts" erstellen
-- [ ] Upload-Logic in [TransactionForm.tsx](src/components/TransactionForm.tsx)
+- [x] Migration `20260131_expense_accounts.sql` - Kontenplan mit Default-Kategorien
+- [x] Migration `20260131_transaction_attachments.sql` - Beleg-Upload Struktur
+- [ ] Supabase Storage Bucket "transaction-receipts" erstellen (manuell)
+- [ ] Upload-Logic in TransactionForm.tsx (benötigt Storage Bucket)
 - [ ] File Validation (max 10MB, nur PDF/JPEG/PNG)
 - [ ] Anzeige der hochgeladenen Datei (Link zum Öffnen)
-- [ ] Settings Tab "Kontenplan" für expense_accounts
-- [ ] TransactionForm: Dropdown mit expense_accounts statt freiem Text
+- [x] Settings Tab "Kontenplan" für expense_accounts - CRUD UI
+- [x] TransactionForm: Dropdown mit expense_accounts (dynamisch + Fallback)
 
 ---
 
