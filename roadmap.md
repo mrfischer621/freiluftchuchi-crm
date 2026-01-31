@@ -785,10 +785,10 @@ CREATE POLICY "Tenant Isolation" ON expense_accounts
 ```
 
 **Checkliste:**
-- [ ] Inline-Form Component in [Zeiterfassung.tsx](src/pages/Zeiterfassung.tsx)
-- [ ] handleQuickAdd() mit Validation
-- [ ] Nach Add: Form leeren + Tabelle refreshen
-- [ ] Optional: Enter-Taste → Submit
+- [x] Inline-Form Component in Zeiterfassung.tsx (Quick-Add)
+- [x] handleQuickAdd() mit Validation
+- [x] Nach Add: Form leeren + Tabelle refreshen
+- [x] Enter-Taste Submit via form onSubmit
 
 ### 4.2 Tabellen-Erweiterungen
 
@@ -849,14 +849,14 @@ const groupedEntries = entries.reduce((acc, entry) => {
 ```
 
 **Checkliste:**
-- [ ] Spalten Kunde & Projekt in Table hinzufügen
-- [ ] JOIN-Query: .select('*, customers(name), projects(name)')
-- [ ] KW-Spalte berechnen (date-fns: getWeek())
-- [ ] Toggle-Komponente für Date/KW Umschaltung
-- [ ] Gruppierung nach KW implementieren (groupedEntries)
-- [ ] Sortierung nach Datum als Alternative
-- [ ] CSS: Gruppen-Header stylen
-- [ ] User-Präferenz speichern (localStorage)
+- [x] Spalten Kunde & Projekt in Table hinzufügen
+- [x] JOIN-Query: .select('*, customers(name), projects(name)')
+- [x] KW-Spalte berechnen (date-fns: getWeek())
+- [x] Toggle-Komponente für Date/KW Umschaltung
+- [x] Gruppierung nach KW implementieren (groupedEntries)
+- [x] Sortierung nach Datum als Alternative
+- [x] CSS: Gruppen-Header stylen
+- [x] User-Präferenz speichern (localStorage)
 
 ### 4.3 Pflichtfeld "Verrechenbar"
 

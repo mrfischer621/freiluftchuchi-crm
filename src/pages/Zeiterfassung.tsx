@@ -1,27 +1,59 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import type { TimeEntry, Project } from '../lib/supabase';
+import type { TimeEntry, Project, Customer } from '../lib/supabase';
 import TimeEntryForm from '../components/TimeEntryForm';
 import TimeEntryTable from '../components/TimeEntryTable';
 import Modal from '../components/Modal';
 import { useCompany } from '../context/CompanyContext';
-import { Plus } from 'lucide-react';
+import { Plus, Calendar, Layers } from 'lucide-react';
+import { getWeek, getYear, parseISO } from 'date-fns';
+
+type GroupingMode = 'date' | 'week';
+
+// Extended TimeEntry with customer name from project
+interface TimeEntryWithCustomer extends TimeEntry {
+  customerName?: string;
+  projectName?: string;
+}
 
 export default function Zeiterfassung() {
   const { selectedCompany } = useCompany();
-  const [entries, setEntries] = useState<TimeEntry[]>([]);
+  const [entries, setEntries] = useState<TimeEntryWithCustomer[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [_customers, setCustomers] = useState<Customer[]>([]);
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Grouping mode state
+  const [groupingMode, setGroupingMode] = useState<GroupingMode>(() => {
+    const saved = localStorage.getItem('zeiterfassung_grouping');
+    return (saved as GroupingMode) || 'date';
+  });
+
+  // Inline Quick-Add Form state
+  const [quickAddData, setQuickAddData] = useState({
+    projectId: '',
+    date: new Date().toISOString().split('T')[0],
+    hours: '',
+    rate: '140',
+    description: '',
+    billable: true,
+  });
+  const [isQuickAdding, setIsQuickAdding] = useState(false);
+
   useEffect(() => {
     if (selectedCompany) {
       fetchData();
     }
   }, [selectedCompany]);
+
+  // Save grouping preference
+  useEffect(() => {
+    localStorage.setItem('zeiterfassung_grouping', groupingMode);
+  }, [groupingMode]);
 
   // Early return if no company selected
   if (!selectedCompany) {
@@ -43,7 +75,7 @@ export default function Zeiterfassung() {
       setEntries([]);
       setProjects([]);
 
-      const [entriesResult, projectsResult] = await Promise.all([
+      const [entriesResult, projectsResult, customersResult] = await Promise.all([
         supabase
           .from('time_entries')
           .select('*')
@@ -51,6 +83,11 @@ export default function Zeiterfassung() {
           .order('date', { ascending: false }),
         supabase
           .from('projects')
+          .select('*, customers(name)')
+          .eq('company_id', selectedCompany.id)
+          .order('name', { ascending: true }),
+        supabase
+          .from('customers')
           .select('*')
           .eq('company_id', selectedCompany.id)
           .order('name', { ascending: true }),
@@ -58,9 +95,22 @@ export default function Zeiterfassung() {
 
       if (entriesResult.error) throw entriesResult.error;
       if (projectsResult.error) throw projectsResult.error;
+      if (customersResult.error) throw customersResult.error;
 
-      setEntries(entriesResult.data || []);
-      setProjects(projectsResult.data || []);
+      // Enrich entries with project and customer names
+      const projectsData = projectsResult.data || [];
+      const enrichedEntries: TimeEntryWithCustomer[] = (entriesResult.data || []).map(entry => {
+        const project = projectsData.find(p => p.id === entry.project_id) as any;
+        return {
+          ...entry,
+          projectName: project?.name || 'Unbekannt',
+          customerName: project?.customers?.name || 'Unbekannt',
+        };
+      });
+
+      setEntries(enrichedEntries);
+      setProjects(projectsData);
+      setCustomers(customersResult.data || []);
     } catch (err) {
       console.error('Error fetching data:', err);
       setError('Fehler beim Laden der Daten. Bitte überprüfen Sie Ihre Supabase-Konfiguration.');
@@ -94,6 +144,45 @@ export default function Zeiterfassung() {
     } catch (err) {
       console.error('Error saving time entry:', err);
       throw err;
+    }
+  };
+
+  const handleQuickAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCompany || !quickAddData.projectId || !quickAddData.hours) return;
+
+    setIsQuickAdding(true);
+    try {
+      const { error } = await supabase
+        .from('time_entries')
+        .insert([{
+          company_id: selectedCompany.id,
+          project_id: quickAddData.projectId,
+          date: quickAddData.date,
+          hours: parseFloat(quickAddData.hours),
+          rate: parseFloat(quickAddData.rate),
+          description: quickAddData.description || null,
+          invoiced: false,
+          billable: quickAddData.billable,
+          invoice_id: null,
+        }]);
+
+      if (error) throw error;
+
+      // Reset form but keep project and rate
+      setQuickAddData(prev => ({
+        ...prev,
+        date: new Date().toISOString().split('T')[0],
+        hours: '',
+        description: '',
+      }));
+
+      await fetchData();
+    } catch (err) {
+      console.error('Error quick adding time entry:', err);
+      alert('Fehler beim Speichern des Zeiteintrags.');
+    } finally {
+      setIsQuickAdding(false);
     }
   };
 
@@ -133,6 +222,33 @@ export default function Zeiterfassung() {
     ? entries.filter((entry) => entry.project_id === selectedProjectId)
     : entries;
 
+  // Group entries by week
+  const groupEntriesByWeek = (entries: TimeEntryWithCustomer[]) => {
+    const grouped: Record<string, TimeEntryWithCustomer[]> = {};
+
+    entries.forEach(entry => {
+      const date = parseISO(entry.date);
+      const week = getWeek(date, { weekStartsOn: 1 });
+      const year = getYear(date);
+      const key = `${year}-KW${week.toString().padStart(2, '0')}`;
+
+      if (!grouped[key]) {
+        grouped[key] = [];
+      }
+      grouped[key].push(entry);
+    });
+
+    // Sort by key (descending)
+    return Object.entries(grouped)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .reduce((acc, [key, entries]) => {
+        acc[key] = entries;
+        return acc;
+      }, {} as Record<string, TimeEntryWithCustomer[]>);
+  };
+
+  const groupedEntries = groupingMode === 'week' ? groupEntriesByWeek(filteredEntries) : null;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -141,13 +257,40 @@ export default function Zeiterfassung() {
           <h1 className="text-2xl font-bold text-gray-900">Zeiterfassung</h1>
           <p className="text-gray-600 mt-1">Erfassen Sie Ihre Arbeitszeiten</p>
         </div>
-        <button
-          onClick={handleAddNew}
-          className="flex items-center gap-2 px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition"
-        >
-          <Plus size={20} />
-          Neuer Zeiteintrag
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Grouping Toggle */}
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setGroupingMode('date')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                groupingMode === 'date'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Calendar size={16} />
+              Datum
+            </button>
+            <button
+              onClick={() => setGroupingMode('week')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                groupingMode === 'week'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Layers size={16} />
+              KW
+            </button>
+          </div>
+          <button
+            onClick={handleAddNew}
+            className="flex items-center gap-2 px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition"
+          >
+            <Plus size={20} />
+            Detailliert
+          </button>
+        </div>
       </div>
 
       {/* Error Message */}
@@ -161,6 +304,108 @@ export default function Zeiterfassung() {
       {projects.length === 0 && !isLoading && (
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
           Bitte erstellen Sie zuerst Projekte, bevor Sie Zeiteinträge erfassen.
+        </div>
+      )}
+
+      {/* Quick-Add Inline Form */}
+      {projects.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <form onSubmit={handleQuickAdd} className="flex flex-wrap gap-3 items-end">
+            <div className="flex-1 min-w-[140px]">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Projekt</label>
+              <select
+                value={quickAddData.projectId}
+                onChange={(e) => setQuickAddData(prev => ({ ...prev, projectId: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                required
+              >
+                <option value="">Projekt wählen</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="w-32">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Datum</label>
+              <input
+                type="date"
+                value={quickAddData.date}
+                onChange={(e) => setQuickAddData(prev => ({ ...prev, date: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                required
+              />
+            </div>
+            <div className="w-20">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Stunden</label>
+              <input
+                type="number"
+                step="0.25"
+                min="0"
+                value={quickAddData.hours}
+                onChange={(e) => setQuickAddData(prev => ({ ...prev, hours: e.target.value }))}
+                placeholder="0.00"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                required
+              />
+            </div>
+            <div className="w-24">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Satz CHF</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={quickAddData.rate}
+                onChange={(e) => setQuickAddData(prev => ({ ...prev, rate: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                required
+              />
+            </div>
+            <div className="flex-1 min-w-[160px]">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Beschreibung</label>
+              <input
+                type="text"
+                value={quickAddData.description}
+                onChange={(e) => setQuickAddData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Tätigkeit..."
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+              />
+            </div>
+            <div className="w-28">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Verrechenbar</label>
+              <div className="flex gap-3 py-2">
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="quickBillable"
+                    checked={quickAddData.billable === true}
+                    onChange={() => setQuickAddData(prev => ({ ...prev, billable: true }))}
+                    className="w-3.5 h-3.5 text-freiluft"
+                  />
+                  <span className="text-sm">Ja</span>
+                </label>
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="quickBillable"
+                    checked={quickAddData.billable === false}
+                    onChange={() => setQuickAddData(prev => ({ ...prev, billable: false }))}
+                    className="w-3.5 h-3.5 text-freiluft"
+                  />
+                  <span className="text-sm">Nein</span>
+                </label>
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={isQuickAdding || !quickAddData.projectId || !quickAddData.hours}
+              className="px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+            >
+              <Plus size={18} />
+              {isQuickAdding ? 'Speichert...' : 'Hinzufügen'}
+            </button>
+          </form>
         </div>
       )}
 
@@ -197,6 +442,8 @@ export default function Zeiterfassung() {
           projects={projects}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          groupingMode={groupingMode}
+          groupedEntries={groupedEntries}
         />
       )}
 
