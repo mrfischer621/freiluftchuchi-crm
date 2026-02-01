@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.git/
+package-lock.json
+yarn.lock
+*.log
+.DS_Store
+public/assets/  # Bilder fressen Tokens, wenn er versucht sie zu lesen
+README.md       # Nur lesen, wenn explizit nötig

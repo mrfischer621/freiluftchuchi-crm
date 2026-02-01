@@ -14,8 +14,9 @@ Kleine Anpassungen, die das Nutzungserlebnis sofort verbessern und "Noise" entfe
     - [ ] **Bugfix:** Drag & Drop Verhalten fixen (Karten bleiben nicht in allen Spalten hängen).
     - [ ] **Settings:** Farbe und Beschreibung für Phasen (Stages) hinzufügen und speicherbar machen.
     - [ ] **Actions:**
-        - [ ] "Deal löschen" (Entfernen aus Datenbank).
-        - [ ] "Als verloren markieren" (Status-Update, Deal bleibt für Reporting erhalten).
+        - [ ] "Deal löschen" (Physisches Löschen aus DB).
+        - [ ] "Als verloren markieren" (Logik: Neues Boolean-Feld `is_lost`).
+        - [ ] UI: Verlorene Deals standardmäßig ausblenden, via Toggle-Filter sichtbar machen (Keine eigene Spalte).
 
 ## 2. Core CRM Features & Workflow
 Verbesserung der Datenströme zwischen Kunden, Kontakten und Zeiterfassung.
@@ -36,12 +37,13 @@ Verbesserung der Datenströme zwischen Kunden, Kontakten und Zeiterfassung.
 
 ## 3. Finanz-Architektur (The Heavy Lifting)
 Umbau der Buchhaltung auf ein Journal-basiertes System (Double-Entry Lite).
+**Strategie:** Fresh Start. Keine Migration von Altdaten nötig (werden gelöscht). Logik greift ab sofort für alle neuen (oder manuell nacherfassten) Rechnungen.
 
 - [ ] **3.1 Settings: Kontenplan (Chart of Accounts)**
     - [ ] **Bugfix:** Laden der Konten fixen (API Error beheben).
     - [ ] CRUD: Hinzufügen und Bearbeiten von Buchungskonten ermöglichen.
 - [ ] **3.2 Buchungs-Journal (Ledger)**
-    - [ ] Tabelle `journal_entries` erweitern: Spalten für `source_type` (invoice, expense, manual), `source_id`, `amount`, `account_id`.
+    - [ ] Tabelle `journal_entries` erstellen/erweitern: Spalten für `source_type` (invoice, expense, manual), `source_id`, `amount`, `account_id`.
     - [ ] UI: "Bearbeiten/Löschen" für manuelle Buchungen erlauben.
     - [ ] UI: Scrollbalken-Bug rechts beheben.
 - [ ] **3.3 Automatisierung (Rechnung -> Journal)**
@@ -60,10 +62,11 @@ Finalisierung der Mandantenfähigkeit.
     - [ ] Settings: Bildupload für Logo (PNG/SVG).
     - [ ] PDF-Generator: Dynamisches Einbinden des Logos.
 
-## 5. Design System "Modern Apple" (Final Polish)
+## 5. Design System "Swiss Glass" (Final Polish)
 Erst wenn die Technik steht, wird das Kleid angepasst.
 
-- [ ] **5.1 Design Guidelines definieren (Tailwind)**
-    - [ ] Glassmorphism, San Francisco Font Style, Subtile Gradients.
+- [ ] **5.1 Design Guidelines definieren**
+    - [ ] **Look:** macOS Glassmorphism (Backdrop-Blur, Translucency) in Sidebar & Headern.
+    - [ ] **Tech:** Nutzung von Tailwind Standard-Utilities (`backdrop-blur-md`, `bg-white/80`).
 - [ ] **5.2 Umsetzung**
     - [ ] Global Layout, Tabellen-Styling, Buttons vereinheitlichen.

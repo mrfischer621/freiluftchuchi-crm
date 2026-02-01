@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthProvider';
 import { useCompany } from '../context/CompanyContext';
 import { supabase } from '../lib/supabase';
-import { Bell, User, Menu, ChevronDown, Building2, Settings, LogOut, Check, Plus } from 'lucide-react';
+import { User, Menu, ChevronDown, Building2, Settings, LogOut, Check, Plus } from 'lucide-react';
 import { CreateCompanyModal } from './CreateCompanyModal';
 
 /**
@@ -99,32 +99,11 @@ export function BentoHeader() {
           <Menu size={20} strokeWidth={2} />
         </button>
 
-        {/* Breadcrumb / Page Title Area */}
-        <nav className="flex items-center gap-2 text-sm">
-          <span className="text-text-secondary">
-            {selectedCompany?.name || 'Freiluftchuchi CRM'}
-          </span>
-        </nav>
+{/* Breadcrumb area reserved for future use */}
       </div>
 
       {/* Right Side - Actions */}
       <div className="flex items-center gap-2">
-        {/* Notifications */}
-        <button
-          className="
-            p-2
-            rounded-lg
-            text-text-secondary
-            hover:text-text-primary
-            hover:bg-slate-100
-            transition-colors duration-150
-            relative
-          "
-          aria-label="Benachrichtigungen"
-        >
-          <Bell size={18} strokeWidth={2} />
-        </button>
-
         {/* User Menu Dropdown */}
         <div className="relative" ref={userMenuRef}>
           <button
