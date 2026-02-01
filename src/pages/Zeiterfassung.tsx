@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import type { TimeEntry, Project, Customer } from '../lib/supabase';
+import type { TimeEntry, TimeEntryWithStatus, Project, Customer } from '../lib/supabase';
 import TimeEntryForm from '../components/TimeEntryForm';
 import TimeEntryTable from '../components/TimeEntryTable';
 import TimeReporting from '../components/TimeReporting';
@@ -12,8 +12,8 @@ import { getWeek, getYear, parseISO } from 'date-fns';
 type GroupingMode = 'date' | 'week';
 type TabMode = 'erfassung' | 'reporting';
 
-// Extended TimeEntry with customer name from project
-interface TimeEntryWithCustomer extends TimeEntry {
+// Extended TimeEntry with customer name from project and dynamic status
+interface TimeEntryWithCustomer extends TimeEntryWithStatus {
   customerName?: string;
   projectName?: string;
 }
@@ -81,8 +81,9 @@ export default function Zeiterfassung() {
       setProjects([]);
 
       const [entriesResult, projectsResult, customersResult] = await Promise.all([
+        // Use the view for dynamic status - falls back to table if view doesn't exist
         supabase
-          .from('time_entries')
+          .from('view_time_entries_with_status')
           .select('*')
           .eq('company_id', selectedCompany.id)
           .order('date', { ascending: false }),
@@ -98,13 +99,33 @@ export default function Zeiterfassung() {
           .order('name', { ascending: true }),
       ]);
 
-      if (entriesResult.error) throw entriesResult.error;
+      // Fallback to time_entries table if view doesn't exist yet
+      let timeEntriesData = entriesResult.data;
+      if (entriesResult.error) {
+        console.warn('View not available, falling back to time_entries table:', entriesResult.error.message);
+        const fallbackResult = await supabase
+          .from('time_entries')
+          .select('*')
+          .eq('company_id', selectedCompany.id)
+          .order('date', { ascending: false });
+
+        if (fallbackResult.error) throw fallbackResult.error;
+        // Map to include derived_status for compatibility
+        timeEntriesData = (fallbackResult.data || []).map(entry => ({
+          ...entry,
+          derived_status: entry.invoice_id ? 'verrechnet' : 'offen',
+          invoice_number: null,
+          invoice_status: null,
+          invoice_date: null,
+        }));
+      }
+
       if (projectsResult.error) throw projectsResult.error;
       if (customersResult.error) throw customersResult.error;
 
       // Enrich entries with project and customer names
       const projectsData = projectsResult.data || [];
-      const enrichedEntries: TimeEntryWithCustomer[] = (entriesResult.data || []).map(entry => {
+      const enrichedEntries: TimeEntryWithCustomer[] = (timeEntriesData || []).map(entry => {
         const project = projectsData.find(p => p.id === entry.project_id) as any;
         return {
           ...entry,

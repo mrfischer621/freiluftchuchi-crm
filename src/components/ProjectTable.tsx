@@ -1,8 +1,13 @@
-import { Pencil, Archive, RotateCcw } from 'lucide-react';
+import { Pencil, Archive, RotateCcw, Clock } from 'lucide-react';
 import type { Project, Customer } from '../lib/supabase';
 
+// Extended Project type with open hours
+export interface ProjectWithOpenHours extends Project {
+  open_hours: number;
+}
+
 type ProjectTableProps = {
-  projects: Project[];
+  projects: ProjectWithOpenHours[];
   customers: Customer[];
   onEdit: (project: Project) => void;
   onArchive: (id: string) => Promise<void>;
@@ -54,6 +59,9 @@ export default function ProjectTable({ projects, customers, onEdit, onArchive, o
                 Status
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Offene Stunden
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Budget
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -85,6 +93,16 @@ export default function ProjectTable({ projects, customers, onEdit, onArchive, o
                   <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusColors[project.status]}`}>
                     {statusLabels[project.status]}
                   </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {project.open_hours > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                      <Clock size={12} />
+                      {project.open_hours.toFixed(1)}h offen
+                    </span>
+                  ) : (
+                    <span className="text-sm text-gray-400">-</span>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-600">

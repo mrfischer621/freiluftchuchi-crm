@@ -1124,7 +1124,7 @@ CREATE POLICY "Tenant Isolation via Parent" ON customer_contacts
 - [x] CRUD für Kontakte (integriert in KundenKontakte.tsx)
 - [x] "Zurück zu Kunden" Breadcrumb
 
-### 5.3 Projektübersicht - Offene Stunden
+### 5.3 Projektübersicht - Offene Stunden ✅ ERLEDIGT
 
 **Query:**
 ```sql
@@ -1149,10 +1149,16 @@ GROUP BY p.id;
 </td>
 ```
 
+**Implementiert:**
+- `Projekte.tsx`: Erweiterte Query mit time_entries für offene Stunden Berechnung
+- `ProjectTable.tsx`: Neue Spalte "Offene Stunden" mit amber Badge (Clock-Icon)
+- Badge zeigt nur wenn open_hours > 0, sonst "-"
+- Berechnung: Summe aller verrechenbaren (billable=true) Zeiteinträge ohne invoice_id
+
 **Checkliste:**
-- [ ] Query mit JOIN in [Projekte.tsx](src/pages/Projekte.tsx)
-- [ ] Spalte "Offene Stunden" in Table
-- [ ] Optional: Link zu Zeiterfassung mit Filter
+- [x] Query mit JOIN in [Projekte.tsx](src/pages/Projekte.tsx)
+- [x] Spalte "Offene Stunden" in Table
+- [ ] Optional: Link zu Zeiterfassung mit Filter (nicht implementiert)
 
 ### 5.4 Dashboard - Jahresansicht
 
@@ -1376,9 +1382,10 @@ supabase db push
 - Phase 4.4 - Reporting-Submodul ✅
 - Phase 5.1 - Globale Filter (Kunden, Projekte, Produkte) ✅
 - Phase 5.2 - Kundenübersicht (Offene Rechnungen, Kontakte-Page) ✅
+- Phase 5.3 - Projektübersicht mit "Offene Stunden" Badge ✅
 - Phase 5.4 - Dashboard Jahresansicht ✅
 
-**Next:** Phase 5.3 (Projektübersicht), Phase 5.5 (Design Polish - optional)
+**Next:** Phase 5.5 (Design Polish - optional)
 
 ---
 

@@ -10,9 +10,14 @@ import toast from 'react-hot-toast';
 
 type FilterType = 'alle' | 'aktiv' | 'archiviert';
 
+// Extended Project type with open hours calculation
+export interface ProjectWithOpenHours extends Project {
+  open_hours: number;
+}
+
 export default function Projekte() {
   const { selectedCompany } = useCompany();
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ProjectWithOpenHours[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,7 +64,7 @@ export default function Projekte() {
         projectsQuery = projectsQuery.eq('is_active', false);
       }
 
-      const [projectsResult, customersResult] = await Promise.all([
+      const [projectsResult, customersResult, timeEntriesResult] = await Promise.all([
         projectsQuery.order('created_at', { ascending: false }),
         supabase
           .from('customers')
@@ -67,12 +72,52 @@ export default function Projekte() {
           .eq('company_id', selectedCompany.id)
           .eq('is_active', true) // Only show active customers in dropdown
           .order('name', { ascending: true }),
+        // Fetch time entries with invoice status for open hours calculation
+        // Use view if available, otherwise join with invoices
+        supabase
+          .from('view_time_entries_with_status')
+          .select('project_id, hours, invoice_id, invoice_status')
+          .eq('company_id', selectedCompany.id)
+          .eq('billable', true),
       ]);
 
       if (projectsResult.error) throw projectsResult.error;
       if (customersResult.error) throw customersResult.error;
 
-      setProjects(projectsResult.data || []);
+      // Fallback to simple query if view doesn't exist
+      let timeEntriesData = timeEntriesResult.data;
+      if (timeEntriesResult.error) {
+        console.warn('View not available for open hours, using fallback:', timeEntriesResult.error.message);
+        const fallbackResult = await supabase
+          .from('time_entries')
+          .select('project_id, hours, invoice_id')
+          .eq('company_id', selectedCompany.id)
+          .eq('billable', true)
+          .is('invoice_id', null);
+
+        if (fallbackResult.error) throw fallbackResult.error;
+        timeEntriesData = (fallbackResult.data || []).map(e => ({ ...e, invoice_status: null }));
+      }
+
+      // Calculate open hours per project
+      // "Open" = not invoiced OR invoiced but still in draft status
+      const openHoursMap = new Map<string, number>();
+      (timeEntriesData || []).forEach((entry: any) => {
+        // Count as open if: no invoice OR invoice is draft
+        const isOpen = !entry.invoice_id || entry.invoice_status === 'entwurf';
+        if (isOpen) {
+          const currentHours = openHoursMap.get(entry.project_id) || 0;
+          openHoursMap.set(entry.project_id, currentHours + (entry.hours || 0));
+        }
+      });
+
+      // Merge projects with open hours
+      const projectsWithOpenHours: ProjectWithOpenHours[] = (projectsResult.data || []).map((project) => ({
+        ...project,
+        open_hours: openHoursMap.get(project.id) || 0,
+      }));
+
+      setProjects(projectsWithOpenHours);
       setCustomers(customersResult.data || []);
     } catch (err) {
       console.error('Error fetching data:', err);

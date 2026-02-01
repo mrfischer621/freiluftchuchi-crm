@@ -104,10 +104,19 @@ export interface TimeEntry {
   hours: number;
   rate: number;
   description: string | null;
+  /** @deprecated Use invoice_id !== null instead */
   invoiced: boolean;
   billable: boolean; // true = verrechenbar
   invoice_id: string | null; // Reference to invoice if already invoiced
   created_at: string;
+}
+
+// Extended TimeEntry with dynamic status from view_time_entries_with_status
+export interface TimeEntryWithStatus extends TimeEntry {
+  derived_status: 'offen' | 'entwurf' | 'versendet' | 'bezahlt' | 'überfällig';
+  invoice_number: string | null;
+  invoice_status: 'entwurf' | 'versendet' | 'bezahlt' | 'überfällig' | null;
+  invoice_date: string | null;
 }
 
 export interface Invoice {

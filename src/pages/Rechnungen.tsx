@@ -156,7 +156,8 @@ export default function Rechnungen() {
 
   const handleSubmit = async (
     data: InvoiceFormData,
-    calculatedTotals: { subtotal: number; vat_amount: number; total: number; discountAmount?: number }
+    calculatedTotals: { subtotal: number; vat_amount: number; total: number; discountAmount?: number },
+    timeEntryIds?: string[]
   ) => {
     if (!selectedCompany) return;
 
@@ -265,8 +266,28 @@ export default function Rechnungen() {
 
         if (itemsError) throw itemsError;
 
+        // Link time entries to the new invoice (atomic update)
+        if (timeEntryIds && timeEntryIds.length > 0) {
+          const { error: timeEntriesError } = await supabase
+            .from('time_entries')
+            .update({ invoice_id: (invoiceData as any).id })
+            .in('id', timeEntryIds);
+
+          if (timeEntriesError) {
+            console.error('Error linking time entries:', timeEntriesError);
+            // Don't throw - invoice was created successfully, just warn
+            setToast({
+              type: 'success',
+              message: `Rechnung erstellt, aber ${timeEntryIds.length} Zeiteinträge konnten nicht verknüpft werden.`
+            });
+          } else {
+            setToast({ type: 'success', message: `Rechnung erfolgreich erstellt mit ${timeEntryIds.length} verknüpften Zeiteinträgen!` });
+          }
+        } else {
+          setToast({ type: 'success', message: 'Rechnung erfolgreich erstellt!' });
+        }
+
         handleCloseModal();
-        setToast({ type: 'success', message: 'Rechnung erfolgreich erstellt!' });
         await fetchData();
       }
     } catch (err: any) {
@@ -291,6 +312,13 @@ export default function Rechnungen() {
     if (!confirm('Möchten Sie diese Rechnung wirklich löschen?')) return;
 
     try {
+      // First, unlink any time entries from this invoice (set invoice_id to NULL)
+      // This is redundant with ON DELETE SET NULL but provides explicit control
+      await supabase
+        .from('time_entries')
+        .update({ invoice_id: null })
+        .eq('invoice_id', id);
+
       // Delete invoice items first (cascade should handle this, but being explicit)
       await supabase.from('invoice_items').delete().eq('invoice_id', id);
 
@@ -298,10 +326,11 @@ export default function Rechnungen() {
       const { error } = await supabase.from('invoices').delete().eq('id', id);
 
       if (error) throw error;
+      setToast({ type: 'success', message: 'Rechnung und Verknüpfungen erfolgreich gelöscht.' });
       await fetchData();
     } catch (err) {
       console.error('Error deleting invoice:', err);
-      alert('Fehler beim Löschen der Rechnung.');
+      setToast({ type: 'error', message: 'Fehler beim Löschen der Rechnung.' });
     }
   };
 

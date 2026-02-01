@@ -1,12 +1,23 @@
 import { Pencil, Trash2 } from 'lucide-react';
-import type { TimeEntry, Project } from '../lib/supabase';
+import type { TimeEntry, TimeEntryWithStatus, Project } from '../lib/supabase';
 import { getWeek, parseISO, format } from 'date-fns';
 
-// Extended TimeEntry with customer name from project
-interface TimeEntryWithCustomer extends TimeEntry {
+// Extended TimeEntry with customer name from project and dynamic status
+interface TimeEntryWithCustomer extends TimeEntryWithStatus {
   customerName?: string;
   projectName?: string;
 }
+
+// Status display configuration
+const statusConfig: Record<string, { label: string; className: string }> = {
+  offen: { label: 'Offen', className: 'bg-yellow-100 text-yellow-800' },
+  entwurf: { label: 'Entwurf', className: 'bg-gray-100 text-gray-600' },
+  versendet: { label: 'Versendet', className: 'bg-blue-100 text-blue-800' },
+  bezahlt: { label: 'Bezahlt', className: 'bg-green-100 text-green-800' },
+  überfällig: { label: 'Überfällig', className: 'bg-red-100 text-red-800' },
+  // Fallback for legacy 'verrechnet' status
+  verrechnet: { label: 'Verrechnet', className: 'bg-blue-100 text-blue-800' },
+};
 
 type GroupingMode = 'date' | 'week';
 
@@ -125,15 +136,19 @@ export default function TimeEntryTable({
           </span>
         </td>
         <td className="px-4 py-3 whitespace-nowrap text-center">
-          <span
-            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-              entry.invoiced
-                ? 'bg-blue-100 text-blue-800'
-                : 'bg-yellow-100 text-yellow-800'
-            }`}
-          >
-            {entry.invoiced ? 'Verrechnet' : 'Offen'}
-          </span>
+          {/* Dynamic status from view - shows invoice status when linked */}
+          {(() => {
+            const status = entry.derived_status || (entry.invoice_id ? 'verrechnet' : 'offen');
+            const config = statusConfig[status] || statusConfig.offen;
+            return (
+              <span
+                className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${config.className}`}
+                title={entry.invoice_number ? `Rechnung: ${entry.invoice_number}` : undefined}
+              >
+                {config.label}
+              </span>
+            );
+          })()}
         </td>
         <td className="px-4 py-3 whitespace-nowrap text-right">
           <div className="flex justify-end gap-1">
