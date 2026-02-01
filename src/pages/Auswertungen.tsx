@@ -97,8 +97,17 @@ export default function Auswertungen() {
       const fromDate = dateRange.from.toISOString().split('T')[0];
       const toDate = dateRange.to.toISOString().split('T')[0];
 
-      // Fetch transactions and categories in parallel
-      const [transactionsResult, categoriesResult] = await Promise.all([
+      // Fetch invoices, transactions, and categories in parallel (same logic as useAnalytics)
+      const [invoicesResult, transactionsResult, categoriesResult] = await Promise.all([
+        // Fetch paid invoices with customer data
+        supabase
+          .from('invoices')
+          .select('*, customers(*)')
+          .eq('company_id', selectedCompany.id)
+          .eq('status', 'bezahlt')
+          .or(`and(paid_at.gte.${fromDate},paid_at.lte.${toDate}),and(paid_at.is.null,issue_date.gte.${fromDate},issue_date.lte.${toDate})`),
+
+        // Fetch transactions
         supabase
           .from('transactions')
           .select('*')
@@ -106,6 +115,8 @@ export default function Auswertungen() {
           .gte('date', fromDate)
           .lte('date', toDate)
           .order('date', { ascending: true }),
+
+        // Fetch categories
         supabase
           .from('categories')
           .select('*')
@@ -113,18 +124,47 @@ export default function Auswertungen() {
           .eq('is_active', true)
       ]);
 
+      if (invoicesResult.error) throw invoicesResult.error;
       if (transactionsResult.error) throw transactionsResult.error;
       if (categoriesResult.error) throw categoriesResult.error;
 
-      const transactions = transactionsResult.data || [];
+      // Convert paid invoices to transaction format
+      const invoiceTransactions: Transaction[] = (invoicesResult.data || [])
+        .map((invoice: any) => {
+          const transactionDate = invoice.paid_at || invoice.issue_date;
+          return {
+            id: `invoice-${invoice.id}`,
+            company_id: selectedCompany.id,
+            type: 'einnahme' as const,
+            date: transactionDate,
+            amount: invoice.total,
+            description: `Rechnung ${invoice.invoice_number} - ${invoice.customers?.name || 'Unbekannt'}`,
+            category: 'Umsatz',
+            project_id: invoice.project_id,
+            customer_id: invoice.customer_id,
+            invoice_id: invoice.id,
+            document_url: null,
+            receipt_url: null,
+            tags: null,
+            billable: true,
+            transaction_number: invoice.invoice_number,
+            created_at: invoice.created_at,
+          };
+        })
+        .filter((t) => t.date >= fromDate && t.date <= toDate);
+
+      const regularTransactions = transactionsResult.data || [];
       const cats = categoriesResult.data || [];
+
+      // Combine invoices and transactions
+      const allTransactions = [...invoiceTransactions, ...regularTransactions];
 
       // Create a lookup map for categories by name
       const categoryByName = new Map<string, Category>();
       cats.forEach(cat => categoryByName.set(cat.name, cat));
 
-      // Attach category details to transactions
-      const transactionsWithCategories: TransactionWithCategory[] = transactions.map(t => ({
+      // Attach category details to ALL transactions (for CSV export)
+      const transactionsWithCategories: TransactionWithCategory[] = allTransactions.map(t => ({
         ...t,
         category_details: t.category ? categoryByName.get(t.category) || null : null
       }));
@@ -134,7 +174,7 @@ export default function Auswertungen() {
       const einnahmenMap = new Map<string, CategorySummary>();
       const ausgabenMap = new Map<string, CategorySummary>();
 
-      transactions.forEach(t => {
+      allTransactions.forEach(t => {
         const categoryName = t.category || 'Ohne Kategorie';
         const categoryDetails = categoryByName.get(categoryName);
         const map = t.type === 'einnahme' ? einnahmenMap : ausgabenMap;
@@ -257,6 +297,14 @@ export default function Auswertungen() {
 
   const handleCustomRange = () => {
     setShowCustomPicker(true);
+    // Initialize custom range with last 30 days as sensible default
+    // This prevents getPresetRange('custom') from being called with null customRange
+    const today = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+    today.setHours(23, 59, 59, 999);
+    setCustomRange({ from: thirtyDaysAgo, to: today });
     setSelectedPreset('custom');
   };
 
@@ -398,14 +446,15 @@ export default function Auswertungen() {
           </div>
 
           {/* Custom Date Picker */}
-          {showCustomPicker && (
+          {showCustomPicker && customRange && (
             <div className="mt-4 flex gap-4 items-center">
               <div className="flex items-center gap-2">
                 <label className="text-sm font-medium text-content-secondary">Von:</label>
                 <input
                   type="date"
+                  value={customRange.from.toISOString().split('T')[0]}
                   onChange={(e) => {
-                    if (customRange) {
+                    if (e.target.value) {
                       applyCustomRange(e.target.value, customRange.to.toISOString().split('T')[0]);
                     }
                   }}
@@ -416,12 +465,10 @@ export default function Auswertungen() {
                 <label className="text-sm font-medium text-content-secondary">Bis:</label>
                 <input
                   type="date"
+                  value={customRange.to.toISOString().split('T')[0]}
                   onChange={(e) => {
-                    if (customRange) {
+                    if (e.target.value) {
                       applyCustomRange(customRange.from.toISOString().split('T')[0], e.target.value);
-                    } else {
-                      const today = new Date().toISOString().split('T')[0];
-                      applyCustomRange(today, e.target.value);
                     }
                   }}
                   className="px-3 py-2 border border-surface-border rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"

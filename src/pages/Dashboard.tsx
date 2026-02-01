@@ -22,7 +22,7 @@ interface ChartData {
 export default function Dashboard() {
   const { selectedCompany } = useCompany();
   const [viewMode, setViewMode] = useState<ViewMode>('days');
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>(30);
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>(90);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [revenue, setRevenue] = useState(0);
   const [expenses, setExpenses] = useState(0);

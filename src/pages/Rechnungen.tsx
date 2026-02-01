@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Invoice, InvoiceItem, Customer, Project, Company } from '../lib/supabase';
 import InvoiceForm from '../components/InvoiceForm';
@@ -23,6 +24,7 @@ interface Toast {
 
 export default function Rechnungen() {
   const { selectedCompany } = useCompany();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -63,6 +65,18 @@ export default function Rechnungen() {
       return () => clearTimeout(timer);
     }
   }, [toast]);
+
+  // Handle query parameter for opening specific invoice
+  useEffect(() => {
+    const invoiceId = searchParams.get('id');
+    if (invoiceId && invoices.length > 0) {
+      const invoice = invoices.find(i => i.id === invoiceId);
+      if (invoice) {
+        handleEdit(invoice);
+        setSearchParams({}); // Clear query param after opening
+      }
+    }
+  }, [searchParams, invoices]);
 
   // Early return if no company selected
   if (!selectedCompany) {

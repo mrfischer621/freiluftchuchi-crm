@@ -118,7 +118,7 @@ export function useGlobalSearch(query: string) {
             type: 'customer' as const,
             title: c.name as string,
             subtitle: (c.contact_person || c.email || undefined) as string | undefined,
-            route: `/kunden?id=${c.id}`,
+            route: `/kunden/${c.id}`,
           })),
           projects: (projectsResult.data || []).map((p) => ({
             id: p.id as string,

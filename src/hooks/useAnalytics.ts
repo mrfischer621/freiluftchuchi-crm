@@ -135,19 +135,26 @@ export function useAnalytics(dateRange: DateRange) {
       const toDate = dateRange.to.toISOString().split('T')[0];
 
       // Fetch both invoices and expenses in parallel
+      // Invoices: Use paid_at if available, otherwise issue_date - need broader fetch + client filter
+      // Expenses: Can filter server-side directly by date
       const [invoicesResult, expensesResult] = await Promise.all([
         // A. Fetch paid invoices with customer data
+        // We filter by paid_at OR issue_date, so we need to fetch invoices where EITHER date could be in range
+        // Use OR filter: paid_at in range OR (paid_at is null AND issue_date in range)
         supabase
           .from('invoices')
           .select('*, customers(*)')
           .eq('company_id', selectedCompany.id)
-          .eq('status', 'bezahlt'),
+          .eq('status', 'bezahlt')
+          .or(`and(paid_at.gte.${fromDate},paid_at.lte.${toDate}),and(paid_at.is.null,issue_date.gte.${fromDate},issue_date.lte.${toDate})`),
 
-        // B. Fetch all expenses
+        // B. Fetch expenses with server-side date filtering (no year boundary issues)
         supabase
           .from('expenses')
           .select('*')
           .eq('company_id', selectedCompany.id)
+          .gte('date', fromDate)
+          .lte('date', toDate)
       ]);
 
       if (invoicesResult.error) throw invoicesResult.error;

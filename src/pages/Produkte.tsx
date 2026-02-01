@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Product } from '../lib/supabase';
 import ProductForm from '../components/ProductForm';
@@ -12,6 +13,7 @@ type FilterType = 'alle' | 'aktiv' | 'archiviert';
 
 export default function Produkte() {
   const { selectedCompany } = useCompany();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +26,18 @@ export default function Produkte() {
       fetchProducts();
     }
   }, [selectedCompany, filter]);
+
+  // Handle query parameter for opening specific product
+  useEffect(() => {
+    const productId = searchParams.get('id');
+    if (productId && products.length > 0) {
+      const product = products.find(p => p.id === productId);
+      if (product) {
+        handleEdit(product);
+        setSearchParams({}); // Clear query param after opening
+      }
+    }
+  }, [searchParams, products]);
 
   const fetchProducts = async () => {
     if (!selectedCompany) return;

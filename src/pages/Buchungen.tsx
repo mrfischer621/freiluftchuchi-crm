@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Filter } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Transaction, Customer, Project } from '../lib/supabase';
@@ -9,6 +10,7 @@ import { useCompany } from '../context/CompanyContext';
 
 export default function Buchungen() {
   const { selectedCompany } = useCompany();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -31,6 +33,18 @@ export default function Buchungen() {
   useEffect(() => {
     applyFilters();
   }, [transactions, filterType, filterPeriod]);
+
+  // Handle query parameter for opening specific transaction
+  useEffect(() => {
+    const transactionId = searchParams.get('id');
+    if (transactionId && transactions.length > 0) {
+      const transaction = transactions.find(t => t.id === transactionId);
+      if (transaction) {
+        handleEdit(transaction);
+        setSearchParams({}); // Clear query param after opening
+      }
+    }
+  }, [searchParams, transactions]);
 
   const fetchData = async () => {
     if (!selectedCompany) return;

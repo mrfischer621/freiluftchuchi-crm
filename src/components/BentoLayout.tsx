@@ -1,4 +1,5 @@
-import { Outlet } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import { BentoSidebar } from './BentoSidebar';
 import { BentoHeader } from './BentoHeader';
 import { useCompany } from '../context/CompanyContext';
@@ -10,24 +11,37 @@ import { useCompany } from '../context/CompanyContext';
  * - 100vh fixed viewport (no body scroll)
  * - CSS Grid: [Dark Sidebar | Light Content Area]
  * - High contrast: slate-900 sidebar vs slate-50 main
- * - Responsive: Sidebar collapses on mobile
+ * - Responsive: Sidebar collapses on mobile with hamburger menu
+ * - Mobile: Sidebar as fixed overlay with backdrop
  * - Main content fills available height for Kanban-style pages
  */
 export default function BentoLayout() {
   const { selectedCompany } = useCompany();
+  const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
 
   return (
     <div className="h-screen w-screen overflow-hidden flex">
-      {/* Sidebar - Dark, Fixed Width */}
+      {/* Sidebar - Dark, Fixed Width (Desktop) / Fixed Overlay (Mobile) */}
       <aside className="w-60 flex-shrink-0 bg-sidebar-bg border-r border-sidebar-border hidden md:flex flex-col">
         <BentoSidebar />
+      </aside>
+
+      {/* Mobile Sidebar - Fixed Overlay */}
+      <aside className="fixed inset-y-0 left-0 w-60 z-50 md:hidden">
+        <BentoSidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
       </aside>
 
       {/* Main Content Area - Light Background */}
       <div className="flex-1 flex flex-col min-w-0 bg-app-bg">
         {/* Header - Sticky Top */}
         <header className="h-16 flex-shrink-0 bg-white border-b border-surface-border px-6 flex items-center justify-between">
-          <BentoHeader />
+          <BentoHeader onMenuClick={() => setIsMobileMenuOpen(true)} />
         </header>
 
         {/* Main Content - Fills remaining height */}

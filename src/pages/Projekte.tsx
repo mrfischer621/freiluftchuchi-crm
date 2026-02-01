@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Project, Customer } from '../lib/supabase';
 import ProjectForm from '../components/ProjectForm';
@@ -17,6 +18,7 @@ export interface ProjectWithOpenHours extends Project {
 
 export default function Projekte() {
   const { selectedCompany } = useCompany();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [projects, setProjects] = useState<ProjectWithOpenHours[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
@@ -30,6 +32,18 @@ export default function Projekte() {
       fetchData();
     }
   }, [selectedCompany, filter]);
+
+  // Handle query parameter for opening specific project
+  useEffect(() => {
+    const projectId = searchParams.get('id');
+    if (projectId && projects.length > 0) {
+      const project = projects.find(p => p.id === projectId);
+      if (project) {
+        handleEdit(project);
+        setSearchParams({}); // Clear query param after opening
+      }
+    }
+  }, [searchParams, projects]);
 
   // Early return if no company selected
   if (!selectedCompany) {

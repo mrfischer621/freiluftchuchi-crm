@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Customer } from '../lib/supabase';
 import CustomerForm from '../components/CustomerForm';
@@ -17,6 +18,7 @@ export interface CustomerWithStats extends Customer {
 type FilterType = 'alle' | 'aktiv' | 'archiviert';
 
 export default function Kunden() {
+  const navigate = useNavigate();
   const { selectedCompany } = useCompany();
   const [customers, setCustomers] = useState<CustomerWithStats[]>([]);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -184,6 +186,10 @@ export default function Kunden() {
     setIsModalOpen(true);
   };
 
+  const handleRowClick = (customer: Customer) => {
+    navigate(`/kunden/${customer.id}`);
+  };
+
   const handleArchive = async (id: string) => {
     if (!confirm('Möchten Sie diesen Kunden wirklich archivieren?')) return;
 
@@ -333,7 +339,7 @@ export default function Kunden() {
         <CustomerTable
           customers={filteredCustomers}
           onEdit={handleEdit}
-          onRowClick={handleEdit}
+          onRowClick={handleRowClick}
           onArchive={handleArchive}
           onRestore={handleRestore}
           onDelete={handleDelete}

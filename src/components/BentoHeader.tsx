@@ -61,7 +61,7 @@ function SearchResultGroup({ title, icon, results, onSelect }: SearchResultGroup
  * - User menu with company switcher (right)
  * - Mobile menu trigger
  */
-export function BentoHeader() {
+export function BentoHeader({ onMenuClick }: { onMenuClick?: () => void }) {
   const navigate = useNavigate();
   const { user, signOut, profile } = useAuth();
   const { selectedCompany, companies, switchCompany, isLoading } = useCompany();
@@ -177,13 +177,14 @@ export function BentoHeader() {
       <div className="flex items-center gap-4">
         {/* Mobile Menu Button */}
         <button
+          onClick={onMenuClick}
           className="md:hidden p-2 -ml-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-slate-100 transition-colors"
           aria-label="Menu öffnen"
         >
           <Menu size={20} strokeWidth={2} />
         </button>
 
-{/* Breadcrumb area reserved for future use */}
+        {/* Breadcrumb area reserved for future use */}
       </div>
 
       {/* Center - Global Search */}

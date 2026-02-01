@@ -16,6 +16,13 @@ export default function ProductTable({ products, onEdit, onArchive, onRestore }:
     }).format(amount);
   };
 
+  const truncateDescription = (text: string | null, wordLimit: number = 10): string => {
+    if (!text) return '-';
+    const words = text.split(' ');
+    if (words.length <= wordLimit) return text;
+    return words.slice(0, wordLimit).join(' ') + '...';
+  };
+
   if (products.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-6">
@@ -30,7 +37,7 @@ export default function ProductTable({ products, onEdit, onArchive, onRestore }:
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+              <th className="sticky left-0 z-10 bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preis</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Einheit</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Beschreibung</th>
@@ -46,7 +53,7 @@ export default function ProductTable({ products, onEdit, onArchive, onRestore }:
                   !product.is_active ? 'opacity-50' : ''
                 }`}
               >
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="sticky left-0 z-10 bg-white px-6 py-4 whitespace-nowrap group-hover:bg-gray-50">
                   <span className="text-sm font-medium text-gray-900">{product.name}</span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -57,9 +64,9 @@ export default function ProductTable({ products, onEdit, onArchive, onRestore }:
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="text-sm text-gray-600">{product.unit}</span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-6 py-4">
                   <span className="text-sm text-gray-600">
-                    {product.description || '-'}
+                    {truncateDescription(product.description)}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
