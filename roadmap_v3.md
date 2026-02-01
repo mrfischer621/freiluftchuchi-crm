@@ -4,29 +4,29 @@
 Abschluss der Umstellung auf Single-Entry Bookkeeping und Verbesserung der UX.
 
 - [x] **1.1 Transaction UI & Logic** (ehemals 3.2)
-    - [x] **UI Fix:** Scrollbalken rechts entfernen. Layout an `InvoiceTable` angleichen (Pagination oder Auto-Height statt fester Container-Höhe).
+    - [ ] **UI Fix:** Scrollbalken rechts entfernen. Layout an `InvoiceTable` angleichen (Pagination oder Auto-Height statt fester Container-Höhe).
     - [x] **Kategorien-Logik:** Dropdown im Formular gruppieren (Einnahmen/Ausgaben).
     - [x] **Auto-Type:** Beim Wählen einer Kategorie (z.B. "Miete") automatisch den Typ (Ausgabe) setzen.
-- [x] **1.2 Beleg-Management** (Neu)
+- [ ] **1.2 Beleg-Management** (Neu)
     - [x] **Storage:** Supabase Storage Bucket `receipts` einrichten (Public/Private Policies).
     - [x] **DB:** Tabelle `transactions` um Spalte `receipt_url` (oder `attachments` array) erweitern.
     - [x] **UI:** Upload-Zone (Drag & Drop) im Buchungs-Formular für PDF/JPG.
     - [x] **View:** Vorschau-Button oder Download-Link in der Tabelle.
-- [x] **1.3 Auswertungen / Reports** (ehemals 3.3)
-    - [x] Einnahmen-/Ausgabenübersicht nach Kategorien (Chart oder Tabelle).
-    - [x] Steuerrelevante Positionen hervorheben.
-    - [x] Export für Treuhänder (CSV/PDF).
+- [ ] **1.3 Auswertungen / Reports** (ehemals 3.3)
+    - [ ] Einnahmen-/Ausgabenübersicht nach Kategorien (Chart oder Tabelle).
+    - [ ] Steuerrelevante Positionen hervorheben.
+    - [ ] Export für Treuhänder (CSV/PDF).
 
 ## 2. Global Usability (Priorität Mittel)
 Funktionen, die sich über alle Module erstrecken.
 
-- [ ] **2.1 Globale Suche** (Neu)
-    - [ ] Implementierung der Suchleiste (Text-Filter wie bei Kunden) für:
-        - [ ] Projekte
-        - [ ] Produkte
-        - [ ] Angebote (Offerten)
-        - [ ] Rechnungen
-        - [ ] Buchungen
+- [x] **2.1 Globale Suche** (Neu)
+    - [x] Implementierung der Suchleiste (Text-Filter wie bei Kunden) für:
+        - [x] Projekte
+        - [x] Produkte
+        - [x] Angebote (Offerten)
+        - [x] Rechnungen
+        - [x] Buchungen
 - [ ] **2.2 Global Timer (Stopwatch)** (ehemals 2.4)
     - [ ] "Play"-Button im Global Header.
     - [ ] Context & LocalStorage Persistence (überdauert Reload).
