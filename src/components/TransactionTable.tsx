@@ -1,4 +1,5 @@
-import { Eye, MoreVertical } from 'lucide-react';
+import { Eye, MoreVertical, Paperclip } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import type { Transaction, Customer, Project } from '../lib/supabase';
 
 interface TransactionTableProps {
@@ -90,6 +91,9 @@ export default function TransactionTable({ transactions, customers, projects, on
                 Projekt
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Beleg
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Aktionen
               </th>
             </tr>
@@ -142,6 +146,31 @@ export default function TransactionTable({ transactions, customers, projects, on
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {getProjectName(transaction.project_id)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    {transaction.receipt_url ? (
+                      <button
+                        onClick={async () => {
+                          const { data, error } = await supabase.storage
+                            .from('receipts')
+                            .createSignedUrl(transaction.receipt_url!, 60);
+                          if (error) {
+                            console.error('Error creating signed URL:', error);
+                            alert('Fehler beim Öffnen des Belegs.');
+                            return;
+                          }
+                          if (data?.signedUrl) {
+                            window.open(data.signedUrl, '_blank');
+                          }
+                        }}
+                        className="inline-flex items-center justify-center text-gray-400 hover:text-freiluft transition-colors"
+                        title="Beleg anzeigen"
+                      >
+                        <Paperclip className="w-5 h-5" />
+                      </button>
+                    ) : (
+                      <span className="text-gray-300">-</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <div className="flex items-center justify-center gap-2">

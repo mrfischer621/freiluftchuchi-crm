@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { Upload, X, FileText, Image } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useCompany } from '../context/CompanyContext';
+import { useAuth } from '../context/AuthProvider';
 import type { Transaction, Customer, Project, Category } from '../lib/supabase';
 
 interface TransactionFormProps {
@@ -13,6 +15,8 @@ interface TransactionFormProps {
 
 export default function TransactionForm({ transaction, onSubmit, onCancel, customers, projects }: TransactionFormProps) {
   const { selectedCompany } = useCompany();
+  const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [activeTab, setActiveTab] = useState<'einnahme' | 'ausgabe'>(transaction?.type || 'ausgabe');
@@ -27,6 +31,11 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
   const [tagInput, setTagInput] = useState('');
   const [billable, setBillable] = useState(transaction?.billable || false);
   const [loading, setLoading] = useState(false);
+
+  // Receipt upload state
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [existingReceiptUrl, setExistingReceiptUrl] = useState<string | null>(transaction?.receipt_url || null);
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
 
   // Fetch categories from database
   useEffect(() => {
@@ -104,6 +113,12 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
     const categoryName = selectedCategory?.name || null;
 
     try {
+      // Upload receipt if a new file was selected
+      let receiptUrl = existingReceiptUrl;
+      if (receiptFile) {
+        receiptUrl = await uploadReceipt();
+      }
+
       await onSubmit({
         type: activeTab,
         transaction_number: transactionNumber,
@@ -115,6 +130,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
         project_id: projectId || null,
         tags: tags.length > 0 ? tags : null,
         billable,
+        receipt_url: receiptUrl,
       });
 
       if (saveAndNew) {
@@ -128,6 +144,11 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
         setProjectId('');
         setTags([]);
         setBillable(false);
+        setReceiptFile(null);
+        setExistingReceiptUrl(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       } else {
         onCancel();
       }
@@ -147,6 +168,71 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
 
   const removeTag = (tagToRemove: string) => {
     setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+
+  // Receipt file handling
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Bitte wählen Sie eine PDF- oder Bilddatei (JPG, PNG, WebP).');
+        return;
+      }
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Die Datei darf maximal 10 MB gross sein.');
+        return;
+      }
+      setReceiptFile(file);
+      setExistingReceiptUrl(null); // Clear existing URL when new file selected
+    }
+  };
+
+  const removeReceipt = () => {
+    setReceiptFile(null);
+    setExistingReceiptUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const uploadReceipt = async (): Promise<string | null> => {
+    if (!receiptFile || !user) return existingReceiptUrl;
+
+    setUploadingReceipt(true);
+    try {
+      const timestamp = Date.now();
+      const sanitizedFileName = receiptFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const filePath = `${user.id}/${timestamp}_${sanitizedFileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('receipts')
+        .upload(filePath, receiptFile);
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
+
+      // Return file path only (not public URL) - use signed URLs for access
+      return filePath;
+    } catch (error) {
+      console.error('Error uploading receipt:', error);
+      alert('Fehler beim Hochladen des Belegs.');
+      return existingReceiptUrl;
+    } finally {
+      setUploadingReceipt(false);
+    }
+  };
+
+  const getFileIcon = () => {
+    if (!receiptFile) return null;
+    if (receiptFile.type === 'application/pdf') {
+      return <FileText className="w-5 h-5 text-red-500" />;
+    }
+    return <Image className="w-5 h-5 text-blue-500" />;
   };
 
   return (
@@ -273,6 +359,81 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent"
                 placeholder="Details zur Buchung..."
               />
+            </div>
+
+            {/* Receipt Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Beleg (optional)
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                onChange={handleFileSelect}
+                className="hidden"
+                id="receipt-upload"
+              />
+
+              {!receiptFile && !existingReceiptUrl ? (
+                <label
+                  htmlFor="receipt-upload"
+                  className="flex items-center justify-center gap-2 w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-freiluft hover:bg-gray-50 transition-colors"
+                >
+                  <Upload className="w-5 h-5 text-gray-400" />
+                  <span className="text-sm text-gray-600">PDF oder Bild hochladen (max. 10 MB)</span>
+                </label>
+              ) : (
+                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    {receiptFile ? (
+                      <>
+                        {getFileIcon()}
+                        <span className="text-sm text-gray-700 truncate max-w-[200px]">
+                          {receiptFile.name}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          ({(receiptFile.size / 1024).toFixed(0)} KB)
+                        </span>
+                      </>
+                    ) : existingReceiptUrl ? (
+                      <>
+                        <FileText className="w-5 h-5 text-green-500" />
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const { data, error } = await supabase.storage
+                              .from('receipts')
+                              .createSignedUrl(existingReceiptUrl, 60);
+                            if (error) {
+                              console.error('Error creating signed URL:', error);
+                              alert('Fehler beim Öffnen des Belegs.');
+                              return;
+                            }
+                            if (data?.signedUrl) {
+                              window.open(data.signedUrl, '_blank');
+                            }
+                          }}
+                          className="text-sm text-freiluft hover:underline"
+                        >
+                          Beleg anzeigen
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removeReceipt}
+                    className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    title="Beleg entfernen"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+              {uploadingReceipt && (
+                <p className="mt-1 text-sm text-gray-500">Beleg wird hochgeladen...</p>
+              )}
             </div>
 
             {/* Customer and Project */}

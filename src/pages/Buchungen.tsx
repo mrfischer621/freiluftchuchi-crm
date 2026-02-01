@@ -73,6 +73,7 @@ export default function Buchungen() {
         customer_id: invoice.customer_id,
         invoice_id: invoice.id,
         document_url: null,
+        receipt_url: null,
         tags: null,
         billable: true,
         transaction_number: invoice.invoice_number,

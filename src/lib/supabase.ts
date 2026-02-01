@@ -197,6 +197,7 @@ export interface Transaction {
   customer_id: string | null;
   invoice_id: string | null;
   document_url: string | null;
+  receipt_url: string | null;
   tags: string[] | null;
   billable: boolean;
   transaction_number: string | null;
