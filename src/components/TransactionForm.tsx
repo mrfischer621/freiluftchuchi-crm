@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import type { Transaction, Customer, Project, ExpenseAccount } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import { useCompany } from '../context/CompanyContext';
+import type { Transaction, Customer, Project, Category } from '../lib/supabase';
 
 interface TransactionFormProps {
   transaction?: Transaction;
@@ -7,20 +9,17 @@ interface TransactionFormProps {
   onCancel: () => void;
   customers: Customer[];
   projects: Project[];
-  expenseAccounts?: ExpenseAccount[];
 }
 
-export default function TransactionForm({ transaction, onSubmit, onCancel, customers, projects, expenseAccounts = [] }: TransactionFormProps) {
-  // Fallback categories if no expense accounts are configured
-  const defaultCategories = ['Materialaufwand', 'Personalkosten', 'Miete', 'Marketing', 'Sonstige'];
-  const categoryOptions = expenseAccounts.length > 0
-    ? expenseAccounts.map(a => a.name)
-    : defaultCategories;
+export default function TransactionForm({ transaction, onSubmit, onCancel, customers, projects }: TransactionFormProps) {
+  const { selectedCompany } = useCompany();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [activeTab, setActiveTab] = useState<'einnahme' | 'ausgabe'>(transaction?.type || 'ausgabe');
   const [transactionNumber, setTransactionNumber] = useState(transaction?.transaction_number || '');
   const [date, setDate] = useState(transaction?.date || new Date().toISOString().split('T')[0]);
   const [amount, setAmount] = useState(transaction?.amount.toString() || '');
-  const [category, setCategory] = useState(transaction?.category || categoryOptions[0] || 'Sonstige');
+  const [categoryId, setCategoryId] = useState(transaction?.category || '');
   const [description, setDescription] = useState(transaction?.description || '');
   const [customerId, setCustomerId] = useState(transaction?.customer_id || '');
   const [projectId, setProjectId] = useState(transaction?.project_id || '');
@@ -28,6 +27,53 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
   const [tagInput, setTagInput] = useState('');
   const [billable, setBillable] = useState(transaction?.billable || false);
   const [loading, setLoading] = useState(false);
+
+  // Fetch categories from database
+  useEffect(() => {
+    const fetchCategories = async () => {
+      if (!selectedCompany) return;
+
+      try {
+        setIsLoadingCategories(true);
+        const { data, error } = await supabase
+          .from('categories')
+          .select('*')
+          .eq('company_id', selectedCompany.id)
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true });
+
+        if (error) throw error;
+        setCategories(data || []);
+
+        // Set default category if none selected
+        if (!categoryId && data && data.length > 0) {
+          const typeForTab = activeTab === 'einnahme' ? 'income' : 'expense';
+          const defaultCat = data.find(c => c.type === typeForTab);
+          if (defaultCat) {
+            setCategoryId(defaultCat.id);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, [selectedCompany]);
+
+  // Filter categories by transaction type
+  const filteredCategories = categories.filter(c =>
+    activeTab === 'einnahme' ? c.type === 'income' : c.type === 'expense'
+  );
+
+  // Update default category when tab changes
+  useEffect(() => {
+    if (filteredCategories.length > 0 && !filteredCategories.find(c => c.id === categoryId)) {
+      setCategoryId(filteredCategories[0].id);
+    }
+  }, [activeTab, filteredCategories, categoryId]);
 
   useEffect(() => {
     if (!transaction && !transactionNumber) {
@@ -42,13 +88,17 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
     e.preventDefault();
     setLoading(true);
 
+    // Get category name for storage (backward compatible with string category field)
+    const selectedCategory = categories.find(c => c.id === categoryId);
+    const categoryName = selectedCategory?.name || null;
+
     try {
       await onSubmit({
         type: activeTab,
         transaction_number: transactionNumber,
         date,
         amount: parseFloat(amount),
-        category,
+        category: categoryName,
         description: description || null,
         customer_id: customerId || null,
         project_id: projectId || null,
@@ -61,7 +111,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
         setTransactionNumber('');
         setAmount('');
         setDescription('');
-        setCategory(categoryOptions[0] || 'Sonstige');
+        setCategoryId(filteredCategories[0]?.id || '');
         setCustomerId('');
         setProjectId('');
         setTags([]);
@@ -168,13 +218,20 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
                   Kategorie
                 </label>
                 <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent"
+                  disabled={isLoadingCategories}
                 >
-                  {categoryOptions.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
+                  {isLoadingCategories ? (
+                    <option value="">Lädt...</option>
+                  ) : filteredCategories.length === 0 ? (
+                    <option value="">Keine Kategorien verfügbar</option>
+                  ) : (
+                    filteredCategories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))
+                  )}
                 </select>
               </div>
             </div>

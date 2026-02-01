@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import type { PipelineStage, ExpenseAccount } from '../lib/supabase';
+import type { PipelineStage, Category, CategoryType } from '../lib/supabase';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthProvider';
-import { Building2, Save, AlertCircle, CheckCircle, TrendingUp, Edit2, Check, X, Trash2, Plus, User, FileText, Layers } from 'lucide-react';
+import { Building2, Save, AlertCircle, CheckCircle, TrendingUp, Edit2, Check, X, Trash2, Plus, User, FileText, Tags, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 
 interface CompanyFormData {
   name: string;
@@ -24,7 +24,7 @@ interface Toast {
   message: string;
 }
 
-type TabType = 'company' | 'profile' | 'templates' | 'pipeline' | 'accounts';
+type TabType = 'company' | 'profile' | 'templates' | 'pipeline' | 'categories';
 
 export default function Settings() {
   const { selectedCompany, refreshCompanies } = useCompany();
@@ -68,12 +68,18 @@ export default function Settings() {
   const [editStageColor, setEditStageColor] = useState('');
   const [isLoadingStages, setIsLoadingStages] = useState(false);
 
-  // Expense accounts (Kontenplan) state
-  const [expenseAccounts, setExpenseAccounts] = useState<ExpenseAccount[]>([]);
-  const [newAccountName, setNewAccountName] = useState('');
-  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
-  const [editAccountName, setEditAccountName] = useState('');
-  const [isLoadingAccounts, setIsLoadingAccounts] = useState(false);
+  // Categories (Buchungskategorien) state
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryTypeFilter, setCategoryTypeFilter] = useState<CategoryType | 'all'>('all');
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryType, setNewCategoryType] = useState<CategoryType>('expense');
+  const [newCategoryColor, setNewCategoryColor] = useState('#6B7280');
+  const [newCategoryTaxRelevant, setNewCategoryTaxRelevant] = useState(true);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState('');
+  const [editCategoryColor, setEditCategoryColor] = useState('');
+  const [editCategoryTaxRelevant, setEditCategoryTaxRelevant] = useState(true);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
   // Load company data
   useEffect(() => {
@@ -113,10 +119,10 @@ export default function Settings() {
     }
   }, [activeTab, selectedCompany]);
 
-  // Load expense accounts when accounts tab is active
+  // Load categories when categories tab is active
   useEffect(() => {
-    if (activeTab === 'accounts' && selectedCompany) {
-      fetchExpenseAccounts();
+    if (activeTab === 'categories' && selectedCompany) {
+      fetchCategories();
     }
   }, [activeTab, selectedCompany]);
 
@@ -159,40 +165,45 @@ export default function Settings() {
     }
   };
 
-  const fetchExpenseAccounts = async () => {
+  const fetchCategories = async () => {
     if (!selectedCompany) return;
 
     try {
-      setIsLoadingAccounts(true);
+      setIsLoadingCategories(true);
       const { data, error } = await supabase
-        .from('expense_accounts')
+        .from('categories')
         .select('*')
         .eq('company_id', selectedCompany.id)
         .eq('is_active', true)
+        .order('type', { ascending: true })
         .order('sort_order', { ascending: true });
 
       if (error) throw error;
-      setExpenseAccounts(data || []);
+      setCategories(data || []);
     } catch (err) {
-      console.error('Error fetching expense accounts:', err);
-      showToast('error', 'Fehler beim Laden der Aufwandskonten.');
+      console.error('Error fetching categories:', err);
+      showToast('error', 'Fehler beim Laden der Kategorien.');
     } finally {
-      setIsLoadingAccounts(false);
+      setIsLoadingCategories(false);
     }
   };
 
-  const handleAddAccount = async () => {
-    if (!newAccountName.trim() || !selectedCompany) return;
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim() || !selectedCompany) return;
 
     try {
-      setIsLoadingAccounts(true);
-      const maxSortOrder = Math.max(0, ...expenseAccounts.map(a => a.sort_order));
+      setIsLoadingCategories(true);
+      const sameTypeCategories = categories.filter(c => c.type === newCategoryType);
+      const maxSortOrder = Math.max(0, ...sameTypeCategories.map(c => c.sort_order));
 
       const { data, error } = await supabase
-        .from('expense_accounts')
+        .from('categories')
         .insert({
           company_id: selectedCompany.id,
-          name: newAccountName.trim(),
+          name: newCategoryName.trim(),
+          type: newCategoryType,
+          color: newCategoryColor,
+          is_tax_relevant: newCategoryTaxRelevant,
           sort_order: maxSortOrder + 1,
         })
         .select()
@@ -200,69 +211,85 @@ export default function Settings() {
 
       if (error) throw error;
 
-      setExpenseAccounts([...expenseAccounts, data]);
-      setNewAccountName('');
-      showToast('success', 'Aufwandskonto hinzugefügt.');
+      setCategories([...categories, data]);
+      setNewCategoryName('');
+      setNewCategoryColor('#6B7280');
+      setNewCategoryTaxRelevant(true);
+      showToast('success', 'Kategorie hinzugefügt.');
     } catch (err) {
-      console.error('Error adding expense account:', err);
-      showToast('error', 'Fehler beim Hinzufügen des Kontos.');
+      console.error('Error adding category:', err);
+      showToast('error', 'Fehler beim Hinzufügen der Kategorie.');
     } finally {
-      setIsLoadingAccounts(false);
+      setIsLoadingCategories(false);
     }
   };
 
-  const handleUpdateAccount = async (accountId: string) => {
-    if (!editAccountName.trim()) return;
+  const handleUpdateCategory = async (categoryId: string) => {
+    if (!editCategoryName.trim()) return;
 
     try {
       const { error } = await supabase
-        .from('expense_accounts')
-        .update({ name: editAccountName.trim() })
-        .eq('id', accountId);
+        .from('categories')
+        .update({
+          name: editCategoryName.trim(),
+          color: editCategoryColor,
+          is_tax_relevant: editCategoryTaxRelevant,
+        })
+        .eq('id', categoryId);
 
       if (error) throw error;
 
-      setExpenseAccounts(expenseAccounts.map(a =>
-        a.id === accountId ? { ...a, name: editAccountName.trim() } : a
+      setCategories(categories.map(c =>
+        c.id === categoryId
+          ? { ...c, name: editCategoryName.trim(), color: editCategoryColor, is_tax_relevant: editCategoryTaxRelevant }
+          : c
       ));
-      setEditingAccountId(null);
-      setEditAccountName('');
-      showToast('success', 'Konto aktualisiert.');
+      setEditingCategoryId(null);
+      setEditCategoryName('');
+      showToast('success', 'Kategorie aktualisiert.');
     } catch (err) {
-      console.error('Error updating expense account:', err);
-      showToast('error', 'Fehler beim Aktualisieren des Kontos.');
+      console.error('Error updating category:', err);
+      showToast('error', 'Fehler beim Aktualisieren der Kategorie.');
     }
   };
 
-  const handleDeleteAccount = async (accountId: string) => {
-    if (!confirm('Möchten Sie dieses Konto wirklich deaktivieren?')) return;
+  const handleDeleteCategory = async (categoryId: string) => {
+    if (!confirm('Möchten Sie diese Kategorie wirklich deaktivieren?')) return;
 
     try {
       // Soft delete - set is_active to false
       const { error } = await supabase
-        .from('expense_accounts')
+        .from('categories')
         .update({ is_active: false })
-        .eq('id', accountId);
+        .eq('id', categoryId);
 
       if (error) throw error;
 
-      setExpenseAccounts(expenseAccounts.filter(a => a.id !== accountId));
-      showToast('success', 'Konto deaktiviert.');
+      setCategories(categories.filter(c => c.id !== categoryId));
+      showToast('success', 'Kategorie deaktiviert.');
     } catch (err) {
-      console.error('Error deleting expense account:', err);
-      showToast('error', 'Fehler beim Deaktivieren des Kontos.');
+      console.error('Error deleting category:', err);
+      showToast('error', 'Fehler beim Deaktivieren der Kategorie.');
     }
   };
 
-  const startEditAccount = (account: ExpenseAccount) => {
-    setEditingAccountId(account.id);
-    setEditAccountName(account.name);
+  const startEditCategory = (category: Category) => {
+    setEditingCategoryId(category.id);
+    setEditCategoryName(category.name);
+    setEditCategoryColor(category.color);
+    setEditCategoryTaxRelevant(category.is_tax_relevant);
   };
 
-  const cancelEditAccount = () => {
-    setEditingAccountId(null);
-    setEditAccountName('');
+  const cancelEditCategory = () => {
+    setEditingCategoryId(null);
+    setEditCategoryName('');
+    setEditCategoryColor('');
+    setEditCategoryTaxRelevant(true);
   };
+
+  const filteredCategories = categoryTypeFilter === 'all'
+    ? categories
+    : categories.filter(c => c.type === categoryTypeFilter);
 
   const validateCompanyForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -523,7 +550,7 @@ export default function Settings() {
     { id: 'company' as TabType, label: 'Firmenprofil', icon: Building2 },
     { id: 'profile' as TabType, label: 'Benutzerprofil', icon: User },
     { id: 'templates' as TabType, label: 'Textvorlagen', icon: FileText },
-    { id: 'accounts' as TabType, label: 'Kontenplan', icon: Layers },
+    { id: 'categories' as TabType, label: 'Buchungskategorien', icon: Tags },
     { id: 'pipeline' as TabType, label: 'Sales Pipeline', icon: TrendingUp },
   ];
 
@@ -1099,34 +1126,94 @@ export default function Settings() {
         </div>
       )}
 
-      {/* Tab Content: Expense Accounts (Kontenplan) */}
-      {activeTab === 'accounts' && (
+      {/* Tab Content: Buchungskategorien */}
+      {activeTab === 'categories' && (
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">Aufwandskonten verwalten</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Buchungskategorien verwalten</h2>
             <p className="text-sm text-gray-600">
-              Definieren Sie Kategorien für Ihre Buchungen. Diese erscheinen als Dropdown bei der Erfassung von Ausgaben.
+              Definieren Sie Kategorien für Einnahmen und Ausgaben. Diese erscheinen als Dropdown bei der Buchungserfassung.
             </p>
           </div>
 
-          {/* Add New Account */}
-          <div className="flex gap-2 mb-6">
+          {/* Type Filter */}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setCategoryTypeFilter('all')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                categoryTypeFilter === 'all'
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Alle
+            </button>
+            <button
+              onClick={() => setCategoryTypeFilter('income')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                categoryTypeFilter === 'income'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-green-50 text-green-700 hover:bg-green-100'
+              }`}
+            >
+              <ArrowDownCircle size={16} />
+              Einnahmen
+            </button>
+            <button
+              onClick={() => setCategoryTypeFilter('expense')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                categoryTypeFilter === 'expense'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-red-50 text-red-700 hover:bg-red-100'
+              }`}
+            >
+              <ArrowUpCircle size={16} />
+              Ausgaben
+            </button>
+          </div>
+
+          {/* Add New Category */}
+          <div className="flex flex-wrap gap-2 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <input
               type="text"
-              value={newAccountName}
-              onChange={(e) => setNewAccountName(e.target.value)}
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
-                  handleAddAccount();
+                  handleAddCategory();
                 }
               }}
-              placeholder="Neues Konto hinzufügen..."
-              className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              placeholder="Neue Kategorie..."
+              className="flex-1 min-w-[200px] px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition bg-white"
             />
+            <select
+              value={newCategoryType}
+              onChange={(e) => setNewCategoryType(e.target.value as CategoryType)}
+              className="px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition bg-white"
+            >
+              <option value="expense">Ausgabe</option>
+              <option value="income">Einnahme</option>
+            </select>
+            <input
+              type="color"
+              value={newCategoryColor}
+              onChange={(e) => setNewCategoryColor(e.target.value)}
+              className="w-12 h-10 rounded-lg border border-gray-200 cursor-pointer"
+              title="Farbe wählen"
+            />
+            <label className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+              <input
+                type="checkbox"
+                checked={newCategoryTaxRelevant}
+                onChange={(e) => setNewCategoryTaxRelevant(e.target.checked)}
+                className="w-4 h-4 text-freiluft border-gray-300 rounded focus:ring-freiluft"
+              />
+              <span className="text-sm text-gray-700">Steuerrelevant</span>
+            </label>
             <button
-              onClick={handleAddAccount}
-              disabled={!newAccountName.trim() || isLoadingAccounts}
+              onClick={handleAddCategory}
+              disabled={!newCategoryName.trim() || isLoadingCategories}
               className="px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Plus size={18} />
@@ -1134,50 +1221,67 @@ export default function Settings() {
             </button>
           </div>
 
-          {isLoadingAccounts ? (
+          {isLoadingCategories ? (
             <div className="flex items-center justify-center h-32">
               <p className="text-gray-500">Lädt...</p>
             </div>
-          ) : expenseAccounts.length === 0 ? (
+          ) : filteredCategories.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <Layers size={48} className="mx-auto mb-4 opacity-50" />
-              <p>Noch keine Aufwandskonten vorhanden.</p>
-              <p className="text-sm">Fügen Sie oben Ihr erstes Konto hinzu.</p>
+              <Tags size={48} className="mx-auto mb-4 opacity-50" />
+              <p>Keine Kategorien gefunden.</p>
+              <p className="text-sm">Fügen Sie oben Ihre erste Kategorie hinzu.</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {expenseAccounts.map((account) => (
+              {filteredCategories.map((category) => (
                 <div
-                  key={account.id}
+                  key={category.id}
                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
                 >
-                  {editingAccountId === account.id ? (
+                  {editingCategoryId === category.id ? (
                     <>
-                      <input
-                        type="text"
-                        value={editAccountName}
-                        onChange={(e) => setEditAccountName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleUpdateAccount(account.id);
-                          } else if (e.key === 'Escape') {
-                            cancelEditAccount();
-                          }
-                        }}
-                        className="flex-1 px-3 py-1 border border-gray-300 rounded focus:border-freiluft focus:ring-1 focus:ring-freiluft/20 outline-none"
-                        autoFocus
-                      />
+                      <div className="flex items-center gap-2 flex-1">
+                        <input
+                          type="color"
+                          value={editCategoryColor}
+                          onChange={(e) => setEditCategoryColor(e.target.value)}
+                          className="w-8 h-8 rounded border border-gray-200 cursor-pointer"
+                        />
+                        <input
+                          type="text"
+                          value={editCategoryName}
+                          onChange={(e) => setEditCategoryName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleUpdateCategory(category.id);
+                            } else if (e.key === 'Escape') {
+                              cancelEditCategory();
+                            }
+                          }}
+                          className="flex-1 px-3 py-1 border border-gray-300 rounded focus:border-freiluft focus:ring-1 focus:ring-freiluft/20 outline-none"
+                          autoFocus
+                        />
+                        <label className="flex items-center gap-2 px-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editCategoryTaxRelevant}
+                            onChange={(e) => setEditCategoryTaxRelevant(e.target.checked)}
+                            className="w-4 h-4 text-freiluft border-gray-300 rounded focus:ring-freiluft"
+                          />
+                          <span className="text-xs text-gray-600">Steuer</span>
+                        </label>
+                      </div>
                       <div className="flex items-center gap-1 ml-2">
                         <button
-                          onClick={() => handleUpdateAccount(account.id)}
+                          onClick={() => handleUpdateCategory(category.id)}
                           className="p-2 hover:bg-green-100 rounded transition"
                           title="Speichern"
                         >
                           <Check size={18} className="text-green-600" />
                         </button>
                         <button
-                          onClick={cancelEditAccount}
+                          onClick={cancelEditCategory}
                           className="p-2 hover:bg-red-100 rounded transition"
                           title="Abbrechen"
                         >
@@ -1187,17 +1291,35 @@ export default function Settings() {
                     </>
                   ) : (
                     <>
-                      <span className="font-medium text-gray-900">{account.name}</span>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-4 h-4 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: category.color }}
+                        />
+                        <span className="font-medium text-gray-900">{category.name}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          category.type === 'income'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {category.type === 'income' ? 'Einnahme' : 'Ausgabe'}
+                        </span>
+                        {category.is_tax_relevant && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                            Steuerrelevant
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => startEditAccount(account)}
+                          onClick={() => startEditCategory(category)}
                           className="p-2 hover:bg-gray-200 rounded transition"
                           title="Bearbeiten"
                         >
                           <Edit2 size={18} className="text-gray-600" />
                         </button>
                         <button
-                          onClick={() => handleDeleteAccount(account.id)}
+                          onClick={() => handleDeleteCategory(category.id)}
                           className="p-2 hover:bg-red-100 rounded transition"
                           title="Deaktivieren"
                         >
@@ -1212,7 +1334,7 @@ export default function Settings() {
           )}
 
           <p className="text-xs text-gray-500 mt-4">
-            Hinweis: Deaktivierte Konten werden aus dem Dropdown entfernt, bestehende Buchungen bleiben erhalten.
+            Hinweis: Deaktivierte Kategorien werden aus dem Dropdown entfernt, bestehende Buchungen bleiben erhalten.
           </p>
         </div>
       )}

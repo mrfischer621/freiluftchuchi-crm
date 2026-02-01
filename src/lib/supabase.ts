@@ -225,11 +225,28 @@ export interface Product {
   updated_at: string;
 }
 
-// Expense Account Types (Kontenplan)
+// Expense Account Types (Kontenplan) - Legacy, use Category instead
 export interface ExpenseAccount {
   id: string;
   company_id: string;
   name: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Category Types (Buchungskategorien - Milchbüechli)
+export type CategoryType = 'income' | 'expense';
+
+export interface Category {
+  id: string;
+  company_id: string;
+  name: string;
+  type: CategoryType;
+  icon: string | null;
+  color: string;
+  is_tax_relevant: boolean;
   sort_order: number;
   is_active: boolean;
   created_at: string;
@@ -406,6 +423,11 @@ export interface Database {
         Row: TransactionAttachment;
         Insert: Omit<TransactionAttachment, 'id' | 'uploaded_at'>;
         Update: Partial<Omit<TransactionAttachment, 'id' | 'uploaded_at'>>;
+      };
+      categories: {
+        Row: Category;
+        Insert: Omit<Category, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Category, 'id' | 'created_at' | 'updated_at'>>;
       };
     };
   };

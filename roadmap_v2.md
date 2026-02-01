@@ -35,12 +35,18 @@ Verbesserung der Datenströme zwischen Kunden, Kontakten und Zeiterfassung.
     - [ ] Globaler State (überdauert Seitenwechsel).
     - [ ] Stop-Button -> Öffnet "Save Time Entry" Modal.
 
-## 3. Finanz-Architektur (The Heavy Lifting)
-Umbau der Buchhaltung auf ein Journal-basiertes System (Double-Entry Lite).
+## 3. Finanz-Architektur: Milchbüechli (Einnahmen-/Ausgabenrechnung)
+Einfache Single-Entry Buchhaltung für Schweizer KMU und Selbstständige.
 
-- [ ] **3.1 Settings: Kontenplan (Chart of Accounts)**
-    - [ ] **Bugfix:** Laden der Konten fixen (API Error beheben).
-    - [ ] CRUD: Hinzufügen und Bearbeiten von Buchungskonten ermöglichen.
-- [ ] **3.2 Buchungs-Journal (Ledger)**
-    - [ ] Tabelle `journal_entries` erstellen/erweitern.
-    - [ ] UI: "Bearbeiten/Lö
+- [x] **3.1 Settings: Buchungskategorien (Categories)**
+    - [x] Tabelle `categories` erstellen (id, company_id, name, type: 'income'|'expense', icon, color, is_tax_relevant).
+    - [x] Migration mit Standard-Kategorien (Warenaufwand, Personalaufwand, Raumaufwand, Informatik, Werbung, Dienstleistungsumsatz, etc.).
+    - [x] UI in Settings zum Verwalten (Hinzufügen/Bearbeiten/Löschen).
+- [ ] **3.2 Einnahmen/Ausgaben Manager**
+    - [ ] Bestehende Buchungen-Seite anpassen für neue Kategorien-Struktur.
+    - [ ] Dropdown zur Kategorie-Auswahl (gruppiert nach Einnahmen/Ausgaben).
+    - [ ] Automatische Typ-Erkennung basierend auf gewählter Kategorie.
+- [ ] **3.3 Auswertungen / Reports**
+    - [ ] Einnahmen-/Ausgabenübersicht nach Kategorien.
+    - [ ] Steuerrelevante Positionen hervorheben.
+    - [ ] Export für Treuhänder (CSV/PDF).
