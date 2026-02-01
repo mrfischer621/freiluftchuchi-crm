@@ -52,15 +52,15 @@ const formatCHF = (value: number) => {
   }).format(value);
 };
 
-// Color palette
+// Color palette - Sage brand colors
 const COLORS = {
-  income: '#10b981', // green
-  expense: '#ef4444', // red
-  profit: '#3b82f6', // blue
-  primary: '#14b8a6', // teal (freiluft)
+  income: '#166534', // success-dark (green-800)
+  expense: '#991b1b', // danger-dark (red-800)
+  profit: '#6b8a5e', // sage-500 (brand)
+  primary: '#6b8a5e', // sage-500 (brand)
 };
 
-const PIE_COLORS = ['#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef'];
+const PIE_COLORS = ['#6b8a5e', '#8aa67c', '#aec2a3', '#547047', '#435839', '#ced9c7', '#38472f', '#2f3a28'];
 
 type ViewMode = 'charts' | 'milchbuechli';
 
@@ -270,7 +270,7 @@ export default function Auswertungen() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-xl text-gray-600">Lädt...</div>
+        <div className="text-xl text-content-secondary">Lädt...</div>
       </div>
     );
   }
@@ -280,17 +280,17 @@ export default function Auswertungen() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-bold text-gray-900">Auswertungen</h1>
+          <h1 className="text-3xl font-bold text-content-heading">Auswertungen</h1>
 
           {/* View Mode Toggle & Export */}
           <div className="flex items-center gap-3">
-            <div className="flex bg-gray-100 rounded-lg p-1">
+            <div className="flex bg-sage-100 rounded-lg p-1">
               <button
                 onClick={() => setViewMode('milchbuechli')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                   viewMode === 'milchbuechli'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-content-heading shadow-sm'
+                    : 'text-content-secondary hover:text-content-heading'
                 }`}
               >
                 <FileText className="w-4 h-4" />
@@ -300,8 +300,8 @@ export default function Auswertungen() {
                 onClick={() => setViewMode('charts')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                   viewMode === 'charts'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-content-heading shadow-sm'
+                    : 'text-content-secondary hover:text-content-heading'
                 }`}
               >
                 <BarChart3 className="w-4 h-4" />
@@ -312,7 +312,7 @@ export default function Auswertungen() {
             {viewMode === 'milchbuechli' && (
               <button
                 onClick={handleExportCSV}
-                className="flex items-center gap-2 px-4 py-2 bg-freiluft text-white rounded-lg font-medium hover:bg-freiluft/90 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg font-medium hover:bg-brand-dark transition-colors"
               >
                 <Download className="w-4 h-4" />
                 Export für Treuhänder (CSV)
@@ -328,8 +328,8 @@ export default function Auswertungen() {
               onClick={() => handlePresetChange('current_month')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 selectedPreset === 'current_month'
-                  ? 'bg-freiluft text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-brand text-white'
+                  : 'bg-sage-100 text-content-body hover:bg-sage-200'
               }`}
             >
               Aktueller Monat
@@ -338,8 +338,8 @@ export default function Auswertungen() {
               onClick={() => handlePresetChange('last_month')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 selectedPreset === 'last_month'
-                  ? 'bg-freiluft text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-brand text-white'
+                  : 'bg-sage-100 text-content-body hover:bg-sage-200'
               }`}
             >
               Letzter Monat
@@ -348,8 +348,8 @@ export default function Auswertungen() {
               onClick={() => handlePresetChange('current_year')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 selectedPreset === 'current_year'
-                  ? 'bg-freiluft text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-brand text-white'
+                  : 'bg-sage-100 text-content-body hover:bg-sage-200'
               }`}
             >
               Dieses Jahr
@@ -358,8 +358,8 @@ export default function Auswertungen() {
               onClick={() => handlePresetChange('last_year')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 selectedPreset === 'last_year'
-                  ? 'bg-freiluft text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-brand text-white'
+                  : 'bg-sage-100 text-content-body hover:bg-sage-200'
               }`}
             >
               Letztes Jahr
@@ -368,8 +368,8 @@ export default function Auswertungen() {
               onClick={() => handlePresetChange('last_30_days')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 selectedPreset === 'last_30_days'
-                  ? 'bg-freiluft text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-brand text-white'
+                  : 'bg-sage-100 text-content-body hover:bg-sage-200'
               }`}
             >
               Letzte 30 Tage
@@ -378,8 +378,8 @@ export default function Auswertungen() {
               onClick={() => handlePresetChange('last_90_days')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 selectedPreset === 'last_90_days'
-                  ? 'bg-freiluft text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-brand text-white'
+                  : 'bg-sage-100 text-content-body hover:bg-sage-200'
               }`}
             >
               Letzte 90 Tage
@@ -388,8 +388,8 @@ export default function Auswertungen() {
               onClick={handleCustomRange}
               className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
                 selectedPreset === 'custom'
-                  ? 'bg-freiluft text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-brand text-white'
+                  : 'bg-sage-100 text-content-body hover:bg-sage-200'
               }`}
             >
               <Calendar className="w-4 h-4" />
@@ -401,7 +401,7 @@ export default function Auswertungen() {
           {showCustomPicker && (
             <div className="mt-4 flex gap-4 items-center">
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Von:</label>
+                <label className="text-sm font-medium text-content-secondary">Von:</label>
                 <input
                   type="date"
                   onChange={(e) => {
@@ -409,11 +409,11 @@ export default function Auswertungen() {
                       applyCustomRange(e.target.value, customRange.to.toISOString().split('T')[0]);
                     }
                   }}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent"
+                  className="px-3 py-2 border border-surface-border rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                 />
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Bis:</label>
+                <label className="text-sm font-medium text-content-secondary">Bis:</label>
                 <input
                   type="date"
                   onChange={(e) => {
@@ -424,7 +424,7 @@ export default function Auswertungen() {
                       applyCustomRange(today, e.target.value);
                     }
                   }}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent"
+                  className="px-3 py-2 border border-surface-border rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                 />
               </div>
             </div>
@@ -444,25 +444,25 @@ export default function Auswertungen() {
         <>
           {milchbuechliLoading ? (
             <div className="flex items-center justify-center h-64">
-              <div className="text-xl text-gray-600">Lädt Buchungen...</div>
+              <div className="text-xl text-content-secondary">Lädt Buchungen...</div>
             </div>
           ) : milchbuechliData ? (
             <div className="space-y-6">
               {/* Summary KPI Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white rounded-lg shadow p-6">
-                  <div className="text-sm font-medium text-gray-600 mb-2">Total Einnahmen</div>
-                  <div className="text-3xl font-bold text-green-600">{formatCHF(milchbuechliData.totalEinnahmen)}</div>
-                  <div className="text-sm text-gray-500 mt-1">{milchbuechliData.einnahmen.reduce((s, e) => s + e.count, 0)} Buchungen</div>
+                  <div className="text-sm font-medium text-content-secondary mb-2">Total Einnahmen</div>
+                  <div className="text-3xl font-bold text-success-dark">{formatCHF(milchbuechliData.totalEinnahmen)}</div>
+                  <div className="text-sm text-content-tertiary mt-1">{milchbuechliData.einnahmen.reduce((s, e) => s + e.count, 0)} Buchungen</div>
                 </div>
                 <div className="bg-white rounded-lg shadow p-6">
-                  <div className="text-sm font-medium text-gray-600 mb-2">Total Ausgaben</div>
-                  <div className="text-3xl font-bold text-red-600">{formatCHF(milchbuechliData.totalAusgaben)}</div>
-                  <div className="text-sm text-gray-500 mt-1">{milchbuechliData.ausgaben.reduce((s, a) => s + a.count, 0)} Buchungen</div>
+                  <div className="text-sm font-medium text-content-secondary mb-2">Total Ausgaben</div>
+                  <div className="text-3xl font-bold text-danger-dark">{formatCHF(milchbuechliData.totalAusgaben)}</div>
+                  <div className="text-sm text-content-tertiary mt-1">{milchbuechliData.ausgaben.reduce((s, a) => s + a.count, 0)} Buchungen</div>
                 </div>
-                <div className="bg-white rounded-lg shadow p-6 border-2 border-gray-200">
-                  <div className="text-sm font-medium text-gray-600 mb-2">Gewinn / Verlust</div>
-                  <div className={`text-3xl font-bold ${milchbuechliData.gewinnVerlust >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <div className="bg-white rounded-lg shadow p-6 border-2 border-surface-border">
+                  <div className="text-sm font-medium text-content-secondary mb-2">Gewinn / Verlust</div>
+                  <div className={`text-3xl font-bold ${milchbuechliData.gewinnVerlust >= 0 ? 'text-success-dark' : 'text-danger-dark'}`}>
                     {formatCHF(milchbuechliData.gewinnVerlust)}
                   </div>
                 </div>
@@ -480,19 +480,19 @@ export default function Auswertungen() {
                   </div>
                   <div className="divide-y divide-gray-100">
                     {milchbuechliData.einnahmen.length === 0 ? (
-                      <div className="px-6 py-8 text-center text-gray-500">
+                      <div className="px-6 py-8 text-center text-content-tertiary">
                         Keine Einnahmen im gewählten Zeitraum
                       </div>
                     ) : (
                       milchbuechliData.einnahmen.map((cat) => (
-                        <div key={cat.categoryName} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
+                        <div key={cat.categoryName} className="px-6 py-4 flex items-center justify-between hover:bg-sage-50">
                           <div className="flex items-center gap-3">
                             <div
                               className="w-3 h-3 rounded-full flex-shrink-0"
                               style={{ backgroundColor: cat.categoryColor }}
                             />
                             <div>
-                              <div className="font-medium text-gray-900 flex items-center gap-2">
+                              <div className="font-medium text-content-heading flex items-center gap-2">
                                 {cat.categoryName}
                                 {cat.isTaxRelevant && (
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
@@ -501,7 +501,7 @@ export default function Auswertungen() {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-sm text-gray-500">{cat.count} Buchung{cat.count !== 1 ? 'en' : ''}</div>
+                              <div className="text-sm text-content-tertiary">{cat.count} Buchung{cat.count !== 1 ? 'en' : ''}</div>
                             </div>
                           </div>
                           <div className="text-right">
@@ -529,19 +529,19 @@ export default function Auswertungen() {
                   </div>
                   <div className="divide-y divide-gray-100">
                     {milchbuechliData.ausgaben.length === 0 ? (
-                      <div className="px-6 py-8 text-center text-gray-500">
+                      <div className="px-6 py-8 text-center text-content-tertiary">
                         Keine Ausgaben im gewählten Zeitraum
                       </div>
                     ) : (
                       milchbuechliData.ausgaben.map((cat) => (
-                        <div key={cat.categoryName} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
+                        <div key={cat.categoryName} className="px-6 py-4 flex items-center justify-between hover:bg-sage-50">
                           <div className="flex items-center gap-3">
                             <div
                               className="w-3 h-3 rounded-full flex-shrink-0"
                               style={{ backgroundColor: cat.categoryColor }}
                             />
                             <div>
-                              <div className="font-medium text-gray-900 flex items-center gap-2">
+                              <div className="font-medium text-content-heading flex items-center gap-2">
                                 {cat.categoryName}
                                 {cat.isTaxRelevant && (
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
@@ -550,7 +550,7 @@ export default function Auswertungen() {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-sm text-gray-500">{cat.count} Buchung{cat.count !== 1 ? 'en' : ''}</div>
+                              <div className="text-sm text-content-tertiary">{cat.count} Buchung{cat.count !== 1 ? 'en' : ''}</div>
                             </div>
                           </div>
                           <div className="text-right">
@@ -576,7 +576,7 @@ export default function Auswertungen() {
                     <h3 className={`text-lg font-semibold ${milchbuechliData.gewinnVerlust >= 0 ? 'text-green-800' : 'text-red-800'}`}>
                       {milchbuechliData.gewinnVerlust >= 0 ? 'Gewinn' : 'Verlust'}
                     </h3>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-content-secondary mt-1">
                       Einnahmen ({formatCHF(milchbuechliData.totalEinnahmen)}) - Ausgaben ({formatCHF(milchbuechliData.totalAusgaben)})
                     </p>
                   </div>
@@ -588,7 +588,7 @@ export default function Auswertungen() {
             </div>
           ) : (
             <div className="flex items-center justify-center h-64">
-              <div className="text-gray-500">Keine Daten verfügbar</div>
+              <div className="text-content-tertiary">Keine Daten verfügbar</div>
             </div>
           )}
         </>
@@ -601,19 +601,19 @@ export default function Auswertungen() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* Total Income */}
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm font-medium text-gray-600 mb-2">Gesamteinnahmen</div>
+          <div className="text-sm font-medium text-content-secondary mb-2">Gesamteinnahmen</div>
           <div className="text-3xl font-bold text-green-600">{formatCHF(kpi.income)}</div>
         </div>
 
         {/* Total Expenses */}
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm font-medium text-gray-600 mb-2">Gesamtausgaben</div>
+          <div className="text-sm font-medium text-content-secondary mb-2">Gesamtausgaben</div>
           <div className="text-3xl font-bold text-red-600">{formatCHF(kpi.expense)}</div>
         </div>
 
         {/* Net Profit */}
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="text-sm font-medium text-gray-600 mb-2">Nettogewinn</div>
+          <div className="text-sm font-medium text-content-secondary mb-2">Nettogewinn</div>
           <div
             className={`text-3xl font-bold ${
               kpi.profit >= 0 ? 'text-green-600' : 'text-red-600'
@@ -626,7 +626,7 @@ export default function Auswertungen() {
 
       {/* Main Timeline Chart */}
       <div className="bg-white rounded-lg shadow p-6 mb-8">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Zeitverlauf</h2>
+        <h2 className="text-xl font-bold text-content-heading mb-6">Zeitverlauf</h2>
         <ResponsiveContainer width="100%" height={400}>
           <LineChart data={timeline}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -690,7 +690,7 @@ export default function Auswertungen() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* By Customer */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Pro Kunde</h2>
+          <h2 className="text-xl font-bold text-content-heading mb-6">Pro Kunde</h2>
           {byCustomer.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={byCustomer.slice(0, 10)} layout="vertical">
@@ -727,13 +727,13 @@ export default function Auswertungen() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center text-gray-500 py-8">Keine Daten verfügbar</div>
+            <div className="text-center text-content-tertiary py-8">Keine Daten verfügbar</div>
           )}
         </div>
 
         {/* By Category */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Nach Konto (Kategorie)</h2>
+          <h2 className="text-xl font-bold text-content-heading mb-6">Nach Konto (Kategorie)</h2>
           {byCategory.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
@@ -762,13 +762,13 @@ export default function Auswertungen() {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center text-gray-500 py-8">Keine Daten verfügbar</div>
+            <div className="text-center text-content-tertiary py-8">Keine Daten verfügbar</div>
           )}
         </div>
 
         {/* By Tags */}
         <div className="bg-white rounded-lg shadow p-6 lg:col-span-2">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Nach Tags</h2>
+          <h2 className="text-xl font-bold text-content-heading mb-6">Nach Tags</h2>
           {byTags.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={byTags.slice(0, 10)} layout="vertical">
@@ -798,7 +798,7 @@ export default function Auswertungen() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center text-gray-500 py-8">Keine Tags vorhanden</div>
+            <div className="text-center text-content-tertiary py-8">Keine Tags vorhanden</div>
           )}
         </div>
       </div>

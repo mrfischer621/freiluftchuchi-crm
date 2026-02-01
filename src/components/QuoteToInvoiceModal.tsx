@@ -162,7 +162,7 @@ export default function QuoteToInvoiceModal({
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
             />
           </div>
 
@@ -178,7 +178,7 @@ export default function QuoteToInvoiceModal({
               step="0.1"
               min="0"
               max="100"
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
             />
           </div>
         </div>
@@ -213,7 +213,7 @@ export default function QuoteToInvoiceModal({
                     onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                     placeholder="Beschreibung"
                     required
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
                   />
                 </div>
 
@@ -232,7 +232,7 @@ export default function QuoteToInvoiceModal({
                     step="0.01"
                     min="0"
                     required
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
                   />
                 </div>
 
@@ -251,7 +251,7 @@ export default function QuoteToInvoiceModal({
                     step="0.01"
                     min="0"
                     required
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
                   />
                 </div>
 
@@ -282,7 +282,7 @@ export default function QuoteToInvoiceModal({
               <span className="text-gray-600">MwSt ({vatRate}%):</span>
               <span className="font-medium">CHF {totals.vat_amount.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-lg font-bold text-freiluft border-t pt-2">
+            <div className="flex justify-between text-lg font-bold text-brand border-t pt-2">
               <span>Gesamttotal:</span>
               <span>CHF {totals.total.toFixed(2)}</span>
             </div>
@@ -302,7 +302,7 @@ export default function QuoteToInvoiceModal({
           <button
             type="submit"
             disabled={isSubmitting || items.length === 0}
-            className="rounded-lg px-4 py-2 font-medium bg-freiluft text-white hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-lg px-4 py-2 font-medium bg-brand text-white hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? 'Erstellt Rechnung...' : 'Rechnung erstellen'}
           </button>

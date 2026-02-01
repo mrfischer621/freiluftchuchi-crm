@@ -330,7 +330,7 @@ export default function Zeiterfassung() {
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition ${
                   selectedProjectId
-                    ? 'bg-freiluft text-white'
+                    ? 'bg-brand text-white'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
                 title="Nach Projekt filtern"
@@ -368,7 +368,7 @@ export default function Zeiterfassung() {
                       }}
                       className={`w-full text-left px-3 py-2 rounded-md text-sm transition ${
                         !selectedProjectId
-                          ? 'bg-freiluft/10 text-freiluft font-medium'
+                          ? 'bg-brand/10 text-brand font-medium'
                           : 'text-gray-600 hover:bg-gray-100'
                       }`}
                     >
@@ -383,7 +383,7 @@ export default function Zeiterfassung() {
                         }}
                         className={`w-full text-left px-3 py-2 rounded-md text-sm transition ${
                           selectedProjectId === project.id
-                            ? 'bg-freiluft/10 text-freiluft font-medium'
+                            ? 'bg-brand/10 text-brand font-medium'
                             : 'text-gray-600 hover:bg-gray-100'
                         }`}
                       >
@@ -397,7 +397,7 @@ export default function Zeiterfassung() {
 
             <button
               onClick={handleAddNew}
-              className="flex items-center gap-2 px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition"
+              className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark transition"
             >
               <Plus size={20} />
               Detailliert
@@ -413,7 +413,7 @@ export default function Zeiterfassung() {
             onClick={() => setActiveTab('erfassung')}
             className={`pb-3 px-1 border-b-2 font-medium text-sm transition flex items-center gap-2 ${
               activeTab === 'erfassung'
-                ? 'border-freiluft text-freiluft'
+                ? 'border-brand text-brand'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
@@ -424,7 +424,7 @@ export default function Zeiterfassung() {
             onClick={() => setActiveTab('reporting')}
             className={`pb-3 px-1 border-b-2 font-medium text-sm transition flex items-center gap-2 ${
               activeTab === 'reporting'
-                ? 'border-freiluft text-freiluft'
+                ? 'border-brand text-brand'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
@@ -460,7 +460,7 @@ export default function Zeiterfassung() {
               <select
                 value={quickAddData.projectId}
                 onChange={(e) => setQuickAddData(prev => ({ ...prev, projectId: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
                 required
               >
                 <option value="">Projekt wählen</option>
@@ -477,7 +477,7 @@ export default function Zeiterfassung() {
                 type="date"
                 value={quickAddData.date}
                 onChange={(e) => setQuickAddData(prev => ({ ...prev, date: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
                 required
               />
             </div>
@@ -490,7 +490,7 @@ export default function Zeiterfassung() {
                 value={quickAddData.hours}
                 onChange={(e) => setQuickAddData(prev => ({ ...prev, hours: e.target.value }))}
                 placeholder="0.00"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
                 required
               />
             </div>
@@ -502,7 +502,7 @@ export default function Zeiterfassung() {
                 min="0"
                 value={quickAddData.rate}
                 onChange={(e) => setQuickAddData(prev => ({ ...prev, rate: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
                 required
               />
             </div>
@@ -513,7 +513,7 @@ export default function Zeiterfassung() {
                 value={quickAddData.description}
                 onChange={(e) => setQuickAddData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Tätigkeit..."
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
               />
             </div>
             <div className="w-28">
@@ -525,7 +525,7 @@ export default function Zeiterfassung() {
                     name="quickBillable"
                     checked={quickAddData.billable === true}
                     onChange={() => setQuickAddData(prev => ({ ...prev, billable: true }))}
-                    className="w-3.5 h-3.5 text-freiluft"
+                    className="w-3.5 h-3.5 text-brand"
                   />
                   <span className="text-sm">Ja</span>
                 </label>
@@ -535,7 +535,7 @@ export default function Zeiterfassung() {
                     name="quickBillable"
                     checked={quickAddData.billable === false}
                     onChange={() => setQuickAddData(prev => ({ ...prev, billable: false }))}
-                    className="w-3.5 h-3.5 text-freiluft"
+                    className="w-3.5 h-3.5 text-brand"
                   />
                   <span className="text-sm">Nein</span>
                 </label>
@@ -544,7 +544,7 @@ export default function Zeiterfassung() {
             <button
               type="submit"
               disabled={isQuickAdding || !quickAddData.projectId || !quickAddData.hours}
-              className="px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+              className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
               <Plus size={18} />
               {isQuickAdding ? 'Speichert...' : 'Hinzufügen'}

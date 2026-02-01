@@ -154,7 +154,7 @@ export default function TimeEntryTable({
           <div className="flex justify-end gap-1">
             <button
               onClick={() => onEdit(entry)}
-              className="p-1.5 text-freiluft hover:bg-teal-50 rounded transition"
+              className="p-1.5 text-brand hover:bg-sage-50 rounded transition"
               title="Bearbeiten"
             >
               <Pencil size={16} />
@@ -260,20 +260,20 @@ export default function TimeEntryTable({
             <tr>
               <td colSpan={5} className="px-4 py-3">
                 <div className="flex items-center gap-4">
-                  <span className="text-sm font-bold text-freiluft uppercase">Total</span>
+                  <span className="text-sm font-bold text-brand uppercase">Total</span>
                   <span className="text-xs text-gray-500">
                     davon {billableHours.toFixed(1)}h verrechenbar
                   </span>
                 </div>
               </td>
               <td className="px-4 py-3 text-right">
-                <div className="text-sm font-bold text-freiluft">
+                <div className="text-sm font-bold text-brand">
                   {totalHours.toFixed(2)} h
                 </div>
               </td>
               <td className="px-4 py-3"></td>
               <td className="px-4 py-3 text-right">
-                <div className="text-sm font-bold text-freiluft">
+                <div className="text-sm font-bold text-brand">
                   CHF {totalAmount.toFixed(2)}
                 </div>
               </td>

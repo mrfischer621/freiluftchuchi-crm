@@ -210,7 +210,7 @@ export default function KundenKontakte() {
       <div className="space-y-6">
         <Link
           to="/kunden"
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-freiluft transition"
+          className="inline-flex items-center gap-2 text-gray-600 hover:text-brand transition"
         >
           <ArrowLeft size={20} />
           Zurück zu Kunden
@@ -227,7 +227,7 @@ export default function KundenKontakte() {
       {/* Breadcrumb */}
       <Link
         to="/kunden"
-        className="inline-flex items-center gap-2 text-gray-600 hover:text-freiluft transition"
+        className="inline-flex items-center gap-2 text-gray-600 hover:text-brand transition"
       >
         <ArrowLeft size={20} />
         Zurück zu Kunden
@@ -241,7 +241,7 @@ export default function KundenKontakte() {
         </div>
         <button
           onClick={() => openModal()}
-          className="flex items-center gap-2 px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition"
+          className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark transition"
         >
           <Plus size={20} />
           Neuer Kontakt
@@ -294,7 +294,7 @@ export default function KundenKontakte() {
                       {contact.email ? (
                         <a
                           href={`mailto:${contact.email}`}
-                          className="text-sm text-freiluft hover:underline"
+                          className="text-sm text-brand hover:underline"
                         >
                           {contact.email}
                         </a>
@@ -306,7 +306,7 @@ export default function KundenKontakte() {
                       {contact.phone ? (
                         <a
                           href={`tel:${contact.phone}`}
-                          className="text-sm text-gray-600 hover:text-freiluft"
+                          className="text-sm text-gray-600 hover:text-brand"
                         >
                           {contact.phone}
                         </a>
@@ -334,7 +334,7 @@ export default function KundenKontakte() {
                       <div className="flex justify-end gap-2">
                         <button
                           onClick={() => openModal(contact)}
-                          className="p-2 text-freiluft hover:bg-teal-50 rounded-lg transition"
+                          className="p-2 text-brand hover:bg-sage-50 rounded-lg transition"
                           title="Bearbeiten"
                         >
                           <Pencil size={18} />
@@ -373,7 +373,7 @@ export default function KundenKontakte() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
               placeholder="z.B. Max Mustermann"
             />
           </div>
@@ -387,7 +387,7 @@ export default function KundenKontakte() {
               id="contactRole"
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
               placeholder="z.B. Geschäftsführer"
             />
           </div>
@@ -401,7 +401,7 @@ export default function KundenKontakte() {
               id="contactEmail"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
               placeholder="kontakt@example.com"
             />
           </div>
@@ -415,7 +415,7 @@ export default function KundenKontakte() {
               id="contactPhone"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
               placeholder="+41 79 123 45 67"
             />
           </div>
@@ -426,7 +426,7 @@ export default function KundenKontakte() {
               id="isPrimary"
               checked={isPrimary}
               onChange={(e) => setIsPrimary(e.target.checked)}
-              className="w-4 h-4 text-freiluft border-gray-300 rounded focus:ring-freiluft"
+              className="w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand"
             />
             <label htmlFor="isPrimary" className="text-sm text-gray-700">
               Als Hauptkontakt setzen
@@ -438,7 +438,7 @@ export default function KundenKontakte() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-lg px-6 py-2 font-medium bg-freiluft text-white hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-lg px-6 py-2 font-medium bg-brand text-white hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? 'Speichert...' : editingContact ? 'Aktualisieren' : 'Speichern'}
             </button>

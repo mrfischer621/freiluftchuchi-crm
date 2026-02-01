@@ -205,7 +205,7 @@ export default function Buchungen() {
   if (!selectedCompany || loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-xl text-gray-600">Lädt...</div>
+        <div className="text-xl text-content-secondary">Lädt...</div>
       </div>
     );
   }
@@ -215,12 +215,12 @@ export default function Buchungen() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Buchungen</h1>
-          <p className="text-gray-600 mt-1">Verwalten Sie Ihre Einnahmen und Ausgaben</p>
+          <h1 className="text-2xl font-bold text-content-heading">Buchungen</h1>
+          <p className="text-content-secondary mt-1">Verwalten Sie Ihre Einnahmen und Ausgaben</p>
         </div>
         <button
           onClick={handleNewTransaction}
-          className="flex items-center gap-2 px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition"
+          className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark transition"
         >
           <Plus size={20} />
           Neue Buchung
@@ -236,8 +236,8 @@ export default function Buchungen() {
               onClick={() => setFilterType('all')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 filterType === 'all'
-                  ? 'bg-freiluft text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-brand text-white'
+                  : 'bg-sage-100 text-content-body hover:bg-sage-200'
               }`}
             >
               Alle Konten
@@ -246,8 +246,8 @@ export default function Buchungen() {
               onClick={() => setFilterType('einnahme')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 filterType === 'einnahme'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-success-dark text-white'
+                  : 'bg-sage-100 text-content-body hover:bg-sage-200'
               }`}
             >
               Einnahmen
@@ -256,8 +256,8 @@ export default function Buchungen() {
               onClick={() => setFilterType('ausgabe')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 filterType === 'ausgabe'
-                  ? 'bg-red-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-danger-dark text-white'
+                  : 'bg-sage-100 text-content-body hover:bg-sage-200'
               }`}
             >
               Ausgaben
@@ -266,11 +266,11 @@ export default function Buchungen() {
 
           {/* Period Filter */}
           <div className="flex items-center gap-2 ml-auto">
-            <Filter className="w-4 h-4 text-gray-500" />
+            <Filter className="w-4 h-4 text-content-tertiary" />
             <select
               value={filterPeriod}
               onChange={(e) => setFilterPeriod(e.target.value as any)}
-              className="px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="px-3 py-2 border border-surface-border rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
             >
               <option value="30">Letzte 30 Tage</option>
               <option value="90">Letzte 90 Tage</option>

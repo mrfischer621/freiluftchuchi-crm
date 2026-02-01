@@ -77,7 +77,7 @@ export default function ProductTable({ products, onEdit, onArchive, onRestore }:
                   <div className="flex justify-end gap-2">
                     <button
                       onClick={() => onEdit(product)}
-                      className="p-2 text-freiluft hover:bg-teal-50 rounded-lg transition"
+                      className="p-2 text-brand hover:bg-sage-50 rounded-lg transition"
                       title="Bearbeiten"
                     >
                       <Pencil size={18} />

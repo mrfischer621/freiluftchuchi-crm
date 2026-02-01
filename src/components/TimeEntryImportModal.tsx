@@ -232,7 +232,7 @@ export default function TimeEntryImportModal({
               <button
                 type="button"
                 onClick={handleSelectAll}
-                className="text-sm text-freiluft hover:underline"
+                className="text-sm text-brand hover:underline"
               >
                 {selectedGroups.size === groupedEntries.length ? 'Alle abwählen' : 'Alle auswählen'}
               </button>
@@ -250,7 +250,7 @@ export default function TimeEntryImportModal({
                   className={`
                     p-4 rounded-lg border cursor-pointer transition-all
                     ${selectedGroups.has(group.key)
-                      ? 'border-freiluft bg-freiluft/5 ring-1 ring-freiluft'
+                      ? 'border-brand bg-brand/5 ring-1 ring-brand'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }
                   `}
@@ -261,7 +261,7 @@ export default function TimeEntryImportModal({
                         <div className={`
                           w-5 h-5 rounded flex items-center justify-center flex-shrink-0
                           ${selectedGroups.has(group.key)
-                            ? 'bg-freiluft text-white'
+                            ? 'bg-brand text-white'
                             : 'border-2 border-gray-300'
                           }
                         `}>
@@ -285,7 +285,7 @@ export default function TimeEntryImportModal({
                       <div className="text-sm text-gray-500">
                         à CHF {group.rate.toFixed(0)}.-
                       </div>
-                      <div className="text-sm font-medium text-freiluft mt-1">
+                      <div className="text-sm font-medium text-brand mt-1">
                         CHF {(group.totalHours * group.rate).toFixed(2)}
                       </div>
                     </div>
@@ -306,7 +306,7 @@ export default function TimeEntryImportModal({
                   </div>
                   <div className="text-right">
                     <span className="text-sm text-gray-600">Total:</span>
-                    <span className="ml-2 font-bold text-freiluft text-lg">
+                    <span className="ml-2 font-bold text-brand text-lg">
                       CHF {totalSelectedAmount.toFixed(2)}
                     </span>
                   </div>
@@ -330,7 +330,7 @@ export default function TimeEntryImportModal({
             type="button"
             onClick={handleImport}
             disabled={selectedGroups.size === 0}
-            className="px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <Clock size={16} />
             {selectedGroups.size > 0

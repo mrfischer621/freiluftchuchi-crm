@@ -94,7 +94,7 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
             >
               <option value="">Projekt auswählen</option>
               {projects.map((project) => (
@@ -115,7 +115,7 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
               value={date}
               onChange={(e) => setDate(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
             />
           </div>
         </div>
@@ -133,7 +133,7 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
               required
               step="0.25"
               min="0"
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
               placeholder="0.00"
             />
           </div>
@@ -150,7 +150,7 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
               required
               step="0.01"
               min="0"
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
               placeholder="140.00"
             />
           </div>
@@ -174,7 +174,7 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
-            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition resize-none"
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition resize-none"
             placeholder="Tätigkeitsbeschreibung..."
           />
         </div>
@@ -190,7 +190,7 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
                 name="billable"
                 checked={billable === true}
                 onChange={() => setBillable(true)}
-                className="w-4 h-4 text-freiluft border-gray-300 focus:ring-freiluft"
+                className="w-4 h-4 text-brand border-gray-300 focus:ring-brand"
               />
               <span className="text-sm text-gray-700">Ja</span>
             </label>
@@ -200,7 +200,7 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
                 name="billable"
                 checked={billable === false}
                 onChange={() => setBillable(false)}
-                className="w-4 h-4 text-freiluft border-gray-300 focus:ring-freiluft"
+                className="w-4 h-4 text-brand border-gray-300 focus:ring-brand"
               />
               <span className="text-sm text-gray-700">Nein</span>
             </label>
@@ -211,7 +211,7 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
           <button
             type="submit"
             disabled={isSubmitting}
-            className="rounded-lg px-4 py-2 font-medium bg-freiluft text-white hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-lg px-4 py-2 font-medium bg-brand text-white hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? 'Speichert...' : editingEntry ? 'Aktualisieren' : 'Speichern'}
           </button>

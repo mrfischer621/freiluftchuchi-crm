@@ -299,7 +299,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
             >
               <option value="">Kunde auswählen</option>
               {customers.map((customer) => (
@@ -319,7 +319,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
               disabled={!customerId}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition disabled:bg-gray-50"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition disabled:bg-gray-50"
             >
               <option value="">Kein Projekt</option>
               {customerProjects.map((project) => (
@@ -357,7 +357,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="z.B. Webentwicklung Januar 2026"
-            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
           />
         </div>
 
@@ -373,7 +373,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
               value={issueDate}
               onChange={(e) => setIssueDate(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
             />
           </div>
 
@@ -386,7 +386,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
               id="dueDate"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
             />
           </div>
 
@@ -398,7 +398,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
               id="status"
               value={status}
               onChange={(e) => setStatus(e.target.value as Invoice['status'])}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
             >
               <option value="entwurf">Entwurf</option>
               <option value="versendet">Versendet</option>
@@ -417,7 +417,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
             <button
               type="button"
               onClick={loadCompanyTemplate}
-              className="text-xs text-freiluft hover:underline"
+              className="text-xs text-brand hover:underline"
             >
               Vorlage laden
             </button>
@@ -428,7 +428,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
             onChange={(e) => setIntroText(e.target.value)}
             placeholder="Einleitungstext für die Rechnung..."
             rows={2}
-            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition resize-none"
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition resize-none"
           />
         </div>
 
@@ -442,7 +442,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
                 <button
                   type="button"
                   onClick={() => setIsTimeImportModalOpen(true)}
-                  className="rounded-lg px-3 py-1.5 text-sm font-medium bg-freiluft/10 text-freiluft hover:bg-freiluft/20 transition flex items-center gap-2"
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium bg-brand/10 text-brand hover:bg-brand/20 transition flex items-center gap-2"
                 >
                   <Clock size={16} />
                   Zeiten laden
@@ -481,7 +481,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
                     <select
                       value={item.product_id || ''}
                       onChange={(e) => handleProductSelect(index, e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
                     >
                       <option value="">Frei</option>
                       {products.map((product) => (
@@ -505,7 +505,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
                       onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                       placeholder="Beschreibung"
                       required
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
                     />
                   </div>
 
@@ -524,7 +524,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
                       step="0.01"
                       min="0"
                       required
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
                     />
                   </div>
 
@@ -543,7 +543,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
                       step="0.01"
                       min="0"
                       required
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
                     />
                   </div>
 
@@ -563,7 +563,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
                         step="0.1"
                         min="0"
                         max="100"
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
                       />
                     </div>
                   )}
@@ -613,7 +613,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
             onChange={(e) => setFooterText(e.target.value)}
             placeholder="Bemerkungen oder zusätzliche Informationen..."
             rows={2}
-            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition resize-none"
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition resize-none"
           />
         </div>
 
@@ -664,7 +664,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
                 <span className="font-medium">CHF {totals.vat_amount.toFixed(2)}</span>
               </div>
             </div>
-            <div className="flex justify-between text-lg font-bold text-freiluft border-t pt-2">
+            <div className="flex justify-between text-lg font-bold text-brand border-t pt-2">
               <span>Gesamttotal:</span>
               <span>CHF {totals.total.toFixed(2)}</span>
             </div>
@@ -675,7 +675,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
           <button
             type="submit"
             disabled={isSubmitting || items.length === 0}
-            className="rounded-lg px-4 py-2 font-medium bg-freiluft text-white hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-lg px-4 py-2 font-medium bg-brand text-white hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? 'Speichert...' : isEditMode ? 'Änderungen speichern' : 'Rechnung speichern'}
           </button>

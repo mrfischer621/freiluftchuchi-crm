@@ -88,7 +88,7 @@ export default function ProjectForm({ onSubmit, editingProject, onCancelEdit, cu
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
               placeholder="Projektname"
             />
           </div>
@@ -102,7 +102,7 @@ export default function ProjectForm({ onSubmit, editingProject, onCancelEdit, cu
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
             >
               <option value="">Kunde auswählen</option>
               {customers.map((customer) => (
@@ -123,7 +123,7 @@ export default function ProjectForm({ onSubmit, editingProject, onCancelEdit, cu
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition resize-none"
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition resize-none"
             placeholder="Projektbeschreibung..."
           />
         </div>
@@ -137,7 +137,7 @@ export default function ProjectForm({ onSubmit, editingProject, onCancelEdit, cu
               id="status"
               value={status}
               onChange={(e) => setStatus(e.target.value as Project['status'])}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
             >
               {statusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -158,7 +158,7 @@ export default function ProjectForm({ onSubmit, editingProject, onCancelEdit, cu
               onChange={(e) => setBudget(e.target.value)}
               step="0.01"
               min="0"
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
               placeholder="0.00"
             />
           </div>
@@ -168,7 +168,7 @@ export default function ProjectForm({ onSubmit, editingProject, onCancelEdit, cu
           <button
             type="submit"
             disabled={isSubmitting}
-            className="rounded-lg px-4 py-2 font-medium bg-freiluft text-white hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-lg px-4 py-2 font-medium bg-brand text-white hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? 'Speichert...' : editingProject ? 'Aktualisieren' : 'Speichern'}
           </button>

@@ -152,7 +152,7 @@ export default function QuoteTable({
                     {/* 3. PDF Download - always available */}
                     <button
                       onClick={() => onDownloadPDF(quote)}
-                      className="p-2 text-freiluft hover:bg-teal-50 rounded-lg transition"
+                      className="p-2 text-brand hover:bg-sage-50 rounded-lg transition"
                       title="PDF herunterladen"
                     >
                       <Download size={18} />

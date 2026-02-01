@@ -261,7 +261,7 @@ export default function Kunden() {
         </div>
         <button
           onClick={handleAddNew}
-          className="flex items-center gap-2 px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition"
+          className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark transition"
         >
           <Plus size={20} />
           Neuer Kunde
@@ -278,7 +278,7 @@ export default function Kunden() {
             placeholder="Kunde suchen..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-freiluft focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
           />
         </div>
 
@@ -288,7 +288,7 @@ export default function Kunden() {
           onClick={() => setFilter('alle')}
           className={`px-4 py-2 rounded-lg font-medium transition ${
             filter === 'alle'
-              ? 'bg-freiluft text-white'
+              ? 'bg-brand text-white'
               : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
           }`}
         >
@@ -298,7 +298,7 @@ export default function Kunden() {
           onClick={() => setFilter('aktiv')}
           className={`px-4 py-2 rounded-lg font-medium transition ${
             filter === 'aktiv'
-              ? 'bg-freiluft text-white'
+              ? 'bg-brand text-white'
               : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
           }`}
         >
@@ -308,7 +308,7 @@ export default function Kunden() {
           onClick={() => setFilter('archiviert')}
           className={`px-4 py-2 rounded-lg font-medium transition ${
             filter === 'archiviert'
-              ? 'bg-freiluft text-white'
+              ? 'bg-brand text-white'
               : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
           }`}
         >

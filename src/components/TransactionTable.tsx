@@ -122,7 +122,7 @@ export default function TransactionTable({ transactions, customers, projects, on
                         {transaction.tags.map((tag) => (
                           <span
                             key={tag}
-                            className="inline-flex px-2 py-0.5 text-xs rounded-full bg-freiluft text-white"
+                            className="inline-flex px-2 py-0.5 text-xs rounded-full bg-brand text-white"
                           >
                             {tag}
                           </span>
@@ -163,7 +163,7 @@ export default function TransactionTable({ transactions, customers, projects, on
                             window.open(data.signedUrl, '_blank');
                           }
                         }}
-                        className="inline-flex items-center justify-center text-gray-400 hover:text-freiluft transition-colors"
+                        className="inline-flex items-center justify-center text-gray-400 hover:text-brand transition-colors"
                         title="Beleg anzeigen"
                       >
                         <Paperclip className="w-5 h-5" />
@@ -176,13 +176,13 @@ export default function TransactionTable({ transactions, customers, projects, on
                     <div className="flex items-center justify-center gap-2">
                       <button
                         onClick={() => onEdit(transaction)}
-                        className="text-gray-400 hover:text-freiluft transition-colors"
+                        className="text-gray-400 hover:text-brand transition-colors"
                         title="Details anzeigen"
                       >
                         <Eye className="w-5 h-5" />
                       </button>
                       <div className="relative group">
-                        <button className="text-gray-400 hover:text-freiluft transition-colors">
+                        <button className="text-gray-400 hover:text-brand transition-colors">
                           <MoreVertical className="w-5 h-5" />
                         </button>
                         <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">

@@ -278,7 +278,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
                   type="text"
                   value={transactionNumber}
                   onChange={(e) => setTransactionNumber(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                   required
                 />
               </div>
@@ -290,7 +290,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                   required
                 />
               </div>
@@ -307,7 +307,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
                   step="0.01"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                   required
                 />
               </div>
@@ -318,7 +318,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
                 <select
                   value={categoryId}
                   onChange={(e) => handleCategoryChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                   disabled={isLoadingCategories}
                 >
                   {isLoadingCategories ? (
@@ -356,7 +356,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                 placeholder="Details zur Buchung..."
               />
             </div>
@@ -378,7 +378,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
               {!receiptFile && !existingReceiptUrl ? (
                 <label
                   htmlFor="receipt-upload"
-                  className="flex items-center justify-center gap-2 w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-freiluft hover:bg-gray-50 transition-colors"
+                  className="flex items-center justify-center gap-2 w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-brand hover:bg-gray-50 transition-colors"
                 >
                   <Upload className="w-5 h-5 text-gray-400" />
                   <span className="text-sm text-gray-600">PDF oder Bild hochladen (max. 10 MB)</span>
@@ -414,7 +414,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
                               window.open(data.signedUrl, '_blank');
                             }
                           }}
-                          className="text-sm text-freiluft hover:underline"
+                          className="text-sm text-brand hover:underline"
                         >
                           Beleg anzeigen
                         </button>
@@ -445,7 +445,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
                 <select
                   value={customerId}
                   onChange={(e) => setCustomerId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                 >
                   <option value="">-- Keine Auswahl --</option>
                   {customers.map((customer) => (
@@ -462,7 +462,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
                 <select
                   value={projectId}
                   onChange={(e) => setProjectId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                 >
                   <option value="">-- Keine Auswahl --</option>
                   {projects.map((project) => (
@@ -490,7 +490,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
                       addTag();
                     }
                   }}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
                   placeholder="Tag hinzufügen..."
                 />
                 <button
@@ -505,7 +505,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
                 {tags.map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center gap-1 px-3 py-1 bg-freiluft text-white rounded-full text-sm"
+                    className="inline-flex items-center gap-1 px-3 py-1 bg-brand text-white rounded-full text-sm"
                   >
                     {tag}
                     <button
@@ -527,7 +527,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
                 id="billable"
                 checked={billable}
                 onChange={(e) => setBillable(e.target.checked)}
-                className="w-4 h-4 text-freiluft border-gray-300 rounded focus:ring-freiluft"
+                className="w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand"
               />
               <label htmlFor="billable" className="ml-2 text-sm text-gray-700">
                 Verrechenbar
@@ -554,7 +554,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-opacity-90"
+                className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-opacity-90"
                 disabled={loading}
               >
                 {loading ? 'Speichern...' : 'Speichern'}

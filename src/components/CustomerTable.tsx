@@ -105,7 +105,7 @@ export default function CustomerTable({ customers, onEdit, onRowClick, onArchive
                   <td className="px-6 py-4 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
                     <Link
                       to={`/kunden/${customer.id}/kontakte`}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm text-gray-600 hover:bg-gray-100 hover:text-freiluft transition"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm text-gray-600 hover:bg-gray-100 hover:text-brand transition"
                     >
                       <Users size={16} />
                       <span>{customer.contacts_count}</span>
@@ -124,7 +124,7 @@ export default function CustomerTable({ customers, onEdit, onRowClick, onArchive
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => onEdit(customer)}
-                        className="p-2 text-freiluft hover:bg-teal-50 rounded-lg transition"
+                        className="p-2 text-brand hover:bg-sage-50 rounded-lg transition"
                         title="Bearbeiten"
                       >
                         <Pencil size={18} />

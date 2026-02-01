@@ -203,7 +203,7 @@ export default function TimeReporting({ entries, projects }: TimeReportingProps)
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-freiluft focus:ring-1 focus:ring-freiluft/20 outline-none"
+              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-brand focus:ring-1 focus:ring-brand/20 outline-none"
             />
           </div>
           <div>
@@ -212,7 +212,7 @@ export default function TimeReporting({ entries, projects }: TimeReportingProps)
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-freiluft focus:ring-1 focus:ring-freiluft/20 outline-none"
+              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-brand focus:ring-1 focus:ring-brand/20 outline-none"
             />
           </div>
 
@@ -222,7 +222,7 @@ export default function TimeReporting({ entries, projects }: TimeReportingProps)
             <select
               value={selectedCustomerId}
               onChange={(e) => setSelectedCustomerId(e.target.value)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-freiluft focus:ring-1 focus:ring-freiluft/20 outline-none min-w-[140px]"
+              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-brand focus:ring-1 focus:ring-brand/20 outline-none min-w-[140px]"
             >
               <option value="">Alle Kunden</option>
               {customers.map(customer => (
@@ -237,7 +237,7 @@ export default function TimeReporting({ entries, projects }: TimeReportingProps)
             <select
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-freiluft focus:ring-1 focus:ring-freiluft/20 outline-none min-w-[140px]"
+              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:border-brand focus:ring-1 focus:ring-brand/20 outline-none min-w-[140px]"
             >
               <option value="">Alle Projekte</option>
               {projects.map(project => (
@@ -316,7 +316,7 @@ export default function TimeReporting({ entries, projects }: TimeReportingProps)
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-500">Gesamtumsatz (verrechenbare Stunden)</p>
-            <p className="text-3xl font-bold text-freiluft">CHF {kpis.totalRevenue.toLocaleString('de-CH', { minimumFractionDigits: 2 })}</p>
+            <p className="text-3xl font-bold text-brand">CHF {kpis.totalRevenue.toLocaleString('de-CH', { minimumFractionDigits: 2 })}</p>
           </div>
           <div className="text-right">
             <p className="text-sm text-gray-500">Verrechenbare Stunden</p>
@@ -363,7 +363,7 @@ export default function TimeReporting({ entries, projects }: TimeReportingProps)
                     <p className="text-sm font-medium text-gray-900 truncate">{project.name}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <div
-                        className="h-2 bg-freiluft rounded-full"
+                        className="h-2 bg-brand rounded-full"
                         style={{ width: `${(project.hours / kpis.totalHours) * 100}%`, minWidth: '4px' }}
                       />
                       <span className="text-xs text-gray-500">

@@ -35,8 +35,8 @@ export function Button({
 
   const variantStyles = {
     primary: 'bg-brand text-white hover:bg-brand-dark focus-visible:ring-brand',
-    secondary: 'bg-white text-text-primary border border-surface-border hover:bg-slate-50 hover:border-slate-300 focus-visible:ring-brand',
-    ghost: 'text-text-secondary hover:bg-slate-100 hover:text-text-primary focus-visible:ring-brand',
+    secondary: 'bg-white text-text-primary border border-surface-border hover:bg-sage-50 hover:border-sage-300 focus-visible:ring-brand',
+    ghost: 'text-text-secondary hover:bg-sage-100 hover:text-text-primary focus-visible:ring-brand',
     danger: 'bg-danger text-white hover:bg-danger-dark focus-visible:ring-danger',
   };
 

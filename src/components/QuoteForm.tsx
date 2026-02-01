@@ -231,7 +231,7 @@ export default function QuoteForm({
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
             >
               <option value="">Kunde auswählen</option>
               {customers.map((customer) => (
@@ -251,7 +251,7 @@ export default function QuoteForm({
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
               disabled={!customerId}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition disabled:bg-gray-50"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition disabled:bg-gray-50"
             >
               <option value="">Kein Projekt</option>
               {customerProjects.map((project) => (
@@ -289,7 +289,7 @@ export default function QuoteForm({
               value={issueDate}
               onChange={(e) => setIssueDate(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
             />
           </div>
 
@@ -303,7 +303,7 @@ export default function QuoteForm({
               value={validUntil}
               onChange={(e) => setValidUntil(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
             />
           </div>
 
@@ -315,7 +315,7 @@ export default function QuoteForm({
               id="status"
               value={status}
               onChange={(e) => setStatus(e.target.value as Quote['status'])}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
             >
               <option value="offen">Offen</option>
               <option value="versendet">Versendet</option>
@@ -352,7 +352,7 @@ export default function QuoteForm({
                     <select
                       value={item.product_id || ''}
                       onChange={(e) => handleProductSelect(index, e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
                     >
                       <option value="">Freie Eingabe</option>
                       {products.map((product) => (
@@ -376,7 +376,7 @@ export default function QuoteForm({
                       onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                       placeholder="Beschreibung"
                       required
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
                     />
                   </div>
 
@@ -395,7 +395,7 @@ export default function QuoteForm({
                       step="0.01"
                       min="0"
                       required
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
                     />
                   </div>
 
@@ -414,7 +414,7 @@ export default function QuoteForm({
                       step="0.01"
                       min="0"
                       required
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition text-sm"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
                     />
                   </div>
 
@@ -468,7 +468,7 @@ export default function QuoteForm({
                 <span className="font-medium">CHF {totals.vat_amount.toFixed(2)}</span>
               </div>
             </div>
-            <div className="flex justify-between text-lg font-bold text-freiluft border-t pt-2">
+            <div className="flex justify-between text-lg font-bold text-brand border-t pt-2">
               <span>Gesamttotal:</span>
               <span>CHF {totals.total.toFixed(2)}</span>
             </div>
@@ -479,7 +479,7 @@ export default function QuoteForm({
           <button
             type="submit"
             disabled={isSubmitting || items.length === 0}
-            className="rounded-lg px-4 py-2 font-medium bg-freiluft text-white hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-lg px-4 py-2 font-medium bg-brand text-white hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? 'Speichert...' : isEditMode ? 'Änderungen speichern' : 'Angebot speichern'}
           </button>

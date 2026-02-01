@@ -90,7 +90,7 @@ export function OpportunityCard({
           : 'bg-white border-gray-100'
         }
         ${isSortableDragging
-          ? 'shadow-2xl ring-2 ring-indigo-500 ring-offset-2'
+          ? 'shadow-2xl ring-2 ring-sage-500 ring-offset-2'
           : 'shadow-sm hover:shadow-xl'
         }
         ${isDragging ? 'opacity-50' : ''}
@@ -230,8 +230,8 @@ export function OpportunityCard({
             }}
             className="
               flex-1 text-xs font-semibold px-3 py-2
-              bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-xl
-              hover:from-indigo-600 hover:to-indigo-700
+              bg-gradient-to-br from-sage-500 to-sage-600 text-white rounded-xl
+              hover:from-sage-600 hover:to-sage-700
               active:translate-y-[1px]
               transition-all duration-150 tracking-tight
               shadow-sm hover:shadow-md

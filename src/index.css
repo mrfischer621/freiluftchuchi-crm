@@ -8,9 +8,9 @@
 
 /* ==========================================
 
-Swiss Modern Design System 2026
+Swiss Spatial 2026 Design System - "Freiluftchuchi Sage"
 
-High Contrast • Clean • Bento-Grid Style
+Organic Modernism • Micro-Depth • Color-Tinted Shadows
 
 ========================================== */
 
@@ -18,53 +18,87 @@ High Contrast • Clean • Bento-Grid Style
 
 @layer base {
 
-/* CSS Custom Properties */
+/* CSS Custom Properties - Swiss Spatial 2026 */
 
 :root {
 
-/* Swiss Modern: Core Palette */
+/* Sage Brand Palette */
 
---sidebar-bg: #0f172a;
+--sage-500: #6b8a5e;
 
---sidebar-hover: #1e293b;
+--sage-600: #547047;
 
---sidebar-text: #94a3b8;
+--sage-700: #435839;
+
+
+
+/* Sidebar (Dark with sage undertone) */
+
+--sidebar-bg: #1a1f1c;
+
+--sidebar-hover: #252b26;
+
+--sidebar-text: #9ca3a0;
 
 --sidebar-text-active: #ffffff;
 
 
 
---app-bg: #f8fafc;
+/* Surfaces */
 
---surface: #ffffff;
+--surface-base: #f7f8f6;
 
---surface-border: #e2e8f0;
+--surface-card: #ffffff;
 
-
-
---brand: #2563eb;
-
---brand-dark: #1d4ed8;
+--surface-border: #e2e5df;
 
 
 
---text-primary: #0f172a;
+/* Brand */
 
---text-secondary: #475569;
+--brand: #6b8a5e;
 
---text-tertiary: #94a3b8;
+--brand-dark: #547047;
 
 
 
-/* Shadows */
+/* Content Text */
 
---shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+--content-heading: #1a1f1c;
 
---shadow-rest: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+--content-body: #374038;
 
---shadow-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+--content-secondary: #5c665e;
 
---shadow-elevated: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+--content-tertiary: #8a948c;
+
+
+
+/* Legacy mappings */
+
+--text-primary: #1a1f1c;
+
+--text-secondary: #5c665e;
+
+--text-tertiary: #8a948c;
+
+--app-bg: #f7f8f6;
+
+
+
+/* Spatial Shadows (Sage-Tinted) */
+
+--shadow-sm: 0 1px 2px 0 rgba(47, 58, 40, 0.05);
+
+--shadow-rest: 0 1px 3px 0 rgba(47, 58, 40, 0.06), 0 1px 2px 0 rgba(47, 58, 40, 0.04);
+
+--shadow-hover: 0 4px 8px -2px rgba(47, 58, 40, 0.08), 0 2px 4px -1px rgba(47, 58, 40, 0.04);
+
+--shadow-elevated: 0 12px 20px -4px rgba(47, 58, 40, 0.10), 0 4px 8px -2px rgba(47, 58, 40, 0.05);
+
+--shadow-spatial-1: 0 2px 8px -2px rgba(107, 138, 94, 0.15), 0 1px 3px 0 rgba(47, 58, 40, 0.06);
+
+--shadow-spatial-2: 0 8px 24px -4px rgba(107, 138, 94, 0.18), 0 4px 8px -2px rgba(47, 58, 40, 0.08);
 
 }
 
@@ -74,23 +108,33 @@ High Contrast • Clean • Bento-Grid Style
 
 .dark {
 
---app-bg: #0f172a;
+--surface-base: #1a1f1c;
 
---surface: #1e293b;
+--surface-card: #252b26;
 
---surface-border: #334155;
+--surface-border: #374038;
 
---text-primary: #f8fafc;
+--app-bg: #1a1f1c;
 
---text-secondary: #cbd5e1;
+--content-heading: #f7f8f6;
 
---text-tertiary: #64748b;
+--content-body: #e6ebe3;
+
+--content-secondary: #aec2a3;
+
+--content-tertiary: #8a948c;
+
+--text-primary: #f7f8f6;
+
+--text-secondary: #aec2a3;
+
+--text-tertiary: #8a948c;
 
 }
 
 
 
-/* Global Typography Settings */
+/* Global Typography Settings - Optimized Rendering */
 
 html {
 
@@ -99,6 +143,8 @@ font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 -webkit-font-smoothing: antialiased;
 
 -moz-osx-font-smoothing: grayscale;
+
+text-rendering: optimizeLegibility;
 
 }
 
@@ -114,9 +160,11 @@ html, body {
 
 
 
+/* Swiss Spatial: Base body styling */
+
 body {
 
-@apply bg-app-bg text-text-primary;
+@apply bg-surface-base text-content-body antialiased;
 
 }
 
@@ -126,7 +174,7 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
 
-@apply tracking-tight font-semibold;
+@apply tracking-tight font-semibold text-content-heading;
 
 }
 
@@ -136,7 +184,7 @@ h1, h2, h3, h4, h5, h6 {
 
 *:focus-visible {
 
-@apply outline-none ring-2 ring-brand ring-offset-2;
+@apply outline-none ring-2 ring-sage-400 ring-offset-2;
 
 }
 
@@ -166,15 +214,15 @@ transition-duration: 0.01ms !important;
 
 /* ==========================================
 
-Swiss Modern: Card Component
+Swiss Spatial: Card Component
 
 ========================================== */
 
 .card {
 
-@apply bg-white border border-surface-border rounded-xl shadow-sm;
+@apply bg-surface-card border border-surface-border rounded-xl shadow-rest;
 
-@apply transition-shadow duration-normal ease-swiss;
+@apply transition-all duration-normal ease-swiss;
 
 }
 
@@ -182,7 +230,7 @@ Swiss Modern: Card Component
 
 .card-hover:hover {
 
-@apply shadow-hover;
+@apply shadow-spatial-1;
 
 }
 
@@ -192,7 +240,7 @@ Swiss Modern: Card Component
 
 @apply card cursor-pointer;
 
-@apply hover:shadow-hover hover:border-slate-300;
+@apply hover:shadow-spatial-1 hover:border-sage-200;
 
 }
 
@@ -222,7 +270,7 @@ Swiss Modern: Bento Grid
 
 /* ==========================================
 
-Swiss Modern: Button Base (Phase 5.5 - mehr Whitespace)
+Swiss Spatial: Button Components
 
 ========================================== */
 
@@ -242,9 +290,9 @@ Swiss Modern: Button Base (Phase 5.5 - mehr Whitespace)
 
 .btn-primary {
 
-@apply btn bg-brand text-white;
+@apply btn bg-brand text-white shadow-rest;
 
-@apply hover:bg-brand-dark;
+@apply hover:bg-brand-dark hover:shadow-spatial-1;
 
 @apply focus-visible:ring-brand;
 
@@ -254,9 +302,9 @@ Swiss Modern: Button Base (Phase 5.5 - mehr Whitespace)
 
 .btn-secondary {
 
-@apply btn bg-white text-text-primary border border-surface-border;
+@apply btn bg-surface-card text-content-body border border-surface-border;
 
-@apply hover:bg-slate-50 hover:border-slate-300;
+@apply hover:bg-sage-50 hover:border-sage-200;
 
 @apply focus-visible:ring-brand;
 
@@ -266,9 +314,9 @@ Swiss Modern: Button Base (Phase 5.5 - mehr Whitespace)
 
 .btn-ghost {
 
-@apply btn text-text-secondary;
+@apply btn text-content-secondary;
 
-@apply hover:bg-slate-100 hover:text-text-primary;
+@apply hover:bg-sage-50 hover:text-content-body;
 
 @apply focus-visible:ring-brand;
 
@@ -278,9 +326,9 @@ Swiss Modern: Button Base (Phase 5.5 - mehr Whitespace)
 
 .btn-danger {
 
-@apply btn bg-danger text-white;
+@apply btn bg-danger text-white shadow-rest;
 
-@apply hover:bg-danger-dark;
+@apply hover:bg-danger-dark hover:shadow-spatial-1;
 
 @apply focus-visible:ring-danger;
 
@@ -290,7 +338,7 @@ Swiss Modern: Button Base (Phase 5.5 - mehr Whitespace)
 
 /* ==========================================
 
-Swiss Modern: Form Inputs (Phase 5.5 - mehr Whitespace)
+Swiss Spatial: Form Inputs
 
 ========================================== */
 
@@ -298,13 +346,13 @@ Swiss Modern: Form Inputs (Phase 5.5 - mehr Whitespace)
 
 @apply w-full px-4 py-2.5 rounded-input;
 
-@apply bg-white border border-surface-border;
+@apply bg-surface-card border border-surface-border;
 
-@apply text-text-primary placeholder:text-text-tertiary;
+@apply text-content-body placeholder:text-content-tertiary;
 
 @apply transition-colors duration-fast ease-swiss;
 
-@apply hover:border-slate-300;
+@apply hover:border-sage-300;
 
 @apply focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand;
 
@@ -322,7 +370,7 @@ Swiss Modern: Form Inputs (Phase 5.5 - mehr Whitespace)
 
 /* ==========================================
 
-Swiss Modern: KPI Card (Dashboard) - Phase 5.5 mehr Whitespace
+Swiss Spatial: KPI Card (Dashboard)
 
 ========================================== */
 
@@ -330,7 +378,7 @@ Swiss Modern: KPI Card (Dashboard) - Phase 5.5 mehr Whitespace
 
 @apply card p-7;
 
-@apply hover:shadow-hover;
+@apply hover:shadow-spatial-1;
 
 }
 
@@ -338,7 +386,7 @@ Swiss Modern: KPI Card (Dashboard) - Phase 5.5 mehr Whitespace
 
 .kpi-label {
 
-@apply text-sm font-medium text-text-secondary mb-1;
+@apply text-sm font-medium text-content-secondary mb-1;
 
 }
 
@@ -346,7 +394,7 @@ Swiss Modern: KPI Card (Dashboard) - Phase 5.5 mehr Whitespace
 
 .kpi-value {
 
-@apply text-3xl font-bold tracking-tight;
+@apply text-3xl font-bold tracking-tight text-content-heading;
 
 }
 
@@ -354,7 +402,7 @@ Swiss Modern: KPI Card (Dashboard) - Phase 5.5 mehr Whitespace
 
 .kpi-positive {
 
-@apply text-success;
+@apply text-success-dark;
 
 }
 
@@ -362,7 +410,7 @@ Swiss Modern: KPI Card (Dashboard) - Phase 5.5 mehr Whitespace
 
 .kpi-negative {
 
-@apply text-danger;
+@apply text-danger-dark;
 
 }
 
@@ -378,7 +426,7 @@ Swiss Modern: KPI Card (Dashboard) - Phase 5.5 mehr Whitespace
 
 /* ==========================================
 
-Swiss Modern: Table
+Swiss Spatial: Table
 
 ========================================== */
 
@@ -400,7 +448,7 @@ Swiss Modern: Table
 
 .table th {
 
-@apply text-left py-4 px-5 font-medium text-text-secondary text-sm;
+@apply text-left py-4 px-5 font-medium text-content-secondary text-sm;
 
 @apply border-b border-surface-border;
 
@@ -410,7 +458,7 @@ Swiss Modern: Table
 
 .table td {
 
-@apply py-4 px-5 text-text-primary;
+@apply py-4 px-5 text-content-body;
 
 @apply border-b border-surface-border;
 
@@ -422,7 +470,7 @@ Swiss Modern: Table
 
 @apply transition-colors duration-fast;
 
-@apply hover:bg-slate-50;
+@apply hover:bg-sage-50;
 
 }
 
@@ -468,7 +516,7 @@ Swiss Modern: Badge / Status
 
 .badge-neutral {
 
-@apply badge bg-slate-100 text-slate-700;
+@apply badge bg-sage-100 text-sage-700;
 
 }
 
@@ -476,7 +524,7 @@ Swiss Modern: Badge / Status
 
 /* ==========================================
 
-Swiss Modern: Scrollbar Utilities
+Swiss Spatial: Scrollbar Utilities
 
 ========================================== */
 
@@ -484,7 +532,7 @@ Swiss Modern: Scrollbar Utilities
 
 scrollbar-width: thin;
 
-scrollbar-color: #cbd5e1 transparent;
+scrollbar-color: #ced9c7 transparent; /* sage-200 */
 
 }
 
@@ -510,7 +558,7 @@ background: transparent;
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
 
-background-color: #cbd5e1;
+background-color: #ced9c7; /* sage-200 */
 
 border-radius: 3px;
 
@@ -520,7 +568,7 @@ border-radius: 3px;
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
 
-background-color: #94a3b8;
+background-color: #aec2a3; /* sage-300 */
 
 }
 

@@ -8,83 +8,122 @@ export default {
   theme: {
     extend: {
       // ==========================================
-      // Swiss Modern Design System 2026 (Updated Phase 5.5)
+      // Swiss Spatial 2026 Design System - "Freiluftchuchi Sage"
+      // Organic Modernism • Micro-Depth • Color-Tinted Shadows
       // ==========================================
       colors: {
         // Legacy support
         'freiluft': '#5c888f',
 
-        // Swiss Modern: Sidebar (Dark)
+        // -----------------------------------------------------------------
+        // SAGE PALETTE: Organic, desaturated green with warm undertones
+        // Fresh but professional - the signature Freiluftchuchi identity
+        // -----------------------------------------------------------------
+        sage: {
+          50: '#f4f6f3',           // Whisper - barely-there sage tint
+          100: '#e6ebe3',          // Mist - soft background
+          200: '#ced9c7',          // Dew - subtle accent
+          300: '#aec2a3',          // Herb - gentle highlight
+          400: '#8aa67c',          // Meadow - secondary actions
+          500: '#6b8a5e',          // Core Sage - primary brand
+          600: '#547047',          // Forest - hover state
+          700: '#435839',          // Deep - pressed state
+          800: '#38472f',          // Shadow - dark accents
+          900: '#2f3a28',          // Night - darkest tone
+        },
+
+        // Swiss Spatial: Sidebar (Dark with subtle sage undertone)
         sidebar: {
-          bg: '#0f172a',           // slate-900
-          hover: '#1e293b',        // slate-800
-          text: '#94a3b8',         // slate-400
+          bg: '#1a1f1c',           // Sage-tinted dark
+          hover: '#252b26',        // Subtle lift
+          text: '#9ca3a0',         // Sage-gray
           'text-active': '#ffffff',
-          border: '#1e293b',       // slate-800
+          border: '#252b26',
         },
 
-        // Swiss Modern: App Background
-        app: {
-          bg: '#f8fafc',           // slate-50 (main content area)
-          'bg-dark': '#0f172a',    // Dark mode background
-        },
-
-        // Swiss Modern: Surfaces (Cards, Modals)
+        // Swiss Spatial: Surface System
         surface: {
-          DEFAULT: '#ffffff',
-          inset: '#f1f5f9',        // slate-100
-          border: '#e2e8f0',       // slate-200
-          'dark': '#1e293b',       // Dark mode surface
+          base: '#f7f8f6',         // Warm off-white (app background)
+          card: '#ffffff',         // Pure white cards
+          floating: 'rgba(255, 255, 255, 0.95)', // Translucent floating panels
+          inset: '#f0f2ee',        // Recessed areas
+          border: '#e2e5df',       // Sage-tinted borders
+          'dark': '#252b26',       // Dark mode surface
         },
 
-        // Swiss Modern: Brand/Accent (Professional Grey-Blue)
+        // Swiss Spatial: App Background (maps to surface.base)
+        app: {
+          bg: '#f7f8f6',           // Warm off-white
+          'bg-dark': '#1a1f1c',    // Dark mode background
+        },
+
+        // Swiss Spatial: Brand (References Sage Palette)
         brand: {
-          light: '#eff6ff',        // blue-50 (sanfter)
-          DEFAULT: '#3b82f6',      // blue-500 (weicher als blue-600)
-          dark: '#2563eb',         // blue-600
-          darker: '#1d4ed8',       // blue-700
+          light: '#e6ebe3',        // sage-100
+          DEFAULT: '#6b8a5e',      // sage-500 - Core brand
+          dark: '#547047',         // sage-600 - Hover
+          darker: '#435839',       // sage-700 - Pressed
         },
 
         // -----------------------------------------------------------------
-        // UPDATED: Entsättigte Palette (Roadmap Phase 5.5)
-        // Professional Grey-Blue Töne, weich und dezent
+        // SEMANTIC COLORS: Harmonized with Sage palette
         // -----------------------------------------------------------------
         success: {
-          light: '#ecfdf5',        // Sehr helles Mint (Emerald-50)
-          DEFAULT: '#34d399',      // Sanftes Mint-Grün (Emerald-400)
-          dark: '#047857',         // Gedämpftes Dunkelgrün (Emerald-700)
+          light: '#ecf5e8',        // Sage-tinted mint
+          DEFAULT: '#4ade80',      // Fresh green (green-400)
+          dark: '#166534',         // Deep forest (green-800)
         },
         warning: {
-          light: '#fffbeb',        // Sehr helles Creme (Amber-50)
-          DEFAULT: '#fbbf24',      // Weiches Gold (Amber-400)
-          dark: '#92400e',         // Gedämpftes Braun-Orange (Amber-800)
+          light: '#fef9e7',        // Warm cream
+          DEFAULT: '#facc15',      // Golden yellow (yellow-400)
+          dark: '#854d0e',         // Amber brown (yellow-800)
         },
         danger: {
-          light: '#fef2f2',        // Sehr helles Rosa (Red-50)
-          DEFAULT: '#f87171',      // Weiches Korall-Rot (Red-400)
-          dark: '#991b1b',         // Gedämpftes Dunkelrot (Red-800)
+          light: '#fef1f1',        // Soft rose
+          DEFAULT: '#f87171',      // Coral red (red-400)
+          dark: '#991b1b',         // Deep crimson (red-800)
         },
-        // -----------------------------------------------------------------
 
-        // Swiss Modern: Text Palette
+        // Swiss Spatial: Content Text
+        content: {
+          heading: '#1a1f1c',      // Darkest sage for titles
+          body: '#374038',         // Readable body text
+          secondary: '#5c665e',    // Muted secondary
+          tertiary: '#8a948c',     // Hints and placeholders
+          inverse: '#f7f8f6',      // For dark backgrounds
+        },
+
+        // Legacy text mapping (for compatibility)
         text: {
-          primary: '#0f172a',      // slate-900
-          secondary: '#475569',    // slate-600
-          tertiary: '#94a3b8',     // slate-400
-          inverse: '#f8fafc',      // For dark backgrounds
+          primary: '#1a1f1c',
+          secondary: '#5c665e',
+          tertiary: '#8a948c',
+          inverse: '#f7f8f6',
         },
       },
 
-      // Enhanced Shadow System (Swiss Modern Depth)
+      // -----------------------------------------------------------------
+      // SPATIAL SHADOWS: Color-tinted for depth and sophistication
+      // Uses sage undertones instead of pure gray/black
+      // -----------------------------------------------------------------
       boxShadow: {
-        'rest': '0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.04)',
-        'hover': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-        'elevated': '0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04)',
-        'floating': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        // Glow effects angepasst auf die neuen Farben (dezenter)
-        'glow-brand': '0 0 0 3px rgba(37, 99, 235, 0.12)',
-        'glow-success': '0 0 0 3px rgba(52, 211, 153, 0.12)', // Updated to match Emerald-400
-        'glow-danger': '0 0 0 3px rgba(248, 113, 113, 0.12)', // Updated to match Red-400
+        // Resting state - minimal lift
+        'rest': '0 1px 3px 0 rgba(47, 58, 40, 0.06), 0 1px 2px 0 rgba(47, 58, 40, 0.04)',
+        // Hover state - subtle elevation
+        'hover': '0 4px 8px -2px rgba(47, 58, 40, 0.08), 0 2px 4px -1px rgba(47, 58, 40, 0.04)',
+        // Elevated panels - clear separation
+        'elevated': '0 12px 20px -4px rgba(47, 58, 40, 0.10), 0 4px 8px -2px rgba(47, 58, 40, 0.05)',
+        // Floating elements - prominent lift
+        'floating': '0 24px 32px -8px rgba(47, 58, 40, 0.12), 0 12px 16px -4px rgba(47, 58, 40, 0.06)',
+
+        // Spatial UI Shadows (2026 Trend: Color-Tinted Micro-Depth)
+        'spatial-1': '0 2px 8px -2px rgba(107, 138, 94, 0.15), 0 1px 3px 0 rgba(47, 58, 40, 0.06)',
+        'spatial-2': '0 8px 24px -4px rgba(107, 138, 94, 0.18), 0 4px 8px -2px rgba(47, 58, 40, 0.08)',
+
+        // Glow effects with sage brand tint
+        'glow-brand': '0 0 0 3px rgba(107, 138, 94, 0.15)',
+        'glow-success': '0 0 0 3px rgba(74, 222, 128, 0.15)',
+        'glow-danger': '0 0 0 3px rgba(248, 113, 113, 0.15)',
       },
 
       // Typography (Neo-Grotesk)

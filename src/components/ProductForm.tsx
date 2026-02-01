@@ -105,7 +105,7 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
             type="text"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent ${
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent ${
               errors.name ? 'border-red-500' : 'border-gray-300'
             }`}
             placeholder="Produktname"
@@ -124,7 +124,7 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
             min="0"
             value={formData.price}
             onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent ${
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent ${
               errors.price ? 'border-red-500' : 'border-gray-300'
             }`}
             placeholder="0.00"
@@ -140,7 +140,7 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
           <select
             value={formData.unit}
             onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent ${
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent ${
               errors.unit ? 'border-red-500' : 'border-gray-300'
             }`}
           >
@@ -160,7 +160,7 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
               type="checkbox"
               checked={formData.is_active}
               onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-              className="w-4 h-4 text-freiluft border-gray-300 rounded focus:ring-freiluft"
+              className="w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand"
             />
             <span className="ml-2 text-sm text-gray-700">Produkt aktiv</span>
           </label>
@@ -174,7 +174,7 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
           placeholder="Optionale Produktbeschreibung"
         />
       </div>
@@ -184,7 +184,7 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
         <button
           type="submit"
           disabled={isSubmitting}
-          className="px-6 py-2 bg-freiluft text-white rounded-lg hover:bg-opacity-90 transition disabled:opacity-50"
+          className="px-6 py-2 bg-brand text-white rounded-lg hover:bg-opacity-90 transition disabled:opacity-50"
         >
           {isSubmitting ? 'Speichern...' : editingProduct ? 'Aktualisieren' : 'Hinzufügen'}
         </button>

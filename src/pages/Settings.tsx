@@ -603,7 +603,7 @@ export default function Settings() {
               onClick={() => setActiveTab(tab.id)}
               className={`pb-3 px-1 border-b-2 font-medium text-sm transition flex items-center gap-2 ${
                 activeTab === tab.id
-                  ? 'border-freiluft text-freiluft'
+                  ? 'border-brand text-brand'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -628,7 +628,7 @@ export default function Settings() {
                 id="name"
                 value={companyFormData.name}
                 onChange={(e) => handleCompanyFieldChange('name', e.target.value)}
-                className={`w-full px-4 py-2 border rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition ${
+                className={`w-full px-4 py-2 border rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition ${
                   errors.name ? 'border-red-500' : 'border-gray-200'
                 }`}
                 placeholder="z.B. Muster AG"
@@ -647,7 +647,7 @@ export default function Settings() {
                   id="street"
                   value={companyFormData.street}
                   onChange={(e) => handleCompanyFieldChange('street', e.target.value)}
-                  className={`w-full px-4 py-2 border rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition ${
+                  className={`w-full px-4 py-2 border rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition ${
                     errors.street ? 'border-red-500' : 'border-gray-200'
                   }`}
                   placeholder="Musterstrasse"
@@ -664,7 +664,7 @@ export default function Settings() {
                   id="house_number"
                   value={companyFormData.house_number}
                   onChange={(e) => handleCompanyFieldChange('house_number', e.target.value)}
-                  className={`w-full px-4 py-2 border rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition ${
+                  className={`w-full px-4 py-2 border rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition ${
                     errors.house_number ? 'border-red-500' : 'border-gray-200'
                   }`}
                   placeholder="123"
@@ -685,7 +685,7 @@ export default function Settings() {
                   id="zip_code"
                   value={companyFormData.zip_code}
                   onChange={(e) => handleCompanyFieldChange('zip_code', e.target.value)}
-                  className={`w-full px-4 py-2 border rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition ${
+                  className={`w-full px-4 py-2 border rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition ${
                     errors.zip_code ? 'border-red-500' : 'border-gray-200'
                   }`}
                   placeholder="8000"
@@ -702,7 +702,7 @@ export default function Settings() {
                   id="city"
                   value={companyFormData.city}
                   onChange={(e) => handleCompanyFieldChange('city', e.target.value)}
-                  className={`w-full px-4 py-2 border rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition ${
+                  className={`w-full px-4 py-2 border rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition ${
                     errors.city ? 'border-red-500' : 'border-gray-200'
                   }`}
                   placeholder="Zürich"
@@ -722,7 +722,7 @@ export default function Settings() {
                   id="iban"
                   value={companyFormData.iban}
                   onChange={(e) => handleCompanyFieldChange('iban', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
                   placeholder="CH93 0000 0000 0000 0000 0"
                 />
               </div>
@@ -736,7 +736,7 @@ export default function Settings() {
                   id="qr_iban"
                   value={companyFormData.qr_iban}
                   onChange={(e) => handleCompanyFieldChange('qr_iban', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
                   placeholder="CH44 3000 0000 0000 0000 0"
                 />
               </div>
@@ -755,7 +755,7 @@ export default function Settings() {
                 id="bank_name"
                 value={companyFormData.bank_name}
                 onChange={(e) => handleCompanyFieldChange('bank_name', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
                 placeholder="z.B. UBS AG"
               />
             </div>
@@ -771,7 +771,7 @@ export default function Settings() {
                   id="uid_number"
                   value={companyFormData.uid_number}
                   onChange={(e) => handleCompanyFieldChange('uid_number', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
                   placeholder="CHE-123.456.789"
                 />
               </div>
@@ -785,7 +785,7 @@ export default function Settings() {
                   id="vat_number"
                   value={companyFormData.vat_number}
                   onChange={(e) => handleCompanyFieldChange('vat_number', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
                   placeholder="CHE-123.456.789 MWST"
                 />
               </div>
@@ -797,7 +797,7 @@ export default function Settings() {
                 id="vat_registered"
                 checked={companyFormData.vat_registered}
                 onChange={(e) => handleCompanyFieldChange('vat_registered', e.target.checked)}
-                className="w-4 h-4 text-freiluft border-gray-300 rounded focus:ring-freiluft"
+                className="w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand"
               />
               <label htmlFor="vat_registered" className="ml-2 text-sm text-gray-700">
                 MWST-pflichtig
@@ -809,7 +809,7 @@ export default function Settings() {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex items-center gap-2 px-6 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-6 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save size={18} />
                 {isSaving ? 'Speichert...' : 'Speichern'}
@@ -840,7 +840,7 @@ export default function Settings() {
                 id="full_name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
                 placeholder="Ihr vollständiger Name"
               />
             </div>
@@ -876,7 +876,7 @@ export default function Settings() {
                     id="new_password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
                     placeholder="Mindestens 6 Zeichen"
                   />
                 </div>
@@ -890,7 +890,7 @@ export default function Settings() {
                     id="confirm_password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
                     placeholder="Passwort bestätigen"
                   />
                 </div>
@@ -902,7 +902,7 @@ export default function Settings() {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex items-center gap-2 px-6 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-6 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save size={18} />
                 {isSaving ? 'Speichert...' : 'Speichern'}
@@ -936,7 +936,7 @@ export default function Settings() {
                   value={invoiceIntro}
                   onChange={(e) => setInvoiceIntro(e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition font-mono text-sm"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition font-mono text-sm"
                   placeholder="Besten Dank für Ihren Auftrag. **Fett**, *kursiv*, - Listen..."
                 />
                 <p className="text-xs text-gray-500 mt-1">Erscheint oberhalb der Rechnungspo sitionen</p>
@@ -951,7 +951,7 @@ export default function Settings() {
                   value={invoiceFooter}
                   onChange={(e) => setInvoiceFooter(e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition font-mono text-sm"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition font-mono text-sm"
                   placeholder="Zahlbar innert 30 Tagen..."
                 />
                 <p className="text-xs text-gray-500 mt-1">Erscheint unterhalb der Rechnungspositionen</p>
@@ -971,7 +971,7 @@ export default function Settings() {
                   value={quoteIntro}
                   onChange={(e) => setQuoteIntro(e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition font-mono text-sm"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition font-mono text-sm"
                   placeholder="Vielen Dank für Ihre Anfrage..."
                 />
                 <p className="text-xs text-gray-500 mt-1">Erscheint oberhalb der Offertenpositionen</p>
@@ -986,7 +986,7 @@ export default function Settings() {
                   value={quoteFooter}
                   onChange={(e) => setQuoteFooter(e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition font-mono text-sm"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition font-mono text-sm"
                   placeholder="Wir freuen uns auf Ihre Antwort..."
                 />
                 <p className="text-xs text-gray-500 mt-1">Erscheint unterhalb der Offertenpositionen</p>
@@ -998,7 +998,7 @@ export default function Settings() {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex items-center gap-2 px-6 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-6 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save size={18} />
                 {isSaving ? 'Speichert...' : 'Alle speichern'}
@@ -1039,7 +1039,7 @@ export default function Settings() {
                     <select
                       value={editStageColor}
                       onChange={(e) => setEditStageColor(e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:border-freiluft focus:ring-1 focus:ring-freiluft outline-none"
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                     >
                       {colorOptions.map((color) => (
                         <option key={color.value} value={color.value}>
@@ -1065,7 +1065,7 @@ export default function Settings() {
                         if (e.key === 'Enter') handleSaveStage(stage.id);
                         if (e.key === 'Escape') handleCancelEdit();
                       }}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-freiluft focus:ring-1 focus:ring-freiluft outline-none"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                       autoFocus
                     />
                   ) : (
@@ -1185,12 +1185,12 @@ export default function Settings() {
                 }
               }}
               placeholder="Neue Kategorie..."
-              className="flex-1 min-w-[200px] px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition bg-white"
+              className="flex-1 min-w-[200px] px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition bg-white"
             />
             <select
               value={newCategoryType}
               onChange={(e) => setNewCategoryType(e.target.value as CategoryType)}
-              className="px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition bg-white"
+              className="px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition bg-white"
             >
               <option value="expense">Ausgabe</option>
               <option value="income">Einnahme</option>
@@ -1207,14 +1207,14 @@ export default function Settings() {
                 type="checkbox"
                 checked={newCategoryTaxRelevant}
                 onChange={(e) => setNewCategoryTaxRelevant(e.target.checked)}
-                className="w-4 h-4 text-freiluft border-gray-300 rounded focus:ring-freiluft"
+                className="w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand"
               />
               <span className="text-sm text-gray-700">Steuerrelevant</span>
             </label>
             <button
               onClick={handleAddCategory}
               disabled={!newCategoryName.trim() || isLoadingCategories}
-              className="px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Plus size={18} />
               Hinzufügen
@@ -1259,7 +1259,7 @@ export default function Settings() {
                               cancelEditCategory();
                             }
                           }}
-                          className="flex-1 px-3 py-1 border border-gray-300 rounded focus:border-freiluft focus:ring-1 focus:ring-freiluft/20 outline-none"
+                          className="flex-1 px-3 py-1 border border-gray-300 rounded focus:border-brand focus:ring-1 focus:ring-brand/20 outline-none"
                           autoFocus
                         />
                         <label className="flex items-center gap-2 px-2 cursor-pointer">
@@ -1267,7 +1267,7 @@ export default function Settings() {
                             type="checkbox"
                             checked={editCategoryTaxRelevant}
                             onChange={(e) => setEditCategoryTaxRelevant(e.target.checked)}
-                            className="w-4 h-4 text-freiluft border-gray-300 rounded focus:ring-freiluft"
+                            className="w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand"
                           />
                           <span className="text-xs text-gray-600">Steuer</span>
                         </label>

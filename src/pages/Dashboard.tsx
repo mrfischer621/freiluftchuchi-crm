@@ -384,7 +384,7 @@ export default function Dashboard() {
                 onClick={() => setViewMode('days')}
                 className={`px-3 py-1.5 text-sm font-medium transition ${
                   viewMode === 'days'
-                    ? 'bg-freiluft text-white'
+                    ? 'bg-brand text-white'
                     : 'bg-white text-gray-600 hover:bg-gray-50'
                 }`}
               >
@@ -394,7 +394,7 @@ export default function Dashboard() {
                 onClick={() => setViewMode('year')}
                 className={`px-3 py-1.5 text-sm font-medium transition ${
                   viewMode === 'year'
-                    ? 'bg-freiluft text-white'
+                    ? 'bg-brand text-white'
                     : 'bg-white text-gray-600 hover:bg-gray-50'
                 }`}
               >
@@ -409,7 +409,7 @@ export default function Dashboard() {
                 <select
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                  className="px-3 py-1.5 text-sm font-medium border border-gray-200 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-freiluft focus:border-transparent"
+                  className="px-3 py-1.5 text-sm font-medium border border-gray-200 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
                 >
                   {yearOptions.map((year) => (
                     <option key={year} value={year}>
