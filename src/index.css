@@ -212,7 +212,7 @@ Swiss Modern: Bento Grid
 
 /* ==========================================
 
-Swiss Modern: Button Base
+Swiss Modern: Button Base (Phase 5.5 - mehr Whitespace)
 
 ========================================== */
 
@@ -220,7 +220,7 @@ Swiss Modern: Button Base
 
 @apply inline-flex items-center justify-center gap-2;
 
-@apply px-4 py-2 rounded-button font-medium text-sm;
+@apply px-5 py-2.5 rounded-button font-medium text-sm;
 
 @apply transition-all duration-fast ease-swiss;
 
@@ -280,13 +280,13 @@ Swiss Modern: Button Base
 
 /* ==========================================
 
-Swiss Modern: Form Inputs
+Swiss Modern: Form Inputs (Phase 5.5 - mehr Whitespace)
 
 ========================================== */
 
 .input {
 
-@apply w-full px-3 py-2 rounded-input;
+@apply w-full px-4 py-2.5 rounded-input;
 
 @apply bg-white border border-surface-border;
 
@@ -312,13 +312,13 @@ Swiss Modern: Form Inputs
 
 /* ==========================================
 
-Swiss Modern: KPI Card (Dashboard)
+Swiss Modern: KPI Card (Dashboard) - Phase 5.5 mehr Whitespace
 
 ========================================== */
 
 .kpi-card {
 
-@apply card p-6;
+@apply card p-7;
 
 @apply hover:shadow-hover;
 
@@ -390,7 +390,7 @@ Swiss Modern: Table
 
 .table th {
 
-@apply text-left py-3 px-4 font-medium text-text-secondary text-sm;
+@apply text-left py-4 px-5 font-medium text-text-secondary text-sm;
 
 @apply border-b border-surface-border;
 
@@ -400,7 +400,7 @@ Swiss Modern: Table
 
 .table td {
 
-@apply py-3 px-4 text-text-primary;
+@apply py-4 px-5 text-text-primary;
 
 @apply border-b border-surface-border;
 
@@ -426,7 +426,7 @@ Swiss Modern: Badge / Status
 
 .badge {
 
-@apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+@apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
 
 }
 

@@ -37,32 +37,32 @@ export default {
           'dark': '#1e293b',       // Dark mode surface
         },
 
-        // Swiss Modern: Brand/Accent (High Contrast Active States)
+        // Swiss Modern: Brand/Accent (Professional Grey-Blue)
         brand: {
-          light: '#dbeafe',        // blue-100
-          DEFAULT: '#2563eb',      // blue-600 (primary action)
-          dark: '#1d4ed8',         // blue-700
-          darker: '#1e40af',       // blue-800
+          light: '#eff6ff',        // blue-50 (sanfter)
+          DEFAULT: '#3b82f6',      // blue-500 (weicher als blue-600)
+          dark: '#2563eb',         // blue-600
+          darker: '#1d4ed8',       // blue-700
         },
 
         // -----------------------------------------------------------------
         // UPDATED: Entsättigte Palette (Roadmap Phase 5.5)
-        // Weicher, weniger "Neon", mehr "Pastell/Modern"
+        // Professional Grey-Blue Töne, weich und dezent
         // -----------------------------------------------------------------
         success: {
-          light: '#d1fae5',        // Pastell Grün (Emerald-100)
-          DEFAULT: '#10b981',      // Smaragd (Emerald-500) - war vorher #16a34a
-          dark: '#059669',         // Emerald-700
+          light: '#ecfdf5',        // Sehr helles Mint (Emerald-50)
+          DEFAULT: '#34d399',      // Sanftes Mint-Grün (Emerald-400)
+          dark: '#047857',         // Gedämpftes Dunkelgrün (Emerald-700)
         },
         warning: {
-          light: '#fef3c7',        // Pastell Gelb (Amber-100)
-          DEFAULT: '#f59e0b',      // Bernstein (Amber-500) - war vorher #d97706
-          dark: '#b45309',         // Amber-700
+          light: '#fffbeb',        // Sehr helles Creme (Amber-50)
+          DEFAULT: '#fbbf24',      // Weiches Gold (Amber-400)
+          dark: '#92400e',         // Gedämpftes Braun-Orange (Amber-800)
         },
         danger: {
-          light: '#fee2e2',        // Pastell Rot (Red-100)
-          DEFAULT: '#ef4444',      // Weiches Rot (Red-500) - war vorher #dc2626
-          dark: '#b91c1c',         // Red-700
+          light: '#fef2f2',        // Sehr helles Rosa (Red-50)
+          DEFAULT: '#f87171',      // Weiches Korall-Rot (Red-400)
+          dark: '#991b1b',         // Gedämpftes Dunkelrot (Red-800)
         },
         // -----------------------------------------------------------------
 
@@ -81,10 +81,10 @@ export default {
         'hover': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
         'elevated': '0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04)',
         'floating': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        // Glow effects angepasst auf die neuen Farben (automatische Transparenz)
-        'glow-brand': '0 0 0 3px rgba(37, 99, 235, 0.15)',
-        'glow-success': '0 0 0 3px rgba(16, 185, 129, 0.15)', // Updated to match Emerald-500
-        'glow-danger': '0 0 0 3px rgba(239, 68, 68, 0.15)',   // Updated to match Red-500
+        // Glow effects angepasst auf die neuen Farben (dezenter)
+        'glow-brand': '0 0 0 3px rgba(37, 99, 235, 0.12)',
+        'glow-success': '0 0 0 3px rgba(52, 211, 153, 0.12)', // Updated to match Emerald-400
+        'glow-danger': '0 0 0 3px rgba(248, 113, 113, 0.12)', // Updated to match Red-400
       },
 
       // Typography (Neo-Grotesk)
