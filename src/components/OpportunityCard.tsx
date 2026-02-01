@@ -1,5 +1,6 @@
+import { useState, useRef, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
-import { AlertCircle, Calendar, GripVertical, FileSpreadsheet } from 'lucide-react';
+import { AlertCircle, Calendar, GripVertical, FileSpreadsheet, MoreVertical, Trash2, XCircle, RotateCcw } from 'lucide-react';
 import type { Opportunity, Customer } from '../lib/supabase';
 
 // ============================================================================
@@ -12,6 +13,8 @@ export interface OpportunityCardProps {
   onEdit: (opp: Opportunity) => void;
   onConvert: (opp: Opportunity) => void;
   onCreateQuote?: (opp: Opportunity) => void;
+  onDelete?: (opp: Opportunity) => void;
+  onToggleLost?: (opp: Opportunity) => void;
   isDragging?: boolean;
 }
 
@@ -21,8 +24,13 @@ export function OpportunityCard({
   onEdit,
   onConvert,
   onCreateQuote,
+  onDelete,
+  onToggleLost,
   isDragging = false,
 }: OpportunityCardProps) {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const {
     attributes,
     listeners,
@@ -31,6 +39,19 @@ export function OpportunityCard({
     transition,
     isDragging: isSortableDragging,
   } = useSortable({ id: String(opportunity.id) });
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMenu]);
 
   // Calculate rotation based on drag direction for tilt effect
   const rotation = transform ? Math.atan2(transform.y, transform.x) * (180 / Math.PI) * 0.05 : 0;
@@ -62,9 +83,12 @@ export function OpportunityCard({
       ref={setNodeRef}
       style={style}
       className={`
-        group relative bg-white rounded-2xl p-4 mb-3
-        border border-gray-100
-        transition-all duration-200 ease-out
+        group relative rounded-2xl p-4 mb-3
+        border transition-all duration-200 ease-out
+        ${opportunity.is_lost
+          ? 'bg-gray-50 border-gray-200 opacity-70'
+          : 'bg-white border-gray-100'
+        }
         ${isSortableDragging
           ? 'shadow-2xl ring-2 ring-indigo-500 ring-offset-2'
           : 'shadow-sm hover:shadow-xl'
@@ -83,8 +107,72 @@ export function OpportunityCard({
         </div>
       </div>
 
+      {/* Menu Button */}
+      {(onDelete || onToggleLost) && (
+        <div ref={menuRef} className="absolute right-2 top-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowMenu(!showMenu);
+            }}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors opacity-0 group-hover:opacity-100"
+          >
+            <MoreVertical size={16} />
+          </button>
+
+          {/* Dropdown Menu */}
+          {showMenu && (
+            <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg border border-gray-200 py-1 min-w-[160px] z-50">
+              {onToggleLost && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleLost(opportunity);
+                    setShowMenu(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  {opportunity.is_lost ? (
+                    <>
+                      <RotateCcw size={14} />
+                      <span>Reaktivieren</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle size={14} />
+                      <span>Als verloren markieren</span>
+                    </>
+                  )}
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(opportunity);
+                    setShowMenu(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <Trash2 size={14} />
+                  <span>Löschen</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Lost Indicator */}
+      {opportunity.is_lost && (
+        <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 mb-3 px-2 py-1 bg-gray-100 rounded-lg border border-gray-200">
+          <XCircle size={14} />
+          <span>Verloren</span>
+        </div>
+      )}
+
       {/* Stale Indicator - Electric Red Accent */}
-      {isStale && (
+      {isStale && !opportunity.is_lost && (
         <div className="flex items-center gap-1.5 text-xs font-medium text-red-600 mb-3 px-2 py-1 bg-red-50 rounded-lg border border-red-100">
           <AlertCircle size={14} />
           <span>Letzter Kontakt vor {daysSinceContact} Tagen</span>

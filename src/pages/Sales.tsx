@@ -12,7 +12,7 @@ import {
   closestCorners,
 } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
-import { Plus } from 'lucide-react';
+import { Plus, Eye, EyeOff } from 'lucide-react';
 import OpportunityForm from '../components/OpportunityForm';
 import { OpportunityCard } from '../components/OpportunityCard';
 import { KanbanColumn } from '../components/KanbanColumn';
@@ -34,6 +34,7 @@ export default function Sales() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [showLost, setShowLost] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -178,6 +179,51 @@ export default function Sales() {
     }
   };
 
+  // Delete opportunity permanently
+  const handleDelete = async (opportunity: Opportunity) => {
+    if (!confirm(`Möchten Sie den Deal "${opportunity.title}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('opportunities')
+        .delete()
+        .eq('id', opportunity.id);
+
+      if (error) throw error;
+      await fetchData();
+    } catch (err) {
+      console.error('Error deleting opportunity:', err);
+      alert('Fehler beim Löschen des Deals.');
+    }
+  };
+
+  // Toggle is_lost status
+  const handleToggleLost = async (opportunity: Opportunity) => {
+    const newIsLost = !opportunity.is_lost;
+
+    // Optimistic update
+    setOpportunities((prev) =>
+      prev.map((opp) =>
+        opp.id === opportunity.id ? { ...opp, is_lost: newIsLost } : opp
+      )
+    );
+
+    try {
+      const { error } = await supabase
+        .from('opportunities')
+        .update({ is_lost: newIsLost })
+        .eq('id', opportunity.id);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error toggling lost status:', err);
+      alert('Fehler beim Aktualisieren des Status.');
+      await fetchData();
+    }
+  };
+
   // BUGFIX: Strict string comparison and immutable update with proper typing
   const handleStageRename = async (stageId: string, newName: string) => {
     if (!selectedCompany) return;
@@ -304,13 +350,30 @@ export default function Sales() {
           title="Sales Pipeline"
           description="Verwalten Sie Ihre Akquise-Prozesse im Kanban-Board"
           actions={
-            <Button
-              variant="primary"
-              icon={<Plus size={18} />}
-              onClick={() => handleAddNew(stages[0]?.id || '')}
-            >
-              Neuer Deal
-            </Button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowLost(!showLost)}
+                className={`
+                  flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
+                  transition-colors border
+                  ${showLost
+                    ? 'bg-gray-100 text-gray-700 border-gray-300'
+                    : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                  }
+                `}
+                title={showLost ? 'Verlorene Deals ausblenden' : 'Verlorene Deals anzeigen'}
+              >
+                {showLost ? <Eye size={16} /> : <EyeOff size={16} />}
+                <span>{showLost ? 'Verlorene sichtbar' : 'Verlorene ausgeblendet'}</span>
+              </button>
+              <Button
+                variant="primary"
+                icon={<Plus size={18} />}
+                onClick={() => handleAddNew(stages[0]?.id || '')}
+              >
+                Neuer Deal
+              </Button>
+            </div>
           }
         />
       </div>
@@ -339,7 +402,9 @@ export default function Sales() {
           <div className="h-full flex gap-4 pb-2">
             {stages.map((stage) => {
               const stageOpportunities = opportunities.filter(
-                (opp) => String(opp.stage_id) === String(stage.id)
+                (opp) =>
+                  String(opp.stage_id) === String(stage.id) &&
+                  (showLost || !opp.is_lost)
               );
               return (
                 <KanbanColumn
@@ -352,6 +417,8 @@ export default function Sales() {
                   onAddNew={handleAddNew}
                   onStageRename={handleStageRename}
                   onCreateQuote={handleCreateQuote}
+                  onDelete={handleDelete}
+                  onToggleLost={handleToggleLost}
                 />
               );
             })}

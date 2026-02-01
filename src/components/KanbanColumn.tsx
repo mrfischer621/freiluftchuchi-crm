@@ -18,6 +18,8 @@ export interface KanbanColumnProps {
   onAddNew: (stageId: string) => void;
   onStageRename: (stageId: string, newName: string) => void;
   onCreateQuote?: (opp: Opportunity) => void;
+  onDelete?: (opp: Opportunity) => void;
+  onToggleLost?: (opp: Opportunity) => void;
 }
 
 export function KanbanColumn({
@@ -29,6 +31,8 @@ export function KanbanColumn({
   onAddNew,
   onStageRename,
   onCreateQuote,
+  onDelete,
+  onToggleLost,
 }: KanbanColumnProps) {
   const opportunityIds = opportunities.map((opp) => String(opp.id));
   const { setNodeRef } = useDroppable({
@@ -122,6 +126,8 @@ export function KanbanColumn({
                   onEdit={onEdit}
                   onConvert={onConvert}
                   onCreateQuote={onCreateQuote}
+                  onDelete={onDelete}
+                  onToggleLost={onToggleLost}
                 />
               );
             })

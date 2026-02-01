@@ -1,13 +1,15 @@
 import { Link } from 'react-router-dom';
-import { Pencil, Archive, RotateCcw, Users } from 'lucide-react';
+import { Pencil, Archive, RotateCcw, Users, Trash2 } from 'lucide-react';
 import type { Customer } from '../lib/supabase';
 import type { CustomerWithStats } from '../pages/Kunden';
 
 type CustomerTableProps = {
   customers: CustomerWithStats[];
   onEdit: (customer: Customer) => void;
+  onRowClick: (customer: Customer) => void;
   onArchive: (id: string) => Promise<void>;
   onRestore: (id: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 };
 
 // Format currency for display
@@ -19,7 +21,7 @@ const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
-export default function CustomerTable({ customers, onEdit, onArchive, onRestore }: CustomerTableProps) {
+export default function CustomerTable({ customers, onEdit, onRowClick, onArchive, onRestore, onDelete }: CustomerTableProps) {
 
   if (customers.length === 0) {
     return (
@@ -69,14 +71,15 @@ export default function CustomerTable({ customers, onEdit, onArchive, onRestore 
               const location = [customer.zip_code, customer.city].filter(Boolean).join(' ') || '-';
 
               return (
-                <tr key={customer.id} className="hover:bg-gray-50 transition">
+                <tr
+                  key={customer.id}
+                  onClick={() => onRowClick(customer)}
+                  className="hover:bg-gray-50 transition cursor-pointer"
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <Link
-                      to={`/kunden/${customer.id}`}
-                      className="text-sm font-medium text-gray-900 hover:text-freiluft transition"
-                    >
+                    <span className="text-sm font-medium text-gray-900">
                       {customer.name}
-                    </Link>
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-600">{customer.contact_person || '-'}</div>
@@ -99,7 +102,7 @@ export default function CustomerTable({ customers, onEdit, onArchive, onRestore 
                       <span className="text-sm text-gray-400">-</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                  <td className="px-6 py-4 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
                     <Link
                       to={`/kunden/${customer.id}/kontakte`}
                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm text-gray-600 hover:bg-gray-100 hover:text-freiluft transition"
@@ -117,7 +120,7 @@ export default function CustomerTable({ customers, onEdit, onArchive, onRestore 
                       {customer.is_active ? 'Aktiv' : 'Archiviert'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                  <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => onEdit(customer)}
@@ -143,6 +146,13 @@ export default function CustomerTable({ customers, onEdit, onArchive, onRestore 
                           <RotateCcw size={18} />
                         </button>
                       )}
+                      <button
+                        onClick={() => onDelete(customer.id)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                        title="Löschen"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
                   </td>
                 </tr>

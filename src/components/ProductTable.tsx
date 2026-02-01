@@ -28,43 +28,43 @@ export default function ProductTable({ products, onEdit, onArchive, onRestore }:
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">Name</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">Preis</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">Einheit</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">Beschreibung</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
-              <th className="text-right py-3 px-4 font-medium text-gray-700">Aktionen</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preis</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Einheit</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Beschreibung</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-200">
             {products.map((product) => (
               <tr
                 key={product.id}
-                className={`border-b border-gray-100 hover:bg-gray-50 ${
+                className={`hover:bg-gray-50 transition ${
                   !product.is_active ? 'opacity-50' : ''
                 }`}
               >
-                <td className="py-3 px-4">
-                  <span className="font-medium text-gray-900">{product.name}</span>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="text-sm font-medium text-gray-900">{product.name}</span>
                 </td>
-                <td className="py-3 px-4">
-                  <span className="font-semibold text-gray-900">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="text-sm font-medium text-gray-900">
                     {formatCurrency(product.price)}
                   </span>
                 </td>
-                <td className="py-3 px-4">
-                  <span className="text-gray-600">{product.unit}</span>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="text-sm text-gray-600">{product.unit}</span>
                 </td>
-                <td className="py-3 px-4">
-                  <span className="text-gray-600 text-sm">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="text-sm text-gray-600">
                     {product.description || '-'}
                   </span>
                 </td>
-                <td className="py-3 px-4">
+                <td className="px-6 py-4 whitespace-nowrap">
                   <span
-                    className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       product.is_active
                         ? 'bg-green-100 text-green-800'
                         : 'bg-gray-100 text-gray-600'
@@ -73,14 +73,14 @@ export default function ProductTable({ products, onEdit, onArchive, onRestore }:
                     {product.is_active ? 'Aktiv' : 'Archiviert'}
                   </span>
                 </td>
-                <td className="py-3 px-4">
+                <td className="px-6 py-4 whitespace-nowrap text-right">
                   <div className="flex justify-end gap-2">
                     <button
                       onClick={() => onEdit(product)}
                       className="p-2 text-freiluft hover:bg-teal-50 rounded-lg transition"
                       title="Bearbeiten"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil size={18} />
                     </button>
                     {product.is_active ? (
                       <button
@@ -88,7 +88,7 @@ export default function ProductTable({ products, onEdit, onArchive, onRestore }:
                         className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition"
                         title="Archivieren"
                       >
-                        <Archive className="w-4 h-4" />
+                        <Archive size={18} />
                       </button>
                     ) : (
                       <button
@@ -96,7 +96,7 @@ export default function ProductTable({ products, onEdit, onArchive, onRestore }:
                         className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
                         title="Wiederherstellen"
                       >
-                        <RotateCcw className="w-4 h-4" />
+                        <RotateCcw size={18} />
                       </button>
                     )}
                   </div>

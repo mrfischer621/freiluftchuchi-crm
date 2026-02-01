@@ -68,6 +68,7 @@ export interface Customer {
   department: string | null;
   phone: string | null;
   website: string | null;
+  notes: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -308,6 +309,7 @@ export interface Opportunity {
   last_contact_at: string;
   next_action_date: string | null;
   notes: string | null;
+  is_lost: boolean;
   created_at: string;
   updated_at: string;
 }

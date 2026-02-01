@@ -32,6 +32,7 @@ export default function CustomerForm({ onSubmit, editingCustomer, onCancelEdit }
   const [department, setDepartment] = useState('');
   const [phone, setPhone] = useState('');
   const [website, setWebsite] = useState('');
+  const [notes, setNotes] = useState('');
 
   useEffect(() => {
     if (editingCustomer) {
@@ -51,6 +52,7 @@ export default function CustomerForm({ onSubmit, editingCustomer, onCancelEdit }
       setDepartment(editingCustomer.department || '');
       setPhone(editingCustomer.phone || '');
       setWebsite(editingCustomer.website || '');
+      setNotes(editingCustomer.notes || '');
     } else {
       resetForm();
     }
@@ -73,6 +75,7 @@ export default function CustomerForm({ onSubmit, editingCustomer, onCancelEdit }
     setDepartment('');
     setPhone('');
     setWebsite('');
+    setNotes('');
 
     setActiveTab('general');
   };
@@ -98,6 +101,7 @@ export default function CustomerForm({ onSubmit, editingCustomer, onCancelEdit }
         department: department || null,
         phone: phone || null,
         website: website || null,
+        notes: notes || null,
         is_active: editingCustomer?.is_active ?? true,
       });
       resetForm();
@@ -189,6 +193,20 @@ export default function CustomerForm({ onSubmit, editingCustomer, onCancelEdit }
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
                 placeholder="kunde@example.com"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                Telefon
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
+                placeholder="+41 79 123 45 67"
               />
             </div>
 
@@ -333,20 +351,6 @@ export default function CustomerForm({ onSubmit, editingCustomer, onCancelEdit }
             </div>
 
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                Telefon
-              </label>
-              <input
-                type="tel"
-                id="phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
-                placeholder="+41 79 123 45 67"
-              />
-            </div>
-
-            <div>
               <label htmlFor="website" className="block text-sm font-medium text-gray-700 mb-1">
                 Website
               </label>
@@ -357,6 +361,20 @@ export default function CustomerForm({ onSubmit, editingCustomer, onCancelEdit }
                 onChange={(e) => setWebsite(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
                 placeholder="https://www.example.com"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+                Interne Notizen
+              </label>
+              <textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={4}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition resize-none"
+                placeholder="Interne Notizen zu diesem Kunden..."
               />
             </div>
           </div>

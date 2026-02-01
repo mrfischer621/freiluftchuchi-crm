@@ -105,6 +105,7 @@ export default function OpportunityForm({
         last_contact_at: editingOpportunity?.last_contact_at || new Date().toISOString(),
         next_action_date: nextActionDate || null,
         notes: notes || null,
+        is_lost: editingOpportunity?.is_lost ?? false,
       });
       resetForm();
     } catch (error) {

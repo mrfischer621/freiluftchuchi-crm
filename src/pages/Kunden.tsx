@@ -141,11 +141,33 @@ export default function Kunden() {
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        // Create new customer and get the ID
+        const { data: newCustomer, error } = await supabase
           .from('customers')
-          .insert([{ ...customerData, company_id: selectedCompany.id }] as any);
+          .insert([{ ...customerData, company_id: selectedCompany.id }] as any)
+          .select('id')
+          .single();
 
         if (error) throw error;
+
+        // Automatically create contact if contact_person is provided
+        if (newCustomer && customerData.contact_person) {
+          const { error: contactError } = await supabase
+            .from('customer_contacts')
+            .insert({
+              customer_id: newCustomer.id,
+              name: customerData.contact_person,
+              email: customerData.email || null,
+              phone: customerData.phone || null,
+              is_primary: true,
+            });
+
+          if (contactError) {
+            console.error('Error creating contact:', contactError);
+            // Don't throw - customer was created successfully
+            toast.error('Kunde erstellt, aber Kontakt konnte nicht erstellt werden.');
+          }
+        }
       }
 
       setIsModalOpen(false);
@@ -193,6 +215,29 @@ export default function Kunden() {
     } catch (err) {
       console.error('Error restoring customer:', err);
       toast.error('Fehler beim Wiederherstellen des Kunden.');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Möchten Sie diesen Kunden wirklich endgültig löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) return;
+
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('Kunde gelöscht');
+      await fetchCustomers();
+    } catch (err: any) {
+      console.error('Error deleting customer:', err);
+      // Check for FK constraint violation
+      if (err?.code === '23503' || err?.message?.includes('foreign key') || err?.message?.includes('violates')) {
+        toast.error('Kunde kann nicht gelöscht werden, da noch verknüpfte Daten existieren (z.B. Rechnungen, Projekte).');
+      } else {
+        toast.error('Fehler beim Löschen des Kunden.');
+      }
     }
   };
 
@@ -288,8 +333,10 @@ export default function Kunden() {
         <CustomerTable
           customers={filteredCustomers}
           onEdit={handleEdit}
+          onRowClick={handleEdit}
           onArchive={handleArchive}
           onRestore={handleRestore}
+          onDelete={handleDelete}
         />
       )}
 
