@@ -288,15 +288,13 @@ export default function Buchungen() {
       )}
 
       {/* Transactions Table */}
-      <div className="bg-white rounded-lg shadow-sm">
-        <TransactionTable
-          transactions={filteredTransactions}
-          customers={customers}
-          projects={projects}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-      </div>
+      <TransactionTable
+        transactions={filteredTransactions}
+        customers={customers}
+        projects={projects}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
 
       {/* Modal */}
       <Modal

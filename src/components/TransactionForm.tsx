@@ -63,17 +63,28 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
     fetchCategories();
   }, [selectedCompany]);
 
-  // Filter categories by transaction type
-  const filteredCategories = categories.filter(c =>
-    activeTab === 'einnahme' ? c.type === 'income' : c.type === 'expense'
-  );
+  // Group categories by type
+  const incomeCategories = categories.filter(c => c.type === 'income');
+  const expenseCategories = categories.filter(c => c.type === 'expense');
 
-  // Update default category when tab changes
-  useEffect(() => {
-    if (filteredCategories.length > 0 && !filteredCategories.find(c => c.id === categoryId)) {
-      setCategoryId(filteredCategories[0].id);
+  // Handle category change - auto-set type based on category
+  const handleCategoryChange = (newCategoryId: string) => {
+    setCategoryId(newCategoryId);
+    const selectedCat = categories.find(c => c.id === newCategoryId);
+    if (selectedCat) {
+      const newType = selectedCat.type === 'income' ? 'einnahme' : 'ausgabe';
+      setActiveTab(newType);
     }
-  }, [activeTab, filteredCategories, categoryId]);
+  };
+
+  // Handle tab change - update category to first of that type
+  const handleTabChange = (newTab: 'einnahme' | 'ausgabe') => {
+    setActiveTab(newTab);
+    const targetCategories = newTab === 'einnahme' ? incomeCategories : expenseCategories;
+    if (targetCategories.length > 0) {
+      setCategoryId(targetCategories[0].id);
+    }
+  };
 
   useEffect(() => {
     if (!transaction && !transactionNumber) {
@@ -107,11 +118,12 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
       });
 
       if (saveAndNew) {
-        // Reset form
+        // Reset form - keep current type and select first category of that type
+        const currentTypeCategories = activeTab === 'einnahme' ? incomeCategories : expenseCategories;
         setTransactionNumber('');
         setAmount('');
         setDescription('');
-        setCategoryId(filteredCategories[0]?.id || '');
+        setCategoryId(currentTypeCategories[0]?.id || '');
         setCustomerId('');
         setProjectId('');
         setTags([]);
@@ -147,7 +159,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
           <div className="flex gap-2 mb-6">
             <button
               type="button"
-              onClick={() => setActiveTab('einnahme')}
+              onClick={() => handleTabChange('einnahme')}
               className={`px-6 py-2 rounded-lg font-medium transition-colors ${
                 activeTab === 'einnahme'
                   ? 'bg-green-500 text-white'
@@ -158,7 +170,7 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('ausgabe')}
+              onClick={() => handleTabChange('ausgabe')}
               className={`px-6 py-2 rounded-lg font-medium transition-colors ${
                 activeTab === 'ausgabe'
                   ? 'bg-red-500 text-white'
@@ -219,18 +231,31 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
                 </label>
                 <select
                   value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-freiluft focus:border-transparent"
                   disabled={isLoadingCategories}
                 >
                   {isLoadingCategories ? (
                     <option value="">Lädt...</option>
-                  ) : filteredCategories.length === 0 ? (
+                  ) : categories.length === 0 ? (
                     <option value="">Keine Kategorien verfügbar</option>
                   ) : (
-                    filteredCategories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))
+                    <>
+                      {incomeCategories.length > 0 && (
+                        <optgroup label="Einnahmen">
+                          {incomeCategories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {expenseCategories.length > 0 && (
+                        <optgroup label="Ausgaben">
+                          {expenseCategories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </>
                   )}
                 </select>
               </div>

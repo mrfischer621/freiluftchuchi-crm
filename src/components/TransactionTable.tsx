@@ -54,10 +54,18 @@ export default function TransactionTable({ transactions, customers, projects, on
     }, 0);
   };
 
+  if (transactions.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <p className="text-gray-500 text-center">Keine Buchungen vorhanden. Erstellen Sie die erste Buchung.</p>
+      </div>
+    );
+  }
+
   return (
-    <div>
+    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="min-w-full bg-white">
+        <table className="w-full">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -87,14 +95,7 @@ export default function TransactionTable({ transactions, customers, projects, on
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {transactions.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
-                  Keine Buchungen vorhanden
-                </td>
-              </tr>
-            ) : (
-              transactions.map((transaction, index) => (
+            {transactions.map((transaction, index) => (
                 <tr
                   key={transaction.id}
                   className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100 transition-colors`}
@@ -177,8 +178,7 @@ export default function TransactionTable({ transactions, customers, projects, on
                     </div>
                   </td>
                 </tr>
-              ))
-            )}
+              ))}
           </tbody>
         </table>
       </div>
