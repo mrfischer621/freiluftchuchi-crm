@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { TimeEntry, TimeEntryWithStatus, Project, Customer } from '../lib/supabase';
 import TimeEntryForm from '../components/TimeEntryForm';
@@ -6,7 +6,7 @@ import TimeEntryTable from '../components/TimeEntryTable';
 import TimeReporting from '../components/TimeReporting';
 import Modal from '../components/Modal';
 import { useCompany } from '../context/CompanyContext';
-import { Plus, Calendar, Layers, ClipboardList, BarChart3 } from 'lucide-react';
+import { Plus, Calendar, Layers, ClipboardList, BarChart3, Filter, X } from 'lucide-react';
 import { getWeek, getYear, parseISO } from 'date-fns';
 
 type GroupingMode = 'date' | 'week';
@@ -26,6 +26,8 @@ export default function Zeiterfassung() {
   const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,6 +61,17 @@ export default function Zeiterfassung() {
   useEffect(() => {
     localStorage.setItem('zeiterfassung_grouping', groupingMode);
   }, [groupingMode]);
+
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+        setIsFilterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Early return if no company selected
   if (!selectedCompany) {
@@ -310,6 +323,78 @@ export default function Zeiterfassung() {
                 KW
               </button>
             </div>
+
+            {/* Filter Button with Dropdown */}
+            <div className="relative" ref={filterRef}>
+              <button
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition ${
+                  selectedProjectId
+                    ? 'bg-freiluft text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+                title="Nach Projekt filtern"
+              >
+                <Filter size={16} />
+                {selectedProjectId && (
+                  <span className="bg-white/20 px-1.5 py-0.5 rounded text-xs">1</span>
+                )}
+              </button>
+
+              {isFilterOpen && (
+                <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="p-3 border-b border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Nach Projekt filtern</span>
+                      {selectedProjectId && (
+                        <button
+                          onClick={() => {
+                            setSelectedProjectId('');
+                            setIsFilterOpen(false);
+                          }}
+                          className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                        >
+                          <X size={12} />
+                          Zurücksetzen
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto p-2">
+                    <button
+                      onClick={() => {
+                        setSelectedProjectId('');
+                        setIsFilterOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-md text-sm transition ${
+                        !selectedProjectId
+                          ? 'bg-freiluft/10 text-freiluft font-medium'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      Alle Projekte
+                    </button>
+                    {projects.map((project) => (
+                      <button
+                        key={project.id}
+                        onClick={() => {
+                          setSelectedProjectId(project.id);
+                          setIsFilterOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-md text-sm transition ${
+                          selectedProjectId === project.id
+                            ? 'bg-freiluft/10 text-freiluft font-medium'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        {project.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={handleAddNew}
               className="flex items-center gap-2 px-4 py-2 bg-freiluft text-white rounded-lg hover:bg-[#4a6d73] transition"
@@ -465,28 +550,6 @@ export default function Zeiterfassung() {
               {isQuickAdding ? 'Speichert...' : 'Hinzufügen'}
             </button>
           </form>
-        </div>
-      )}
-
-      {/* Project Filter */}
-      {entries.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <label htmlFor="projectFilter" className="block text-sm font-medium text-gray-700 mb-2">
-            Nach Projekt filtern
-          </label>
-          <select
-            id="projectFilter"
-            value={selectedProjectId}
-            onChange={(e) => setSelectedProjectId(e.target.value)}
-            className="w-full md:w-64 px-4 py-2 border border-gray-200 rounded-lg focus:border-freiluft focus:ring-2 focus:ring-freiluft/20 outline-none transition"
-          >
-            <option value="">Alle Projekte</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
         </div>
       )}
 

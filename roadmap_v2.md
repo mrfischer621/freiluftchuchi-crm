@@ -26,9 +26,9 @@ Verbesserung der Datenströme zwischen Kunden, Kontakten und Zeiterfassung.
 - [x] **2.2 Kunden-Detailansicht (Modal)**
     - [x] Klick auf Kunden-Zeile öffnet Popup/Modal (statt Seite).
     - [x] Hinzufügen eines "Notizen"-Textfelds (Rich Text) im Kunden-Objekt.
-- [ ] **2.3 Zeiterfassung UX**
-    - [ ] Filter-Zeile "Nach Projekten filtern" entfernen.
-    - [ ] Filter-Icon im Header der Tabelle implementieren.
+- [x] **2.3 Zeiterfassung UX**
+    - [x] Filter-Zeile "Nach Projekten filtern" entfernen.
+    - [x] Filter-Icon im Header der Tabelle implementieren.
 - [ ] **2.4 Global Timer (Stopwatch)**
     - [ ] "Play"-Button im Global Header hinzufügen.
     - [ ] Klick öffnet Popover: Kunde & Projekt wählen.
