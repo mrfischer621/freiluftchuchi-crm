@@ -9,9 +9,11 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCorners,
+  pointerWithin,
+  rectIntersection,
+  closestCenter,
 } from '@dnd-kit/core';
-import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import type { DragEndEvent, DragStartEvent, CollisionDetection, UniqueIdentifier } from '@dnd-kit/core';
 import { Plus, Eye, EyeOff } from 'lucide-react';
 import OpportunityForm from '../components/OpportunityForm';
 import { OpportunityCard } from '../components/OpportunityCard';
@@ -39,10 +41,35 @@ export default function Sales() {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 5,
       },
     })
   );
+
+  // Custom collision detection: prioritize stage columns over opportunity cards
+  // This fixes the issue where dragging to adjacent columns fails because
+  // the collision algorithm picks up cards instead of the column container
+  const customCollisionDetection: CollisionDetection = (args) => {
+    const isStageId = (id: UniqueIdentifier) => String(id).startsWith('stage-');
+
+    // 1. Try pointerWithin first - most accurate when directly over a target
+    const pointerCollisions = pointerWithin(args);
+    const stagePointerCollisions = pointerCollisions.filter((c) => isStageId(c.id));
+    if (stagePointerCollisions.length > 0) return stagePointerCollisions;
+
+    // 2. Try rectIntersection - detects overlapping rectangles
+    const rectCollisions = rectIntersection(args);
+    const stageRectCollisions = rectCollisions.filter((c) => isStageId(c.id));
+    if (stageRectCollisions.length > 0) return stageRectCollisions;
+
+    // 3. Try closestCenter - finds nearest center point (good fallback)
+    const centerCollisions = closestCenter(args);
+    const stageCenterCollisions = centerCollisions.filter((c) => isStageId(c.id));
+    if (stageCenterCollisions.length > 0) return stageCenterCollisions;
+
+    // 4. Last resort: return any card collision for within-column sorting
+    return pointerCollisions;
+  };
 
   useEffect(() => {
     if (selectedCompany) {
@@ -394,7 +421,7 @@ export default function Sales() {
       {/* Kanban Board - Full Height, Responsive Layout */}
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={customCollisionDetection}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >

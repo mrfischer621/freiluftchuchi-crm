@@ -269,14 +269,14 @@ export default function Auswertungen() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-64">
         <div className="text-xl text-gray-600">Lädt...</div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen">
+    <div className="space-y-6">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">

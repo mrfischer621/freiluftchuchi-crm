@@ -35,8 +35,12 @@ export function KanbanColumn({
   onToggleLost,
 }: KanbanColumnProps) {
   const opportunityIds = opportunities.map((opp) => String(opp.id));
-  const { setNodeRef } = useDroppable({
+  const { setNodeRef, isOver } = useDroppable({
     id: `stage-${stage.id}`,
+    data: {
+      type: 'stage',
+      stageId: stage.id,
+    },
   });
 
   const handleStageRename = (newName: string) => {
@@ -48,15 +52,20 @@ export function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className="
+      className={`
         h-full min-h-0
         w-72 flex-shrink-0
         bg-surface-inset
         rounded-xl
         p-4
-        border border-surface-border
+        border-2
         flex flex-col
-      "
+        transition-colors duration-150
+        ${isOver
+          ? 'border-brand bg-brand/5'
+          : 'border-surface-border'
+        }
+      `}
     >
       {/* Column Header */}
       <div className="flex items-center justify-between mb-3 gap-2 flex-shrink-0">
@@ -110,7 +119,7 @@ export function KanbanColumn({
 
       {/* Cards Container - Scrollable, fills remaining height */}
       <SortableContext items={opportunityIds} strategy={verticalListSortingStrategy}>
-        <div className="flex-1 overflow-y-auto space-y-2 min-h-0 scrollbar-thin">
+        <div className="flex-1 overflow-y-auto space-y-2 min-h-[200px] scrollbar-thin">
           {opportunities.length === 0 ? (
             <div className="flex items-center justify-center h-32 border-2 border-dashed border-surface-border rounded-xl">
               <p className="text-sm text-text-tertiary">Keine Deals</p>

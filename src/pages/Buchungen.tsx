@@ -204,7 +204,7 @@ export default function Buchungen() {
 
   if (!selectedCompany || loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-64">
         <div className="text-xl text-gray-600">Lädt...</div>
       </div>
     );

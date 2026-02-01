@@ -104,6 +104,16 @@ font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 
 
 
+/* Prevent body/html scroll - app uses fixed viewport layout */
+
+html, body {
+
+@apply overflow-hidden h-screen;
+
+}
+
+
+
 body {
 
 @apply bg-app-bg text-text-primary;
