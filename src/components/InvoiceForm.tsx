@@ -26,6 +26,7 @@ type ItemState = {
   quantity: string;
   unit_price: string;
   discount_percent: string;
+  vat_rate: string; // Per-line VAT rate (empty = use company default)
   product_id?: string;
 };
 
@@ -64,8 +65,9 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
           quantity: item.quantity.toString(),
           unit_price: item.unit_price.toString(),
           discount_percent: (item.discount_percent || 0).toString(),
+          vat_rate: (item.vat_rate || 0).toString(),
         }))
-      : [{ description: '', quantity: '1', unit_price: '', discount_percent: '0' }]
+      : [{ description: '', quantity: '1', unit_price: '', discount_percent: '0', vat_rate: '' }]
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -122,35 +124,60 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
     : [];
 
   const calculateTotals = () => {
-    // Calculate item subtotals with line discounts
-    const itemsSubtotal = items.reduce((sum, item) => {
+    const vatEnabled = selectedCompany?.vat_enabled || false;
+
+    // Calculate line results with per-line VAT
+    const lineResults = items.map(item => {
       const qty = parseFloat(item.quantity) || 0;
       const price = parseFloat(item.unit_price) || 0;
       const lineDiscount = parseFloat(item.discount_percent) || 0;
+
+      // Line NETTO (after line discount)
       const lineTotal = qty * price;
       const lineDiscountAmount = lineTotal * (lineDiscount / 100);
-      return sum + (lineTotal - lineDiscountAmount);
-    }, 0);
+      const lineNetto = lineTotal - lineDiscountAmount;
 
-    // Apply total discount
+      // Line VAT (only if VAT enabled)
+      let lineVatRate = 0;
+      if (vatEnabled) {
+        // Use line-specific VAT rate, or company default if empty
+        const itemVatRate = parseFloat(item.vat_rate);
+        lineVatRate = !isNaN(itemVatRate) && item.vat_rate.trim() !== ''
+          ? itemVatRate
+          : (selectedCompany?.default_vat_rate || 0);
+      }
+      const lineVatAmount = lineNetto * (lineVatRate / 100);
+
+      return { lineNetto, lineVatAmount, lineVatRate };
+    });
+
+    // Sum all line NETTOs = subtotal
+    const itemsSubtotal = lineResults.reduce((sum, line) => sum + line.lineNetto, 0);
+
+    // Apply total discount to subtotal
     const totalDiscountPct = parseFloat(totalDiscountPercent) || 0;
     const totalDiscountAmount = itemsSubtotal * (totalDiscountPct / 100);
     const subtotalAfterDiscount = itemsSubtotal - totalDiscountAmount;
 
-    // Calculate VAT on discounted amount
-    const vat_amount = subtotalAfterDiscount * (parseFloat(vatRate) / 100);
+    // Adjust VAT proportionally after total discount
+    const discountFactor = itemsSubtotal > 0 ? subtotalAfterDiscount / itemsSubtotal : 1;
+    const totalVatBeforeDiscount = lineResults.reduce((sum, line) => sum + line.lineVatAmount, 0);
+    const vat_amount = totalVatBeforeDiscount * discountFactor;
+
+    // Grand total = discounted NETTO + VAT
     const total = subtotalAfterDiscount + vat_amount;
 
     return {
       subtotal: itemsSubtotal,
       discountAmount: totalDiscountAmount,
       vat_amount,
-      total
+      total,
+      lineVatAmounts: lineResults.map(line => line.lineVatAmount * discountFactor),
     };
   };
 
   const handleAddItem = () => {
-    setItems([...items, { description: '', quantity: '1', unit_price: '', discount_percent: '0' }]);
+    setItems([...items, { description: '', quantity: '1', unit_price: '', discount_percent: '0', vat_rate: '' }]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -172,12 +199,24 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
 
     const product = products.find(p => p.id === productId);
     if (product) {
+      // Use product.vat_rate OR company.default_vat_rate (only if VAT enabled)
+      let effectiveVatRate = '';
+      if (selectedCompany?.vat_enabled) {
+        if (product.vat_rate !== null) {
+          effectiveVatRate = product.vat_rate.toString();
+        } else {
+          // Empty string means "use company default" - will be handled in calculations
+          effectiveVatRate = '';
+        }
+      }
+
       const newItems = [...items];
       newItems[index] = {
         ...newItems[index],
         product_id: productId,
         description: `${product.name} (${product.unit})`,
         unit_price: product.price.toString(),
+        vat_rate: effectiveVatRate,
       };
       setItems(newItems);
     }
@@ -202,6 +241,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
       quantity: item.quantity.toString(),
       unit_price: item.unit_price.toString(),
       discount_percent: '0',
+      vat_rate: '', // Use company default
     }));
 
     // Remove empty first item if present
@@ -220,7 +260,18 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
     setIsSubmitting(true);
 
     try {
-      const { subtotal, vat_amount, total, discountAmount } = calculateTotals();
+      const totals = calculateTotals();
+
+      // Get effective VAT rate for each item (for database storage)
+      const getEffectiveVatRate = (item: ItemState, index: number) => {
+        if (!selectedCompany?.vat_enabled) return 0;
+
+        const itemVatRate = parseFloat(item.vat_rate);
+        if (!isNaN(itemVatRate) && item.vat_rate.trim() !== '') {
+          return itemVatRate;
+        }
+        return selectedCompany?.default_vat_rate || 0;
+      };
 
       const invoiceData: InvoiceFormData = {
         invoice: {
@@ -240,15 +291,17 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
         },
         items: items
           .filter(item => item.description && item.unit_price)
-          .map(item => ({
+          .map((item, index) => ({
             description: item.description,
             quantity: parseFloat(item.quantity) || 1,
             unit_price: parseFloat(item.unit_price),
             discount_percent: parseFloat(item.discount_percent) || 0,
+            vat_rate: getEffectiveVatRate(item, index),
+            vat_amount: totals.lineVatAmounts?.[index] || 0,
           })),
       };
 
-      await onSubmit(invoiceData, { subtotal, vat_amount, total, discountAmount }, importedTimeEntryIds.length > 0 ? importedTimeEntryIds : undefined);
+      await onSubmit(invoiceData, { subtotal: totals.subtotal, vat_amount: totals.vat_amount, total: totals.total, discountAmount: totals.discountAmount }, importedTimeEntryIds.length > 0 ? importedTimeEntryIds : undefined);
     } catch (error) {
       console.error('Error submitting invoice:', error);
     } finally {
@@ -547,6 +600,27 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
                     />
                   </div>
 
+                  {/* VAT Rate (conditional - only if VAT enabled) */}
+                  {selectedCompany?.vat_enabled && (
+                    <div className="col-span-1">
+                      {index === 0 && (
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          MWST %
+                        </label>
+                      )}
+                      <input
+                        type="number"
+                        value={item.vat_rate}
+                        onChange={(e) => handleItemChange(index, 'vat_rate', e.target.value)}
+                        placeholder={selectedCompany.default_vat_rate.toString()}
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
+                      />
+                    </div>
+                  )}
+
                   {/* Line Discount (conditional) */}
                   {showDiscounts && (
                     <div className="col-span-1">
@@ -621,7 +695,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
         <div className="border-t pt-4">
           <div className="max-w-sm ml-auto space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Zwischentotal:</span>
+              <span className="text-gray-600">Zwischentotal (Netto):</span>
               <span className="font-medium">CHF {totals.subtotal.toFixed(2)}</span>
             </div>
 
@@ -649,21 +723,14 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
               </div>
             )}
 
-            <div className="flex justify-between text-sm items-center gap-4">
-              <span className="text-gray-600">MwSt ({vatRate}%):</span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={vatRate}
-                  onChange={(e) => setVatRate(e.target.value)}
-                  step="0.1"
-                  min="0"
-                  max="100"
-                  className="w-20 px-2 py-1 border border-gray-200 rounded text-sm text-right"
-                />
+            {/* VAT - only show if VAT enabled */}
+            {selectedCompany?.vat_enabled && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">MWST (per Position):</span>
                 <span className="font-medium">CHF {totals.vat_amount.toFixed(2)}</span>
               </div>
-            </div>
+            )}
+
             <div className="flex justify-between text-lg font-bold text-brand border-t pt-2">
               <span>Gesamttotal:</span>
               <span>CHF {totals.total.toFixed(2)}</span>

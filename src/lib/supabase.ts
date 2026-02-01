@@ -34,6 +34,8 @@ export interface Company {
   bank_name: string | null;
   vat_number: string | null;
   vat_registered: boolean;
+  vat_enabled: boolean; // VAT calculation enabled for invoices
+  default_vat_rate: number; // Default VAT rate (e.g., 8.1 for Swiss standard rate)
   created_at: string;
   // Text templates for invoices and quotes
   invoice_intro_text: string | null;
@@ -150,6 +152,8 @@ export interface InvoiceItem {
   unit_price: number;
   total: number;
   discount_percent: number;
+  vat_rate: number; // VAT rate snapshot at invoice creation time
+  vat_amount: number; // Calculated VAT amount for this line item
 }
 
 // Quote (Offerte/Angebot) Types
@@ -221,6 +225,7 @@ export interface Product {
   price: number;
   unit: string;
   description: string | null;
+  vat_rate: number | null; // Product-specific VAT rate (null = use company default)
   is_active: boolean;
   created_at: string;
   updated_at: string;

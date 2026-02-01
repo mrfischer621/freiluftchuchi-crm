@@ -16,6 +16,7 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
     unit: 'Stück',
     description: '',
     is_active: true,
+    vat_rate: '', // Empty string means "use company default"
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -28,6 +29,7 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
         unit: editingProduct.unit,
         description: editingProduct.description || '',
         is_active: editingProduct.is_active,
+        vat_rate: editingProduct.vat_rate !== null ? editingProduct.vat_rate.toString() : '',
       });
     }
   }, [editingProduct]);
@@ -67,6 +69,7 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
         price: parseFloat(formData.price),
         unit: formData.unit.trim(),
         description: formData.description.trim() || null,
+        vat_rate: formData.vat_rate ? parseFloat(formData.vat_rate) : null,
         is_active: formData.is_active,
       });
 
@@ -78,6 +81,7 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
           unit: 'Stück',
           description: '',
           is_active: true,
+          vat_rate: '',
         });
       }
     } catch (error) {
@@ -131,6 +135,28 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
           />
           {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price}</p>}
         </div>
+
+        {/* VAT Rate - only show if company.vat_enabled */}
+        {selectedCompany?.vat_enabled && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              MWST-Satz (%)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              max="100"
+              value={formData.vat_rate}
+              onChange={(e) => setFormData({ ...formData, vat_rate: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
+              placeholder={`Standard (${selectedCompany.default_vat_rate}%)`}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Leer lassen für Standard ({selectedCompany.default_vat_rate}%)
+            </p>
+          </div>
+        )}
 
         {/* Unit */}
         <div>

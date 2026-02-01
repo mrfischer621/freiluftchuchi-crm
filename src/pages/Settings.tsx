@@ -17,6 +17,8 @@ interface CompanyFormData {
   bank_name: string;
   vat_number: string;
   vat_registered: boolean;
+  vat_enabled: boolean;
+  default_vat_rate: string; // Store as string in form, convert to number on submit
 }
 
 interface Toast {
@@ -44,6 +46,8 @@ export default function Settings() {
     bank_name: '',
     vat_number: '',
     vat_registered: false,
+    vat_enabled: false,
+    default_vat_rate: '8.1',
   });
 
   // User profile state
@@ -96,6 +100,8 @@ export default function Settings() {
         bank_name: selectedCompany.bank_name || '',
         vat_number: selectedCompany.vat_number || '',
         vat_registered: selectedCompany.vat_registered || false,
+        vat_enabled: selectedCompany.vat_enabled || false,
+        default_vat_rate: selectedCompany.default_vat_rate?.toString() || '8.1',
       });
       // Load text templates
       setInvoiceIntro(selectedCompany.invoice_intro_text || '');
@@ -329,9 +335,15 @@ export default function Settings() {
     setIsSaving(true);
 
     try {
+      // Convert default_vat_rate from string to number
+      const updateData = {
+        ...companyFormData,
+        default_vat_rate: parseFloat(companyFormData.default_vat_rate) || 8.1,
+      };
+
       const { error } = await supabase
         .from('companies')
-        .update(companyFormData)
+        .update(updateData)
         .eq('id', selectedCompany.id);
 
       if (error) throw error;
@@ -802,6 +814,55 @@ export default function Settings() {
               <label htmlFor="vat_registered" className="ml-2 text-sm text-gray-700">
                 MWST-pflichtig
               </label>
+            </div>
+
+            {/* VAT Configuration */}
+            <div className="border-t border-gray-200 pt-6 mt-6">
+              <h3 className="text-base font-semibold text-gray-900 mb-4">
+                MWST-Konfiguration
+              </h3>
+
+              {/* VAT Enabled Toggle */}
+              <div className="flex items-start mb-4">
+                <input
+                  type="checkbox"
+                  id="vat_enabled"
+                  checked={companyFormData.vat_enabled}
+                  onChange={(e) => handleCompanyFieldChange('vat_enabled', e.target.checked)}
+                  className="w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand mt-1"
+                />
+                <div className="ml-3">
+                  <label htmlFor="vat_enabled" className="text-sm font-medium text-gray-700">
+                    MWST auf Rechnungen aktivieren
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Wenn aktiviert, werden auf Rechnungen MWST-Beträge ausgewiesen und berechnet.
+                  </p>
+                </div>
+              </div>
+
+              {/* Default VAT Rate Input (conditional) */}
+              {companyFormData.vat_enabled && (
+                <div>
+                  <label htmlFor="default_vat_rate" className="block text-sm font-medium text-gray-700 mb-1">
+                    Standard MWST-Satz (%)
+                  </label>
+                  <input
+                    type="number"
+                    id="default_vat_rate"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={companyFormData.default_vat_rate}
+                    onChange={(e) => handleCompanyFieldChange('default_vat_rate', e.target.value)}
+                    className="w-32 px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
+                    placeholder="8.1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Schweiz: 8.1% (Normal), 2.6% (Reduziert), 3.8% (Beherbergung)
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Submit Button */}
