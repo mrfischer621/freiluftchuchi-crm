@@ -12,10 +12,10 @@ Abschluss der Umstellung auf Single-Entry Bookkeeping und Verbesserung der UX.
     - [x] **DB:** Tabelle `transactions` um Spalte `receipt_url` (oder `attachments` array) erweitern.
     - [x] **UI:** Upload-Zone (Drag & Drop) im Buchungs-Formular für PDF/JPG.
     - [x] **View:** Vorschau-Button oder Download-Link in der Tabelle.
-- [ ] **1.3 Auswertungen / Reports** (ehemals 3.3)
-    - [ ] Einnahmen-/Ausgabenübersicht nach Kategorien (Chart oder Tabelle).
-    - [ ] Steuerrelevante Positionen hervorheben.
-    - [ ] Export für Treuhänder (CSV/PDF).
+- [x] **1.3 Auswertungen / Reports** (ehemals 3.3)
+    - [x] Einnahmen-/Ausgabenübersicht nach Kategorien (Chart oder Tabelle).
+    - [x] Steuerrelevante Positionen hervorheben.
+    - [x] Export für Treuhänder (CSV/PDF).
 
 ## 2. Global Usability (Priorität Mittel)
 Funktionen, die sich über alle Module erstrecken.

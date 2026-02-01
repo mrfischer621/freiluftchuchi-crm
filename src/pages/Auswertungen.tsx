@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Calendar } from 'lucide-react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { Calendar, BarChart3, FileText, Download, AlertCircle } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -16,6 +16,31 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useAnalytics, getPresetRange, type DateRange } from '../hooks/useAnalytics';
+import { supabase } from '../lib/supabase';
+import { useCompany } from '../context/CompanyContext';
+import type { Transaction, Category } from '../lib/supabase';
+
+// Type for Milchbüechli data
+interface CategorySummary {
+  categoryName: string;
+  categoryColor: string;
+  isTaxRelevant: boolean;
+  total: number;
+  count: number;
+}
+
+interface MilchbuechliData {
+  einnahmen: CategorySummary[];
+  ausgaben: CategorySummary[];
+  totalEinnahmen: number;
+  totalAusgaben: number;
+  gewinnVerlust: number;
+}
+
+// Type for CSV export
+interface TransactionWithCategory extends Transaction {
+  category_details?: Category | null;
+}
 
 // Format CHF currency
 const formatCHF = (value: number) => {
@@ -37,11 +62,23 @@ const COLORS = {
 
 const PIE_COLORS = ['#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef'];
 
+type ViewMode = 'charts' | 'milchbuechli';
+
 export default function Auswertungen() {
+  const { selectedCompany } = useCompany();
+
+  // View mode toggle
+  const [viewMode, setViewMode] = useState<ViewMode>('milchbuechli');
+
   // Default to current month
   const [selectedPreset, setSelectedPreset] = useState<string>('current_month');
   const [customRange, setCustomRange] = useState<DateRange | null>(null);
   const [showCustomPicker, setShowCustomPicker] = useState(false);
+
+  // Milchbüechli data state
+  const [milchbuechliData, setMilchbuechliData] = useState<MilchbuechliData | null>(null);
+  const [milchbuechliLoading, setMilchbuechliLoading] = useState(false);
+  const [rawTransactions, setRawTransactions] = useState<TransactionWithCategory[]>([]);
 
   // Determine active date range - memoized to prevent infinite loop
   const dateRange = useMemo(() => {
@@ -50,6 +87,167 @@ export default function Auswertungen() {
 
   // Fetch analytics data
   const { loading, error, kpi, timeline, byCustomer, byCategory, byTags } = useAnalytics(dateRange);
+
+  // Fetch Milchbüechli data when dateRange changes
+  const fetchMilchbuechliData = useCallback(async () => {
+    if (!selectedCompany || !dateRange) return;
+
+    try {
+      setMilchbuechliLoading(true);
+      const fromDate = dateRange.from.toISOString().split('T')[0];
+      const toDate = dateRange.to.toISOString().split('T')[0];
+
+      // Fetch transactions and categories in parallel
+      const [transactionsResult, categoriesResult] = await Promise.all([
+        supabase
+          .from('transactions')
+          .select('*')
+          .eq('company_id', selectedCompany.id)
+          .gte('date', fromDate)
+          .lte('date', toDate)
+          .order('date', { ascending: true }),
+        supabase
+          .from('categories')
+          .select('*')
+          .eq('company_id', selectedCompany.id)
+          .eq('is_active', true)
+      ]);
+
+      if (transactionsResult.error) throw transactionsResult.error;
+      if (categoriesResult.error) throw categoriesResult.error;
+
+      const transactions = transactionsResult.data || [];
+      const cats = categoriesResult.data || [];
+
+      // Create a lookup map for categories by name
+      const categoryByName = new Map<string, Category>();
+      cats.forEach(cat => categoryByName.set(cat.name, cat));
+
+      // Attach category details to transactions
+      const transactionsWithCategories: TransactionWithCategory[] = transactions.map(t => ({
+        ...t,
+        category_details: t.category ? categoryByName.get(t.category) || null : null
+      }));
+      setRawTransactions(transactionsWithCategories);
+
+      // Group by category and type
+      const einnahmenMap = new Map<string, CategorySummary>();
+      const ausgabenMap = new Map<string, CategorySummary>();
+
+      transactions.forEach(t => {
+        const categoryName = t.category || 'Ohne Kategorie';
+        const categoryDetails = categoryByName.get(categoryName);
+        const map = t.type === 'einnahme' ? einnahmenMap : ausgabenMap;
+
+        if (!map.has(categoryName)) {
+          map.set(categoryName, {
+            categoryName,
+            categoryColor: categoryDetails?.color || '#6B7280',
+            isTaxRelevant: categoryDetails?.is_tax_relevant ?? true,
+            total: 0,
+            count: 0
+          });
+        }
+
+        const summary = map.get(categoryName)!;
+        summary.total += t.amount;
+        summary.count += 1;
+      });
+
+      // Convert to arrays and sort by total
+      const einnahmen = Array.from(einnahmenMap.values()).sort((a, b) => b.total - a.total);
+      const ausgaben = Array.from(ausgabenMap.values()).sort((a, b) => b.total - a.total);
+
+      const totalEinnahmen = einnahmen.reduce((sum, e) => sum + e.total, 0);
+      const totalAusgaben = ausgaben.reduce((sum, a) => sum + a.total, 0);
+
+      setMilchbuechliData({
+        einnahmen,
+        ausgaben,
+        totalEinnahmen,
+        totalAusgaben,
+        gewinnVerlust: totalEinnahmen - totalAusgaben
+      });
+    } catch (err) {
+      console.error('Error fetching Milchbüechli data:', err);
+    } finally {
+      setMilchbuechliLoading(false);
+    }
+  }, [selectedCompany, dateRange]);
+
+  useEffect(() => {
+    if (viewMode === 'milchbuechli') {
+      fetchMilchbuechliData();
+    }
+  }, [viewMode, fetchMilchbuechliData]);
+
+  // CSV Export function
+  const handleExportCSV = async () => {
+    if (!rawTransactions.length) {
+      alert('Keine Daten zum Exportieren vorhanden.');
+      return;
+    }
+
+    // Generate signed URLs for receipts
+    const transactionsWithUrls = await Promise.all(
+      rawTransactions.map(async (t) => {
+        let receiptUrl = '';
+        if (t.receipt_url) {
+          try {
+            const { data } = await supabase.storage
+              .from('receipts')
+              .createSignedUrl(t.receipt_url, 86400); // 24h valid
+            receiptUrl = data?.signedUrl || '';
+          } catch {
+            receiptUrl = '';
+          }
+        }
+        return { ...t, signed_receipt_url: receiptUrl };
+      })
+    );
+
+    // CSV headers
+    const headers = [
+      'Datum',
+      'Kategorie',
+      'Steuerrelevant',
+      'Beschreibung',
+      'Betrag',
+      'Typ',
+      'Beleg-URL'
+    ];
+
+    // CSV rows
+    const rows = transactionsWithUrls.map(t => [
+      new Date(t.date).toLocaleDateString('de-CH'),
+      t.category || 'Ohne Kategorie',
+      t.category_details?.is_tax_relevant ? 'Ja' : 'Nein',
+      (t.description || '').replace(/"/g, '""'), // Escape quotes
+      t.amount.toFixed(2),
+      t.type === 'einnahme' ? 'Einnahme' : 'Ausgabe',
+      t.signed_receipt_url || ''
+    ]);
+
+    // Build CSV content
+    const csvContent = [
+      headers.join(';'),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(';'))
+    ].join('\n');
+
+    // Add BOM for Excel compatibility with special characters
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+
+    // Trigger download
+    const fromStr = dateRange.from.toISOString().split('T')[0];
+    const toStr = dateRange.to.toISOString().split('T')[0];
+    const filename = `buchungen_${fromStr}_bis_${toStr}.csv`;
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
 
   const handlePresetChange = (preset: string) => {
     setSelectedPreset(preset);
@@ -81,7 +279,47 @@ export default function Auswertungen() {
     <div className="p-8 bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Auswertungen</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-bold text-gray-900">Auswertungen</h1>
+
+          {/* View Mode Toggle & Export */}
+          <div className="flex items-center gap-3">
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('milchbuechli')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  viewMode === 'milchbuechli'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                Milchbüechli
+              </button>
+              <button
+                onClick={() => setViewMode('charts')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  viewMode === 'charts'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4" />
+                Charts
+              </button>
+            </div>
+
+            {viewMode === 'milchbuechli' && (
+              <button
+                onClick={handleExportCSV}
+                className="flex items-center gap-2 px-4 py-2 bg-freiluft text-white rounded-lg font-medium hover:bg-freiluft/90 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Export für Treuhänder (CSV)
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Filter Bar */}
         <div className="bg-white rounded-lg shadow p-4">
@@ -201,6 +439,164 @@ export default function Auswertungen() {
         </div>
       )}
 
+      {/* Milchbüechli View */}
+      {viewMode === 'milchbuechli' && (
+        <>
+          {milchbuechliLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-xl text-gray-600">Lädt Buchungen...</div>
+            </div>
+          ) : milchbuechliData ? (
+            <div className="space-y-6">
+              {/* Summary KPI Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white rounded-lg shadow p-6">
+                  <div className="text-sm font-medium text-gray-600 mb-2">Total Einnahmen</div>
+                  <div className="text-3xl font-bold text-green-600">{formatCHF(milchbuechliData.totalEinnahmen)}</div>
+                  <div className="text-sm text-gray-500 mt-1">{milchbuechliData.einnahmen.reduce((s, e) => s + e.count, 0)} Buchungen</div>
+                </div>
+                <div className="bg-white rounded-lg shadow p-6">
+                  <div className="text-sm font-medium text-gray-600 mb-2">Total Ausgaben</div>
+                  <div className="text-3xl font-bold text-red-600">{formatCHF(milchbuechliData.totalAusgaben)}</div>
+                  <div className="text-sm text-gray-500 mt-1">{milchbuechliData.ausgaben.reduce((s, a) => s + a.count, 0)} Buchungen</div>
+                </div>
+                <div className="bg-white rounded-lg shadow p-6 border-2 border-gray-200">
+                  <div className="text-sm font-medium text-gray-600 mb-2">Gewinn / Verlust</div>
+                  <div className={`text-3xl font-bold ${milchbuechliData.gewinnVerlust >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatCHF(milchbuechliData.gewinnVerlust)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Two-Column Layout: Einnahmen / Ausgaben */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Einnahmen Section */}
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="bg-green-50 px-6 py-4 border-b border-green-100">
+                    <h2 className="text-lg font-semibold text-green-800 flex items-center gap-2">
+                      <div className="w-3 h-3 bg-green-500 rounded-full" />
+                      Einnahmen
+                    </h2>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {milchbuechliData.einnahmen.length === 0 ? (
+                      <div className="px-6 py-8 text-center text-gray-500">
+                        Keine Einnahmen im gewählten Zeitraum
+                      </div>
+                    ) : (
+                      milchbuechliData.einnahmen.map((cat) => (
+                        <div key={cat.categoryName} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-3 h-3 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: cat.categoryColor }}
+                            />
+                            <div>
+                              <div className="font-medium text-gray-900 flex items-center gap-2">
+                                {cat.categoryName}
+                                {cat.isTaxRelevant && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    <AlertCircle className="w-3 h-3 mr-0.5" />
+                                    Steuer
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-500">{cat.count} Buchung{cat.count !== 1 ? 'en' : ''}</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-semibold text-green-600">{formatCHF(cat.total)}</div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  {milchbuechliData.einnahmen.length > 0 && (
+                    <div className="bg-green-50 px-6 py-4 border-t border-green-100 flex justify-between items-center">
+                      <span className="font-medium text-green-800">Total Einnahmen</span>
+                      <span className="font-bold text-green-700 text-lg">{formatCHF(milchbuechliData.totalEinnahmen)}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Ausgaben Section */}
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <div className="bg-red-50 px-6 py-4 border-b border-red-100">
+                    <h2 className="text-lg font-semibold text-red-800 flex items-center gap-2">
+                      <div className="w-3 h-3 bg-red-500 rounded-full" />
+                      Ausgaben
+                    </h2>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {milchbuechliData.ausgaben.length === 0 ? (
+                      <div className="px-6 py-8 text-center text-gray-500">
+                        Keine Ausgaben im gewählten Zeitraum
+                      </div>
+                    ) : (
+                      milchbuechliData.ausgaben.map((cat) => (
+                        <div key={cat.categoryName} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-3 h-3 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: cat.categoryColor }}
+                            />
+                            <div>
+                              <div className="font-medium text-gray-900 flex items-center gap-2">
+                                {cat.categoryName}
+                                {cat.isTaxRelevant && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    <AlertCircle className="w-3 h-3 mr-0.5" />
+                                    Steuer
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-500">{cat.count} Buchung{cat.count !== 1 ? 'en' : ''}</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-semibold text-red-600">{formatCHF(cat.total)}</div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  {milchbuechliData.ausgaben.length > 0 && (
+                    <div className="bg-red-50 px-6 py-4 border-t border-red-100 flex justify-between items-center">
+                      <span className="font-medium text-red-800">Total Ausgaben</span>
+                      <span className="font-bold text-red-700 text-lg">{formatCHF(milchbuechliData.totalAusgaben)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Result Banner */}
+              <div className={`rounded-lg shadow p-6 ${milchbuechliData.gewinnVerlust >= 0 ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className={`text-lg font-semibold ${milchbuechliData.gewinnVerlust >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+                      {milchbuechliData.gewinnVerlust >= 0 ? 'Gewinn' : 'Verlust'}
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Einnahmen ({formatCHF(milchbuechliData.totalEinnahmen)}) - Ausgaben ({formatCHF(milchbuechliData.totalAusgaben)})
+                    </p>
+                  </div>
+                  <div className={`text-4xl font-bold ${milchbuechliData.gewinnVerlust >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatCHF(Math.abs(milchbuechliData.gewinnVerlust))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-gray-500">Keine Daten verfügbar</div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Charts View */}
+      {viewMode === 'charts' && (
+        <>
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* Total Income */}
@@ -406,6 +802,8 @@ export default function Auswertungen() {
           )}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }
