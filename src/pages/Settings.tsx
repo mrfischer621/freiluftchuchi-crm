@@ -19,6 +19,7 @@ interface CompanyFormData {
   vat_registered: boolean;
   vat_enabled: boolean;
   default_vat_rate: string; // Store as string in form, convert to number on submit
+  sender_contact_name: string; // Phase 3.3: Optional contact name for invoice sender
 }
 
 interface Toast {
@@ -48,6 +49,7 @@ export default function Settings() {
     vat_registered: false,
     vat_enabled: false,
     default_vat_rate: '8.1',
+    sender_contact_name: '',
   });
 
   // User profile state
@@ -102,6 +104,7 @@ export default function Settings() {
         vat_registered: selectedCompany.vat_registered || false,
         vat_enabled: selectedCompany.vat_enabled || false,
         default_vat_rate: selectedCompany.default_vat_rate?.toString() || '8.1',
+        sender_contact_name: selectedCompany.sender_contact_name || '',
       });
       // Load text templates
       setInvoiceIntro(selectedCompany.invoice_intro_text || '');
@@ -646,6 +649,24 @@ export default function Settings() {
                 placeholder="z.B. Muster AG"
               />
               {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name}</p>}
+            </div>
+
+            {/* Sender Contact Name (Phase 3.3) */}
+            <div>
+              <label htmlFor="sender_contact_name" className="block text-sm font-medium text-gray-700 mb-1">
+                Kontaktperson / Inhaber <span className="text-xs font-normal text-gray-500">(optional, erscheint auf Rechnungen)</span>
+              </label>
+              <input
+                type="text"
+                id="sender_contact_name"
+                value={companyFormData.sender_contact_name}
+                onChange={(e) => handleCompanyFieldChange('sender_contact_name', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
+                placeholder="z.B. c/o Hans Muster oder Inhaber: Maria Müller"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Wenn ausgefüllt, erscheint dieser Name oberhalb des Firmennamens auf PDF-Rechnungen und Offerten.
+              </p>
             </div>
 
             {/* Address */}

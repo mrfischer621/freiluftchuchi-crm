@@ -36,6 +36,7 @@ export interface Company {
   vat_registered: boolean;
   vat_enabled: boolean; // VAT calculation enabled for invoices
   default_vat_rate: number; // Default VAT rate (e.g., 8.1 for Swiss standard rate)
+  sender_contact_name: string | null; // Optional contact/owner name for invoice sender (Phase 3.3)
   created_at: string;
   // Text templates for invoices and quotes
   invoice_intro_text: string | null;

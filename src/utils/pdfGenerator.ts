@@ -176,6 +176,39 @@ function formatAddress(street: string | null, houseNumber: string | null): strin
 }
 
 /**
+ * Render company sender name with optional contact person (Phase 3.3)
+ * Returns the Y coordinate after rendering
+ *
+ * @param doc - jsPDF document
+ * @param company - Company object
+ * @param x - X coordinate
+ * @param y - Y coordinate to start
+ * @param fontSize - Font size to use
+ * @returns New Y coordinate after rendering
+ */
+function renderCompanySender(
+  doc: jsPDF,
+  company: Company,
+  x: number,
+  y: number,
+  fontSize: number = 10
+): number {
+  doc.setFontSize(fontSize);
+
+  // If sender_contact_name exists, render it first
+  if (company.sender_contact_name && company.sender_contact_name.trim()) {
+    doc.text(sanitizeForPDF(company.sender_contact_name), x, y);
+    y += 4; // Line spacing
+  }
+
+  // Always render company name
+  doc.text(sanitizeForPDF(company.name), x, y);
+  y += 4; // Line spacing
+
+  return y;
+}
+
+/**
  * Draw the Swiss cross (vector graphics, no images).
  * - Black square: 7mm x 7mm
  * - White cross on top
@@ -323,7 +356,8 @@ function drawReceiptSection(
   const iban = company.qr_iban || company.iban || '';
   doc.text(SwissQRBill.formatIBAN(sanitizeForPDF(iban)), x, y);
   y += 3;
-  doc.text(sanitizeForPDF(company.name), x, y);
+  // Render company sender (Phase 3.3: includes optional contact name)
+  y = renderCompanySender(doc, company, x, y, FONTS.CONTENT.size) - 4; // Adjust spacing
   y += 3;
   doc.text(sanitizeForPDF(formatAddress(company.street, company.house_number)), x, y);
   y += 3;
@@ -440,7 +474,8 @@ async function drawPaymentSection(
   const iban = company.qr_iban || company.iban || '';
   doc.text(SwissQRBill.formatIBAN(sanitizeForPDF(iban)), infoX, infoY);
   infoY += 3;
-  doc.text(sanitizeForPDF(company.name), infoX, infoY);
+  // Render company sender (Phase 3.3: includes optional contact name)
+  infoY = renderCompanySender(doc, company, infoX, infoY, FONTS.CONTENT.size) - 4; // Adjust spacing
   infoY += 3;
   doc.text(sanitizeForPDF(formatAddress(company.street, company.house_number)), infoX, infoY);
   infoY += 3;
@@ -509,15 +544,15 @@ function drawInvoiceHeader(
 ): void {
   let y = 20;
 
-  // Company logo placeholder or name
+  // Company logo placeholder or name (Phase 3.3: includes optional contact name)
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
-  doc.text(sanitizeForPDF(company.name), 20, y);
-  y += 6;
+  y = renderCompanySender(doc, company, 20, y, 16);
 
   // Company address
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
+  y += 2; // Adjust spacing after sender name
   doc.text(sanitizeForPDF(formatAddress(company.street, company.house_number)), 20, y);
   y += 4;
   doc.text(sanitizeForPDF(`${company.zip_code} ${company.city}`), 20, y);
@@ -988,15 +1023,15 @@ function drawQuoteHeader(
 ): void {
   let y = 20;
 
-  // Company logo placeholder or name
+  // Company logo placeholder or name (Phase 3.3: includes optional contact name)
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
-  doc.text(sanitizeForPDF(company.name), 20, y);
-  y += 6;
+  y = renderCompanySender(doc, company, 20, y, 16);
 
   // Company address
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
+  y += 2; // Adjust spacing after sender name
   doc.text(sanitizeForPDF(formatAddress(company.street, company.house_number)), 20, y);
   y += 4;
   doc.text(sanitizeForPDF(`${company.zip_code} ${company.city}`), 20, y);
