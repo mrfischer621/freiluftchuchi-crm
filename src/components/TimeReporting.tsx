@@ -107,8 +107,8 @@ export default function TimeReporting({ entries, projects }: TimeReportingProps)
 
   // Chart data
   const chartData = [
-    { category: 'Verrechenbar', hours: kpis.billableHours, color: '#16a34a' },
-    { category: 'Nicht verrechenbar', hours: kpis.nonBillableHours, color: '#dc2626' },
+    { category: 'Verrechenbar', hours: kpis.billableHours, color: '#166534' },
+    { category: 'Nicht verrechenbar', hours: kpis.nonBillableHours, color: '#991b1b' },
   ];
 
   // Project breakdown

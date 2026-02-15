@@ -40,14 +40,14 @@ const CustomTooltip = ({ active, payload }: any) => {
       <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
         <p className="font-semibold text-gray-900 mb-2">{payload[0]?.payload.period}</p>
         <div className="space-y-1">
-          <p className="text-sm text-green-600 font-medium">
+          <p className="text-sm text-success-dark font-medium">
             Einnahmen: {formatCurrency(revenue)}
           </p>
-          <p className="text-sm text-red-600 font-medium">
+          <p className="text-sm text-danger-dark font-medium">
             Ausgaben: {formatCurrency(expenses)}
           </p>
           <div className="border-t border-gray-200 pt-1 mt-1">
-            <p className={`text-sm font-semibold ${profit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+            <p className={`text-sm font-semibold ${profit >= 0 ? 'text-success-dark' : 'text-danger-dark'}`}>
               {profit >= 0 ? 'Gewinn' : 'Verlust'}: {formatCurrency(Math.abs(profit))}
             </p>
           </div>
@@ -71,12 +71,12 @@ export default function FinancialChart({
       >
         <defs>
           <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#10B981" stopOpacity={0.05} />
+            <stop offset="5%" stopColor="#166534" stopOpacity={0.3} />
+            <stop offset="95%" stopColor="#166534" stopOpacity={0.05} />
           </linearGradient>
           <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#EF4444" stopOpacity={0.05} />
+            <stop offset="5%" stopColor="#991b1b" stopOpacity={0.3} />
+            <stop offset="95%" stopColor="#991b1b" stopOpacity={0.05} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
@@ -105,7 +105,7 @@ export default function FinancialChart({
         <Area
           type="monotone"
           dataKey="revenue"
-          stroke="#10B981"
+          stroke="#166534"
           strokeWidth={2}
           fill="url(#colorRevenue)"
           name="revenue"
@@ -113,7 +113,7 @@ export default function FinancialChart({
         <Area
           type="monotone"
           dataKey="expenses"
-          stroke="#EF4444"
+          stroke="#991b1b"
           strokeWidth={2}
           fill="url(#colorExpenses)"
           name="expenses"

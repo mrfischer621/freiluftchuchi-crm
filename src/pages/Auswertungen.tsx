@@ -552,7 +552,7 @@ export default function Auswertungen() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="font-semibold text-green-600">{formatCHF(cat.total)}</div>
+                            <div className="font-semibold text-success-dark">{formatCHF(cat.total)}</div>
                           </div>
                         </div>
                       ))
@@ -601,7 +601,7 @@ export default function Auswertungen() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="font-semibold text-red-600">{formatCHF(cat.total)}</div>
+                            <div className="font-semibold text-danger-dark">{formatCHF(cat.total)}</div>
                           </div>
                         </div>
                       ))
@@ -627,7 +627,7 @@ export default function Auswertungen() {
                       Einnahmen ({formatCHF(milchbuechliData.totalEinnahmen)}) - Ausgaben ({formatCHF(milchbuechliData.totalAusgaben)})
                     </p>
                   </div>
-                  <div className={`text-4xl font-bold ${milchbuechliData.gewinnVerlust >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <div className={`text-4xl font-bold ${milchbuechliData.gewinnVerlust >= 0 ? 'text-success-dark' : 'text-danger-dark'}`}>
                     {formatCHF(Math.abs(milchbuechliData.gewinnVerlust))}
                   </div>
                 </div>
@@ -649,13 +649,13 @@ export default function Auswertungen() {
         {/* Total Income */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-sm font-medium text-content-secondary mb-2">Gesamteinnahmen</div>
-          <div className="text-3xl font-bold text-green-600">{formatCHF(kpi.income)}</div>
+          <div className="text-3xl font-bold text-success-dark">{formatCHF(kpi.income)}</div>
         </div>
 
         {/* Total Expenses */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="text-sm font-medium text-content-secondary mb-2">Gesamtausgaben</div>
-          <div className="text-3xl font-bold text-red-600">{formatCHF(kpi.expense)}</div>
+          <div className="text-3xl font-bold text-danger-dark">{formatCHF(kpi.expense)}</div>
         </div>
 
         {/* Net Profit */}
@@ -663,7 +663,7 @@ export default function Auswertungen() {
           <div className="text-sm font-medium text-content-secondary mb-2">Nettogewinn</div>
           <div
             className={`text-3xl font-bold ${
-              kpi.profit >= 0 ? 'text-green-600' : 'text-red-600'
+              kpi.profit >= 0 ? 'text-success-dark' : 'text-danger-dark'
             }`}
           >
             {formatCHF(kpi.profit)}
