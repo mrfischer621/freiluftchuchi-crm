@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Plus, AlertTriangle } from 'lucide-react';
+import { Trash2, Plus, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Quote, QuoteItem, Customer, Project, Product } from '../lib/supabase';
 import { useCompany } from '../context/CompanyContext';
@@ -56,6 +56,17 @@ export default function QuoteForm({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
+
+  // Discount System (Task 3.2)
+  const [discountType, setDiscountType] = useState<'percent' | 'fixed'>(
+    existingQuote?.discount_type || 'percent'
+  );
+  const [discountValue, setDiscountValue] = useState(
+    existingQuote?.discount_value?.toString() || '0'
+  );
+  const [showDiscounts, setShowDiscounts] = useState(
+    (existingQuote?.discount_value && existingQuote.discount_value > 0) || false
+  );
 
   // Show warning for sent/accepted/rejected quotes in edit mode
   const showEditWarning = isEditMode && shouldWarnOnEdit(existingQuote.status);
@@ -114,16 +125,39 @@ export default function QuoteForm({
     : [];
 
   const calculateTotals = () => {
+    // Step 1: Calculate subtotal (sum of all line items)
     const subtotal = items.reduce((sum, item) => {
       const qty = parseFloat(item.quantity) || 0;
       const price = parseFloat(item.unit_price) || 0;
       return sum + (qty * price);
     }, 0);
 
-    const vat_amount = subtotal * (parseFloat(vatRate) / 100);
-    const total = subtotal + vat_amount;
+    // Step 2: Calculate discount amount
+    const discountVal = parseFloat(discountValue) || 0;
+    let discountAmount = 0;
 
-    return { subtotal, vat_amount, total };
+    if (discountType === 'percent') {
+      // Percentage discount (0-100%)
+      discountAmount = subtotal * (discountVal / 100);
+    } else {
+      // Fixed discount (CHF amount)
+      discountAmount = discountVal;
+    }
+
+    // Ensure discount doesn't exceed subtotal
+    discountAmount = Math.min(discountAmount, subtotal);
+
+    // Step 3: Net after discount
+    const nettoNachRabatt = subtotal - discountAmount;
+
+    // Step 4: VAT on discounted amount (only if VAT enabled)
+    const vatEnabled = selectedCompany?.vat_enabled || false;
+    const vat_amount = vatEnabled ? nettoNachRabatt * (parseFloat(vatRate) / 100) : 0;
+
+    // Step 5: Grand total
+    const total = nettoNachRabatt + vat_amount;
+
+    return { subtotal, discountAmount, vat_amount, total };
   };
 
   const handleAddItem = () => {
@@ -165,7 +199,7 @@ export default function QuoteForm({
     setIsSubmitting(true);
 
     try {
-      const { subtotal, vat_amount, total } = calculateTotals();
+      const totals = calculateTotals();
 
       const quoteData: QuoteFormData = {
         quote: {
@@ -180,6 +214,9 @@ export default function QuoteForm({
           status,
           converted_to_invoice_id: null,
           converted_at: null,
+          // Discount system (Task 3.2)
+          discount_type: discountType,
+          discount_value: parseFloat(discountValue) || 0,
         },
         items: items
           .filter(item => item.description && item.unit_price)
@@ -191,7 +228,7 @@ export default function QuoteForm({
           })),
       };
 
-      await onSubmit(quoteData, { subtotal, vat_amount, total });
+      await onSubmit(quoteData, { subtotal: totals.subtotal, vat_amount: totals.vat_amount, total: totals.total });
     } catch (error) {
       console.error('Error submitting quote:', error);
     } finally {
@@ -328,14 +365,24 @@ export default function QuoteForm({
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-900">Positionen</h3>
-            <button
-              type="button"
-              onClick={handleAddItem}
-              className="rounded-lg px-3 py-1.5 text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition flex items-center gap-2"
-            >
-              <Plus size={16} />
-              Position hinzufügen
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowDiscounts(!showDiscounts)}
+                className="rounded-lg px-3 py-1.5 text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition flex items-center gap-2"
+              >
+                {showDiscounts ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                Rabatte
+              </button>
+              <button
+                type="button"
+                onClick={handleAddItem}
+                className="rounded-lg px-3 py-1.5 text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition flex items-center gap-2"
+              >
+                <Plus size={16} />
+                Position hinzufügen
+              </button>
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -453,21 +500,93 @@ export default function QuoteForm({
               <span className="text-gray-600">Zwischentotal:</span>
               <span className="font-medium">CHF {totals.subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-sm items-center gap-4">
-              <span className="text-gray-600">MwSt ({vatRate}%):</span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={vatRate}
-                  onChange={(e) => setVatRate(e.target.value)}
-                  step="0.1"
-                  min="0"
-                  max="100"
-                  className="w-20 px-2 py-1 border border-gray-200 rounded text-sm text-right"
-                />
-                <span className="font-medium">CHF {totals.vat_amount.toFixed(2)}</span>
+
+            {/* Total Discount (conditional) - NEW SYSTEM */}
+            {showDiscounts && (
+              <div className="flex justify-between text-sm items-center gap-4">
+                <span className="text-gray-600">Gesamtrabatt:</span>
+                <div className="flex items-center gap-2">
+                  {/* Toggle Button for Type */}
+                  <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setDiscountType('percent')}
+                      className={`px-2 py-1 text-xs font-medium transition ${
+                        discountType === 'percent'
+                          ? 'bg-brand text-white'
+                          : 'bg-white text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      %
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDiscountType('fixed')}
+                      className={`px-2 py-1 text-xs font-medium transition ${
+                        discountType === 'fixed'
+                          ? 'bg-brand text-white'
+                          : 'bg-white text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      CHF
+                    </button>
+                  </div>
+
+                  {/* Value Input */}
+                  <input
+                    type="number"
+                    value={discountValue}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      // Validation: percent max 100, fixed max subtotal
+                      if (discountType === 'percent' && val > 100) return;
+                      if (discountType === 'fixed' && val > totals.subtotal) return;
+                      setDiscountValue(e.target.value);
+                    }}
+                    step={discountType === 'percent' ? '0.1' : '0.01'}
+                    min="0"
+                    max={discountType === 'percent' ? '100' : totals.subtotal.toFixed(2)}
+                    className="w-20 px-2 py-1 border border-gray-200 rounded text-sm text-right"
+                    placeholder="0"
+                  />
+
+                  {/* Discount Amount Display */}
+                  {totals.discountAmount > 0 && (
+                    <span className="font-medium text-green-600">
+                      -CHF {totals.discountAmount.toFixed(2)}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* VAT - only show if VAT enabled */}
+            {selectedCompany?.vat_enabled && (
+              <div className="flex justify-between text-sm items-center gap-4">
+                <span className="text-gray-600">MwSt ({vatRate}%):</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={vatRate}
+                    onChange={(e) => setVatRate(e.target.value)}
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    className="w-20 px-2 py-1 border border-gray-200 rounded text-sm text-right"
+                  />
+                  <span className="font-medium">CHF {totals.vat_amount.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Non-editable VAT display when disabled */}
+            {!selectedCompany?.vat_enabled && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">MwSt:</span>
+                <span className="font-medium text-gray-400">Nicht aktiv</span>
+              </div>
+            )}
+
             <div className="flex justify-between text-lg font-bold text-brand border-t pt-2">
               <span>Gesamttotal:</span>
               <span>CHF {totals.total.toFixed(2)}</span>

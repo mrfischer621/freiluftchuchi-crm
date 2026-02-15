@@ -141,7 +141,10 @@ export interface Invoice {
   title: string | null;
   introduction_text: string | null;
   footer_text: string | null;
-  total_discount_percent: number;
+  total_discount_percent: number; // Legacy field (kept for backward compatibility)
+  // Discount system (Task 3.2)
+  discount_type: 'percent' | 'fixed';
+  discount_value: number;
 }
 
 export interface InvoiceItem {
@@ -177,6 +180,9 @@ export interface Quote {
   converted_at: string | null;
   created_at: string;
   updated_at: string;
+  // Discount system (Task 3.2)
+  discount_type: 'percent' | 'fixed';
+  discount_value: number;
 }
 
 export interface QuoteItem {

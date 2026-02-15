@@ -210,6 +210,9 @@ export default function Angebote() {
             subtotal: calculatedTotals.subtotal,
             vat_amount: calculatedTotals.vat_amount,
             total: calculatedTotals.total,
+            // Discount system (Task 3.2)
+            discount_type: data.quote.discount_type,
+            discount_value: data.quote.discount_value,
           })
           .eq('id', editingQuote.id);
 

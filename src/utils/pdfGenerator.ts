@@ -668,7 +668,7 @@ function drawInvoiceItems(
 
   // Check if any items have discounts
   const hasLineDiscounts = items.some(item => (item.discount_percent || 0) > 0);
-  const hasTotalDiscount = (invoice.total_discount_percent || 0) > 0;
+  const hasTotalDiscount = (invoice.discount_value || 0) > 0;
 
   // Table header
   doc.setFont('helvetica', 'bold');
@@ -729,11 +729,22 @@ function drawInvoiceItems(
   doc.text(`CHF ${formatAmount(itemsSubtotal)}`, 190, y, { align: 'right' });
   y += 6;
 
-  // Total Discount (if any)
+  // Total Discount (if any) - NEW SYSTEM (percent or fixed)
   if (hasTotalDiscount) {
-    const totalDiscountAmount = itemsSubtotal * (invoice.total_discount_percent / 100);
+    let totalDiscountAmount = 0;
+    let discountLabel = '';
+
+    if (invoice.discount_type === 'percent') {
+      totalDiscountAmount = itemsSubtotal * (invoice.discount_value / 100);
+      discountLabel = `Rabatt (${invoice.discount_value}%):`;
+    } else {
+      // Fixed discount (CHF)
+      totalDiscountAmount = Math.min(invoice.discount_value, itemsSubtotal);
+      discountLabel = `Rabatt (CHF ${formatAmount(invoice.discount_value)}):`;
+    }
+
     doc.setFont('helvetica', 'bold');
-    doc.text(`Rabatt (${invoice.total_discount_percent}%):`, 145, y);
+    doc.text(discountLabel, 145, y);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 128, 0); // Green for discount
     doc.text(`-CHF ${formatAmount(totalDiscountAmount)}`, 190, y, { align: 'right' });
@@ -1121,6 +1132,30 @@ function drawQuoteItems(
   doc.setFont('helvetica', 'normal');
   doc.text(`CHF ${formatAmount(quote.subtotal)}`, 190, y, { align: 'right' });
   y += 6;
+
+  // Total Discount (if any) - NEW SYSTEM (percent or fixed)
+  const hasTotalDiscount = (quote.discount_value || 0) > 0;
+  if (hasTotalDiscount) {
+    let totalDiscountAmount = 0;
+    let discountLabel = '';
+
+    if (quote.discount_type === 'percent') {
+      totalDiscountAmount = quote.subtotal * (quote.discount_value / 100);
+      discountLabel = `Rabatt (${quote.discount_value}%):`;
+    } else {
+      // Fixed discount (CHF)
+      totalDiscountAmount = Math.min(quote.discount_value, quote.subtotal);
+      discountLabel = `Rabatt (CHF ${formatAmount(quote.discount_value)}):`;
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.text(discountLabel, 145, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 128, 0); // Green for discount
+    doc.text(`-CHF ${formatAmount(totalDiscountAmount)}`, 190, y, { align: 'right' });
+    doc.setTextColor(0, 0, 0); // Reset to black
+    y += 6;
+  }
 
   // VAT
   if (quote.vat_amount > 0) {

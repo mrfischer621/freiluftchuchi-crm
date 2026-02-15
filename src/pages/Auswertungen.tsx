@@ -70,8 +70,8 @@ export default function Auswertungen() {
   // View mode toggle
   const [viewMode, setViewMode] = useState<ViewMode>('milchbuechli');
 
-  // Default to current month
-  const [selectedPreset, setSelectedPreset] = useState<string>('current_month');
+  // Default to last 90 days (Roadmap 1.2)
+  const [selectedPreset, setSelectedPreset] = useState<string>('last_90_days');
   const [customRange, setCustomRange] = useState<DateRange | null>(null);
   const [showCustomPicker, setShowCustomPicker] = useState(false);
 

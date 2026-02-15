@@ -29,7 +29,6 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
   const [projectId, setProjectId] = useState(transaction?.project_id || '');
   const [tags, setTags] = useState<string[]>(transaction?.tags || []);
   const [tagInput, setTagInput] = useState('');
-  const [billable, setBillable] = useState(transaction?.billable || false);
   const [loading, setLoading] = useState(false);
 
   // Receipt upload state
@@ -129,7 +128,6 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
         customer_id: customerId || null,
         project_id: projectId || null,
         tags: tags.length > 0 ? tags : null,
-        billable,
         receipt_url: receiptUrl,
       });
 
@@ -143,7 +141,6 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
         setCustomerId('');
         setProjectId('');
         setTags([]);
-        setBillable(false);
         setReceiptFile(null);
         setExistingReceiptUrl(null);
         if (fileInputRef.current) {
@@ -518,20 +515,6 @@ export default function TransactionForm({ transaction, onSubmit, onCancel, custo
                   </span>
                 ))}
               </div>
-            </div>
-
-            {/* Billable Checkbox */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="billable"
-                checked={billable}
-                onChange={(e) => setBillable(e.target.checked)}
-                className="w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand"
-              />
-              <label htmlFor="billable" className="ml-2 text-sm text-gray-700">
-                Verrechenbar
-              </label>
             </div>
 
             {/* Buttons */}

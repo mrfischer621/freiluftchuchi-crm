@@ -13,7 +13,7 @@ import { useCompany } from '../context/CompanyContext';
 import { Plus, AlertCircle } from 'lucide-react';
 
 type InvoiceFormData = {
-  invoice: Omit<Invoice, 'id' | 'created_at' | 'subtotal' | 'vat_amount' | 'total'>;
+  invoice: Omit<Invoice, 'id' | 'created_at' | 'subtotal' | 'vat_amount' | 'total' | 'total_discount_percent'>;
   items: Array<Omit<InvoiceItem, 'id' | 'invoice_id' | 'total'>>;
 };
 
@@ -214,7 +214,9 @@ export default function Rechnungen() {
             title: data.invoice.title,
             introduction_text: data.invoice.introduction_text,
             footer_text: data.invoice.footer_text,
-            total_discount_percent: data.invoice.total_discount_percent || 0,
+            // Discount system (Task 3.2)
+            discount_type: data.invoice.discount_type,
+            discount_value: data.invoice.discount_value,
           })
           .eq('id', editingInvoice.id);
 
@@ -229,13 +231,15 @@ export default function Rechnungen() {
 
         if (deleteError) throw deleteError;
 
-        // Insert new items with discount
+        // Insert new items with discount and VAT
         const itemsWithInvoiceId = data.items.map(item => ({
           invoice_id: editingInvoice.id,
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unit_price,
           discount_percent: item.discount_percent || 0,
+          vat_rate: item.vat_rate,
+          vat_amount: item.vat_amount,
           total: calculateItemTotal(item),
         }));
 
@@ -264,13 +268,15 @@ export default function Rechnungen() {
 
         if (invoiceError) throw invoiceError;
 
-        // Insert invoice items with discount
+        // Insert invoice items with discount and VAT
         const itemsWithInvoiceId = data.items.map(item => ({
           invoice_id: (invoiceData as any).id,
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unit_price,
           discount_percent: item.discount_percent || 0,
+          vat_rate: item.vat_rate,
+          vat_amount: item.vat_amount,
           total: calculateItemTotal(item),
         }));
 

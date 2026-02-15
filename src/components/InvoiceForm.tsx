@@ -7,7 +7,7 @@ import { shouldWarnOnEdit, getEditWarningMessage } from '../utils/invoiceUtils';
 import TimeEntryImportModal from './TimeEntryImportModal';
 
 type InvoiceFormData = {
-  invoice: Omit<Invoice, 'id' | 'created_at' | 'subtotal' | 'vat_amount' | 'total'>;
+  invoice: Omit<Invoice, 'id' | 'created_at' | 'subtotal' | 'vat_amount' | 'total' | 'total_discount_percent'>;
   items: Array<Omit<InvoiceItem, 'id' | 'invoice_id' | 'total'>>;
   timeEntryIds?: string[]; // IDs of time entries to link after save
 };
@@ -49,11 +49,29 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
   const [title, setTitle] = useState(existingInvoice?.title || '');
   const [introText, setIntroText] = useState(existingInvoice?.introduction_text || '');
   const [footerText, setFooterText] = useState(existingInvoice?.footer_text || '');
-  const [totalDiscountPercent, setTotalDiscountPercent] = useState(
-    existingInvoice?.total_discount_percent?.toString() || '0'
-  );
+
+  // Discount System (Task 3.2) - Migrate from legacy total_discount_percent
+  const initDiscountType = (): 'percent' | 'fixed' => {
+    if (existingInvoice?.discount_type) return existingInvoice.discount_type;
+    // Legacy migration: if old field has value, use 'percent'
+    if (existingInvoice?.total_discount_percent && existingInvoice.total_discount_percent > 0) return 'percent';
+    return 'percent';
+  };
+  const initDiscountValue = (): string => {
+    if (existingInvoice?.discount_value !== undefined && existingInvoice.discount_value > 0) {
+      return existingInvoice.discount_value.toString();
+    }
+    // Legacy migration: migrate old total_discount_percent to discount_value
+    if (existingInvoice?.total_discount_percent && existingInvoice.total_discount_percent > 0) {
+      return existingInvoice.total_discount_percent.toString();
+    }
+    return '0';
+  };
+
+  const [discountType, setDiscountType] = useState<'percent' | 'fixed'>(initDiscountType());
+  const [discountValue, setDiscountValue] = useState(initDiscountValue());
   const [showDiscounts, setShowDiscounts] = useState(
-    (existingInvoice?.total_discount_percent && existingInvoice.total_discount_percent > 0) ||
+    (parseFloat(initDiscountValue()) > 0) ||
     (existingItems && existingItems.some(item => item.discount_percent > 0)) ||
     false
   );
@@ -154,9 +172,20 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
     // Sum all line NETTOs = subtotal
     const itemsSubtotal = lineResults.reduce((sum, line) => sum + line.lineNetto, 0);
 
-    // Apply total discount to subtotal
-    const totalDiscountPct = parseFloat(totalDiscountPercent) || 0;
-    const totalDiscountAmount = itemsSubtotal * (totalDiscountPct / 100);
+    // Apply total discount to subtotal (NEW SYSTEM: percent or fixed)
+    const discountVal = parseFloat(discountValue) || 0;
+    let totalDiscountAmount = 0;
+
+    if (discountType === 'percent') {
+      // Percentage discount (0-100%)
+      totalDiscountAmount = itemsSubtotal * (discountVal / 100);
+    } else {
+      // Fixed discount (CHF amount)
+      totalDiscountAmount = discountVal;
+    }
+
+    // Ensure discount doesn't exceed subtotal
+    totalDiscountAmount = Math.min(totalDiscountAmount, itemsSubtotal);
     const subtotalAfterDiscount = itemsSubtotal - totalDiscountAmount;
 
     // Adjust VAT proportionally after total discount
@@ -287,7 +316,9 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
           title: title || null,
           introduction_text: introText || null,
           footer_text: footerText || null,
-          total_discount_percent: parseFloat(totalDiscountPercent) || 0,
+          // Discount system (Task 3.2)
+          discount_type: discountType,
+          discount_value: parseFloat(discountValue) || 0,
         },
         items: items
           .filter(item => item.description && item.unit_price)
@@ -699,21 +730,56 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
               <span className="font-medium">CHF {totals.subtotal.toFixed(2)}</span>
             </div>
 
-            {/* Total Discount (conditional) */}
+            {/* Total Discount (conditional) - NEW SYSTEM */}
             {showDiscounts && (
               <div className="flex justify-between text-sm items-center gap-4">
                 <span className="text-gray-600">Gesamtrabatt:</span>
                 <div className="flex items-center gap-2">
+                  {/* Toggle Button for Type */}
+                  <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setDiscountType('percent')}
+                      className={`px-2 py-1 text-xs font-medium transition ${
+                        discountType === 'percent'
+                          ? 'bg-brand text-white'
+                          : 'bg-white text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      %
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDiscountType('fixed')}
+                      className={`px-2 py-1 text-xs font-medium transition ${
+                        discountType === 'fixed'
+                          ? 'bg-brand text-white'
+                          : 'bg-white text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      CHF
+                    </button>
+                  </div>
+
+                  {/* Value Input */}
                   <input
                     type="number"
-                    value={totalDiscountPercent}
-                    onChange={(e) => setTotalDiscountPercent(e.target.value)}
-                    step="0.1"
+                    value={discountValue}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 0;
+                      // Validation: percent max 100, fixed max subtotal
+                      if (discountType === 'percent' && val > 100) return;
+                      if (discountType === 'fixed' && val > totals.subtotal) return;
+                      setDiscountValue(e.target.value);
+                    }}
+                    step={discountType === 'percent' ? '0.1' : '0.01'}
                     min="0"
-                    max="100"
-                    className="w-16 px-2 py-1 border border-gray-200 rounded text-sm text-right"
+                    max={discountType === 'percent' ? '100' : totals.subtotal.toFixed(2)}
+                    className="w-20 px-2 py-1 border border-gray-200 rounded text-sm text-right"
+                    placeholder="0"
                   />
-                  <span className="text-gray-500">%</span>
+
+                  {/* Discount Amount Display */}
                   {totals.discountAmount > 0 && (
                     <span className="font-medium text-green-600">
                       -CHF {totals.discountAmount.toFixed(2)}
