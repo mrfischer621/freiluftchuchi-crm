@@ -17,7 +17,6 @@ interface CompanyFormData {
   uid_number: string;
   bank_name: string;
   vat_number: string;
-  vat_registered: boolean;
   vat_enabled: boolean;
   default_vat_rate: string; // Store as string in form, convert to number on submit
   sender_contact_name: string; // Phase 3.3: Optional contact name for invoice sender
@@ -48,7 +47,6 @@ export default function Settings() {
     uid_number: '',
     bank_name: '',
     vat_number: '',
-    vat_registered: false,
     vat_enabled: false,
     default_vat_rate: '8.1',
     sender_contact_name: '',
@@ -104,7 +102,6 @@ export default function Settings() {
         uid_number: selectedCompany.uid_number || '',
         bank_name: selectedCompany.bank_name || '',
         vat_number: selectedCompany.vat_number || '',
-        vat_registered: selectedCompany.vat_registered || false,
         vat_enabled: selectedCompany.vat_enabled || false,
         default_vat_rate: selectedCompany.default_vat_rate?.toString() || '8.1',
         sender_contact_name: selectedCompany.sender_contact_name || '',
@@ -843,19 +840,6 @@ export default function Settings() {
                   placeholder="CHE-123.456.789 MWST"
                 />
               </div>
-            </div>
-
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="vat_registered"
-                checked={companyFormData.vat_registered}
-                onChange={(e) => handleCompanyFieldChange('vat_registered', e.target.checked)}
-                className="w-4 h-4 text-brand border-gray-300 rounded focus:ring-brand"
-              />
-              <label htmlFor="vat_registered" className="ml-2 text-sm text-gray-700">
-                MWST-pflichtig
-              </label>
             </div>
 
             {/* VAT Configuration */}

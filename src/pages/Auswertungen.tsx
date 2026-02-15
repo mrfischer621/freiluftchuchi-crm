@@ -20,7 +20,7 @@ import { supabase } from '../lib/supabase';
 import { useCompany } from '../context/CompanyContext';
 import type { Transaction, Category } from '../lib/supabase';
 
-// Type for Milchbüechli data
+// Type for financial bookkeeping data
 interface CategorySummary {
   categoryName: string;
   categoryColor: string;
@@ -29,7 +29,7 @@ interface CategorySummary {
   count: number;
 }
 
-interface MilchbuechliData {
+interface FinancialBookkeepingData {
   einnahmen: CategorySummary[];
   ausgaben: CategorySummary[];
   totalEinnahmen: number;
@@ -62,22 +62,22 @@ const COLORS = {
 
 const PIE_COLORS = ['#6b8a5e', '#8aa67c', '#aec2a3', '#547047', '#435839', '#ced9c7', '#38472f', '#2f3a28'];
 
-type ViewMode = 'charts' | 'milchbuechli';
+type ViewMode = 'charts' | 'bookkeeping';
 
 export default function Auswertungen() {
   const { selectedCompany } = useCompany();
 
   // View mode toggle
-  const [viewMode, setViewMode] = useState<ViewMode>('milchbuechli');
+  const [viewMode, setViewMode] = useState<ViewMode>('bookkeeping');
 
   // Default to last 90 days (Roadmap 1.2)
   const [selectedPreset, setSelectedPreset] = useState<string>('last_90_days');
   const [customRange, setCustomRange] = useState<DateRange | null>(null);
   const [showCustomPicker, setShowCustomPicker] = useState(false);
 
-  // Milchbüechli data state
-  const [milchbuechliData, setMilchbuechliData] = useState<MilchbuechliData | null>(null);
-  const [milchbuechliLoading, setMilchbuechliLoading] = useState(false);
+  // Financial bookkeeping data state
+  const [bookkeepingData, setBookkeepingData] = useState<FinancialBookkeepingData | null>(null);
+  const [bookkeepingLoading, setBookkeepingLoading] = useState(false);
   const [rawTransactions, setRawTransactions] = useState<TransactionWithCategory[]>([]);
 
   // Determine active date range - memoized to prevent infinite loop
@@ -88,12 +88,12 @@ export default function Auswertungen() {
   // Fetch analytics data
   const { loading, error, kpi, timeline, byCustomer, byCategory, byTags } = useAnalytics(dateRange);
 
-  // Fetch Milchbüechli data when dateRange changes
-  const fetchMilchbuechliData = useCallback(async () => {
+  // Fetch financial bookkeeping data when dateRange changes
+  const fetchBookkeepingData = useCallback(async () => {
     if (!selectedCompany || !dateRange) return;
 
     try {
-      setMilchbuechliLoading(true);
+      setBookkeepingLoading(true);
       const fromDate = dateRange.from.toISOString().split('T')[0];
       const toDate = dateRange.to.toISOString().split('T')[0];
 
@@ -201,7 +201,7 @@ export default function Auswertungen() {
       const totalEinnahmen = einnahmen.reduce((sum, e) => sum + e.total, 0);
       const totalAusgaben = ausgaben.reduce((sum, a) => sum + a.total, 0);
 
-      setMilchbuechliData({
+      setBookkeepingData({
         einnahmen,
         ausgaben,
         totalEinnahmen,
@@ -209,17 +209,17 @@ export default function Auswertungen() {
         gewinnVerlust: totalEinnahmen - totalAusgaben
       });
     } catch (err) {
-      console.error('Error fetching Milchbüechli data:', err);
+      console.error('Error fetching financial bookkeeping data:', err);
     } finally {
-      setMilchbuechliLoading(false);
+      setBookkeepingLoading(false);
     }
   }, [selectedCompany, dateRange]);
 
   useEffect(() => {
-    if (viewMode === 'milchbuechli') {
-      fetchMilchbuechliData();
+    if (viewMode === 'bookkeeping') {
+      fetchBookkeepingData();
     }
-  }, [viewMode, fetchMilchbuechliData]);
+  }, [viewMode, fetchBookkeepingData]);
 
   // CSV Export function
   const handleExportCSV = async () => {
@@ -334,15 +334,15 @@ export default function Auswertungen() {
           <div className="flex items-center gap-3">
             <div className="flex bg-sage-100 rounded-lg p-1">
               <button
-                onClick={() => setViewMode('milchbuechli')}
+                onClick={() => setViewMode('bookkeeping')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                  viewMode === 'milchbuechli'
+                  viewMode === 'bookkeeping'
                     ? 'bg-white text-content-heading shadow-sm'
                     : 'text-content-secondary hover:text-content-heading'
                 }`}
               >
                 <FileText className="w-4 h-4" />
-                Milchbüechli
+                Buchungen
               </button>
               <button
                 onClick={() => setViewMode('charts')}
@@ -357,7 +357,7 @@ export default function Auswertungen() {
               </button>
             </div>
 
-            {viewMode === 'milchbuechli' && (
+            {viewMode === 'bookkeeping' && (
               <button
                 onClick={handleExportCSV}
                 className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg font-medium hover:bg-brand-dark transition-colors"
@@ -486,31 +486,31 @@ export default function Auswertungen() {
         </div>
       )}
 
-      {/* Milchbüechli View */}
-      {viewMode === 'milchbuechli' && (
+      {/* Financial Bookkeeping View */}
+      {viewMode === 'bookkeeping' && (
         <>
-          {milchbuechliLoading ? (
+          {bookkeepingLoading ? (
             <div className="flex items-center justify-center h-64">
               <div className="text-xl text-content-secondary">Lädt Buchungen...</div>
             </div>
-          ) : milchbuechliData ? (
+          ) : bookkeepingData ? (
             <div className="space-y-6">
               {/* Summary KPI Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white rounded-lg shadow p-6">
                   <div className="text-sm font-medium text-content-secondary mb-2">Total Einnahmen</div>
-                  <div className="text-3xl font-bold text-success-dark">{formatCHF(milchbuechliData.totalEinnahmen)}</div>
-                  <div className="text-sm text-content-tertiary mt-1">{milchbuechliData.einnahmen.reduce((s, e) => s + e.count, 0)} Buchungen</div>
+                  <div className="text-3xl font-bold text-success-dark">{formatCHF(bookkeepingData.totalEinnahmen)}</div>
+                  <div className="text-sm text-content-tertiary mt-1">{bookkeepingData.einnahmen.reduce((s, e) => s + e.count, 0)} Buchungen</div>
                 </div>
                 <div className="bg-white rounded-lg shadow p-6">
                   <div className="text-sm font-medium text-content-secondary mb-2">Total Ausgaben</div>
-                  <div className="text-3xl font-bold text-danger-dark">{formatCHF(milchbuechliData.totalAusgaben)}</div>
-                  <div className="text-sm text-content-tertiary mt-1">{milchbuechliData.ausgaben.reduce((s, a) => s + a.count, 0)} Buchungen</div>
+                  <div className="text-3xl font-bold text-danger-dark">{formatCHF(bookkeepingData.totalAusgaben)}</div>
+                  <div className="text-sm text-content-tertiary mt-1">{bookkeepingData.ausgaben.reduce((s, a) => s + a.count, 0)} Buchungen</div>
                 </div>
                 <div className="bg-white rounded-lg shadow p-6 border-2 border-surface-border">
                   <div className="text-sm font-medium text-content-secondary mb-2">Gewinn / Verlust</div>
-                  <div className={`text-3xl font-bold ${milchbuechliData.gewinnVerlust >= 0 ? 'text-success-dark' : 'text-danger-dark'}`}>
-                    {formatCHF(milchbuechliData.gewinnVerlust)}
+                  <div className={`text-3xl font-bold ${bookkeepingData.gewinnVerlust >= 0 ? 'text-success-dark' : 'text-danger-dark'}`}>
+                    {formatCHF(bookkeepingData.gewinnVerlust)}
                   </div>
                 </div>
               </div>
@@ -526,12 +526,12 @@ export default function Auswertungen() {
                     </h2>
                   </div>
                   <div className="divide-y divide-gray-100">
-                    {milchbuechliData.einnahmen.length === 0 ? (
+                    {bookkeepingData.einnahmen.length === 0 ? (
                       <div className="px-6 py-8 text-center text-content-tertiary">
                         Keine Einnahmen im gewählten Zeitraum
                       </div>
                     ) : (
-                      milchbuechliData.einnahmen.map((cat) => (
+                      bookkeepingData.einnahmen.map((cat) => (
                         <div key={cat.categoryName} className="px-6 py-4 flex items-center justify-between hover:bg-sage-50">
                           <div className="flex items-center gap-3">
                             <div
@@ -558,10 +558,10 @@ export default function Auswertungen() {
                       ))
                     )}
                   </div>
-                  {milchbuechliData.einnahmen.length > 0 && (
+                  {bookkeepingData.einnahmen.length > 0 && (
                     <div className="bg-green-50 px-6 py-4 border-t border-green-100 flex justify-between items-center">
                       <span className="font-medium text-green-800">Total Einnahmen</span>
-                      <span className="font-bold text-green-700 text-lg">{formatCHF(milchbuechliData.totalEinnahmen)}</span>
+                      <span className="font-bold text-green-700 text-lg">{formatCHF(bookkeepingData.totalEinnahmen)}</span>
                     </div>
                   )}
                 </div>
@@ -575,12 +575,12 @@ export default function Auswertungen() {
                     </h2>
                   </div>
                   <div className="divide-y divide-gray-100">
-                    {milchbuechliData.ausgaben.length === 0 ? (
+                    {bookkeepingData.ausgaben.length === 0 ? (
                       <div className="px-6 py-8 text-center text-content-tertiary">
                         Keine Ausgaben im gewählten Zeitraum
                       </div>
                     ) : (
-                      milchbuechliData.ausgaben.map((cat) => (
+                      bookkeepingData.ausgaben.map((cat) => (
                         <div key={cat.categoryName} className="px-6 py-4 flex items-center justify-between hover:bg-sage-50">
                           <div className="flex items-center gap-3">
                             <div
@@ -607,28 +607,28 @@ export default function Auswertungen() {
                       ))
                     )}
                   </div>
-                  {milchbuechliData.ausgaben.length > 0 && (
+                  {bookkeepingData.ausgaben.length > 0 && (
                     <div className="bg-red-50 px-6 py-4 border-t border-red-100 flex justify-between items-center">
                       <span className="font-medium text-red-800">Total Ausgaben</span>
-                      <span className="font-bold text-red-700 text-lg">{formatCHF(milchbuechliData.totalAusgaben)}</span>
+                      <span className="font-bold text-red-700 text-lg">{formatCHF(bookkeepingData.totalAusgaben)}</span>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Result Banner */}
-              <div className={`rounded-lg shadow p-6 ${milchbuechliData.gewinnVerlust >= 0 ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+              <div className={`rounded-lg shadow p-6 ${bookkeepingData.gewinnVerlust >= 0 ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className={`text-lg font-semibold ${milchbuechliData.gewinnVerlust >= 0 ? 'text-green-800' : 'text-red-800'}`}>
-                      {milchbuechliData.gewinnVerlust >= 0 ? 'Gewinn' : 'Verlust'}
+                    <h3 className={`text-lg font-semibold ${bookkeepingData.gewinnVerlust >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+                      {bookkeepingData.gewinnVerlust >= 0 ? 'Gewinn' : 'Verlust'}
                     </h3>
                     <p className="text-sm text-content-secondary mt-1">
-                      Einnahmen ({formatCHF(milchbuechliData.totalEinnahmen)}) - Ausgaben ({formatCHF(milchbuechliData.totalAusgaben)})
+                      Einnahmen ({formatCHF(bookkeepingData.totalEinnahmen)}) - Ausgaben ({formatCHF(bookkeepingData.totalAusgaben)})
                     </p>
                   </div>
-                  <div className={`text-4xl font-bold ${milchbuechliData.gewinnVerlust >= 0 ? 'text-success-dark' : 'text-danger-dark'}`}>
-                    {formatCHF(Math.abs(milchbuechliData.gewinnVerlust))}
+                  <div className={`text-4xl font-bold ${bookkeepingData.gewinnVerlust >= 0 ? 'text-success-dark' : 'text-danger-dark'}`}>
+                    {formatCHF(Math.abs(bookkeepingData.gewinnVerlust))}
                   </div>
                 </div>
               </div>
