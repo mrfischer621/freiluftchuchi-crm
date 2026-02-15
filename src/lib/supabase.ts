@@ -97,6 +97,7 @@ export interface Project {
   description: string | null;
   status: 'offen' | 'laufend' | 'abgeschlossen';
   budget: number | null;
+  hourly_rate: number | null; // Project-specific rate override (Phase 4.3)
   is_active: boolean;
   created_at: string;
 }
@@ -108,6 +109,7 @@ export interface TimeEntry {
   date: string;
   hours: number;
   rate: number;
+  snapshot_source: 'project' | 'customer' | 'default' | 'manual'; // Rate source (Phase 4.3)
   description: string | null;
   /** @deprecated Use invoice_id !== null instead */
   invoiced: boolean;

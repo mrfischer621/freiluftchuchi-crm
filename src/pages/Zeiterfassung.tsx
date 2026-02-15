@@ -45,7 +45,8 @@ export default function Zeiterfassung() {
     projectId: '',
     date: new Date().toISOString().split('T')[0],
     hours: '',
-    rate: '140',
+    rate: '160',
+    rateSource: 'default' as 'project' | 'customer' | 'default' | 'manual',
     description: '',
     billable: true,
   });
@@ -72,6 +73,35 @@ export default function Zeiterfassung() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Auto-populate rate for Quick-Add when project changes (Rate Hierarchy - Phase 4.3)
+  useEffect(() => {
+    if (!quickAddData.projectId) return;
+
+    const resolveRate = async () => {
+      const { data, error } = await supabase.rpc('resolve_hourly_rate', {
+        p_project_id: quickAddData.projectId,
+        p_default_rate: 160.00
+      });
+
+      if (error) {
+        console.error('Error resolving rate for quick-add:', error);
+        setQuickAddData(prev => ({ ...prev, rate: '160', rateSource: 'default' }));
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const { rate: resolvedRate, source } = data[0];
+        setQuickAddData(prev => ({
+          ...prev,
+          rate: resolvedRate.toString(),
+          rateSource: source as 'project' | 'customer' | 'default'
+        }));
+      }
+    };
+
+    resolveRate();
+  }, [quickAddData.projectId]);
 
   // Early return if no company selected
   if (!selectedCompany) {
@@ -200,6 +230,7 @@ export default function Zeiterfassung() {
           date: quickAddData.date,
           hours: parseFloat(quickAddData.hours),
           rate: parseFloat(quickAddData.rate),
+          snapshot_source: quickAddData.rateSource, // Rate source (Phase 4.3)
           description: quickAddData.description || null,
           invoiced: false,
           billable: quickAddData.billable,
@@ -208,12 +239,13 @@ export default function Zeiterfassung() {
 
       if (error) throw error;
 
-      // Reset form but keep project and rate
+      // Reset form but keep project and rate (for batch entry)
       setQuickAddData(prev => ({
         ...prev,
         date: new Date().toISOString().split('T')[0],
         hours: '',
         description: '',
+        // Keep rate and rateSource for next entry
       }));
 
       await fetchData();
@@ -495,13 +527,24 @@ export default function Zeiterfassung() {
               />
             </div>
             <div className="w-24">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Satz CHF</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Satz CHF
+                {quickAddData.rateSource === 'project' && (
+                  <span className="ml-1 text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">P</span>
+                )}
+                {quickAddData.rateSource === 'customer' && (
+                  <span className="ml-1 text-xs bg-green-100 text-green-800 px-1.5 py-0.5 rounded">K</span>
+                )}
+                {quickAddData.rateSource === 'default' && (
+                  <span className="ml-1 text-xs bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">S</span>
+                )}
+              </label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 value={quickAddData.rate}
-                onChange={(e) => setQuickAddData(prev => ({ ...prev, rate: e.target.value }))}
+                onChange={(e) => setQuickAddData(prev => ({ ...prev, rate: e.target.value, rateSource: 'manual' }))}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
                 required
               />

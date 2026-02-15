@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { TimeEntry, Project } from '../lib/supabase';
 import { useCompany } from '../context/CompanyContext';
+import { supabase } from '../lib/supabase';
 
 type TimeEntryFormProps = {
   onSubmit: (entry: Omit<TimeEntry, 'id' | 'created_at'>) => Promise<void>;
@@ -14,7 +15,8 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
   const [projectId, setProjectId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [hours, setHours] = useState('');
-  const [rate, setRate] = useState('140');
+  const [rate, setRate] = useState('160');
+  const [rateSource, setRateSource] = useState<'project' | 'customer' | 'default' | 'manual'>('default');
   const [description, setDescription] = useState('');
   const [billable, setBillable] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,6 +27,7 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
       setDate(editingEntry.date);
       setHours(editingEntry.hours.toString());
       setRate(editingEntry.rate.toString());
+      setRateSource(editingEntry.snapshot_source);
       setDescription(editingEntry.description || '');
       setBillable(editingEntry.billable ?? true);
     } else {
@@ -32,11 +35,39 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
     }
   }, [editingEntry]);
 
+  // Auto-populate rate when project changes (Rate Hierarchy - Phase 4.3)
+  useEffect(() => {
+    if (!projectId || editingEntry) return; // Skip if editing (preserve existing rate)
+
+    const resolveRate = async () => {
+      const { data, error } = await supabase.rpc('resolve_hourly_rate', {
+        p_project_id: projectId,
+        p_default_rate: 160.00
+      });
+
+      if (error) {
+        console.error('Error resolving rate:', error);
+        setRate('160');
+        setRateSource('default');
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const { rate: resolvedRate, source } = data[0];
+        setRate(resolvedRate.toString());
+        setRateSource(source as 'project' | 'customer' | 'default');
+      }
+    };
+
+    resolveRate();
+  }, [projectId, editingEntry]);
+
   const resetForm = () => {
     setProjectId('');
     setDate(new Date().toISOString().split('T')[0]);
     setHours('');
-    setRate('140');
+    setRate('160');
+    setRateSource('default');
     setDescription('');
     setBillable(true);
   };
@@ -58,6 +89,7 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
         date,
         hours: parseFloat(hours),
         rate: parseFloat(rate),
+        snapshot_source: rateSource,
         description: description || null,
         invoiced: false,
         billable,
@@ -141,17 +173,35 @@ export default function TimeEntryForm({ onSubmit, editingEntry, onCancelEdit, pr
           <div>
             <label htmlFor="rate" className="block text-sm font-medium text-gray-700 mb-1">
               Stundensatz (CHF) <span className="text-red-500">*</span>
+              {rateSource === 'project' && (
+                <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                  Projekt
+                </span>
+              )}
+              {rateSource === 'customer' && (
+                <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">
+                  Kunde
+                </span>
+              )}
+              {rateSource === 'default' && (
+                <span className="ml-2 text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded">
+                  Standard
+                </span>
+              )}
             </label>
             <input
               type="number"
               id="rate"
               value={rate}
-              onChange={(e) => setRate(e.target.value)}
+              onChange={(e) => {
+                setRate(e.target.value);
+                setRateSource('manual'); // Manual override
+              }}
               required
               step="0.01"
               min="0"
               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
-              placeholder="140.00"
+              placeholder="160.00"
             />
           </div>
 

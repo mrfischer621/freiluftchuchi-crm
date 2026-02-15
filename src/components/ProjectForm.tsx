@@ -22,6 +22,7 @@ export default function ProjectForm({ onSubmit, editingProject, onCancelEdit, cu
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<Project['status']>('offen');
   const [budget, setBudget] = useState('');
+  const [hourlyRate, setHourlyRate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -31,6 +32,7 @@ export default function ProjectForm({ onSubmit, editingProject, onCancelEdit, cu
       setDescription(editingProject.description || '');
       setStatus(editingProject.status);
       setBudget(editingProject.budget?.toString() || '');
+      setHourlyRate(editingProject.hourly_rate?.toString() || '');
     } else {
       resetForm();
     }
@@ -42,6 +44,7 @@ export default function ProjectForm({ onSubmit, editingProject, onCancelEdit, cu
     setDescription('');
     setStatus('offen');
     setBudget('');
+    setHourlyRate('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,6 +59,7 @@ export default function ProjectForm({ onSubmit, editingProject, onCancelEdit, cu
         description: description || null,
         status,
         budget: budget ? parseFloat(budget) : null,
+        hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
         is_active: editingProject?.is_active ?? true,
       });
       resetForm();
@@ -128,7 +132,7 @@ export default function ProjectForm({ onSubmit, editingProject, onCancelEdit, cu
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
               Status
@@ -161,6 +165,25 @@ export default function ProjectForm({ onSubmit, editingProject, onCancelEdit, cu
               className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
               placeholder="0.00"
             />
+          </div>
+
+          <div>
+            <label htmlFor="hourlyRate" className="block text-sm font-medium text-gray-700 mb-1">
+              Stundensatz (CHF)
+            </label>
+            <input
+              type="number"
+              id="hourlyRate"
+              value={hourlyRate}
+              onChange={(e) => setHourlyRate(e.target.value)}
+              step="0.01"
+              min="0"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
+              placeholder="Kunde/Standard"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Optional. Falls leer: Kunde → Standard (160 CHF)
+            </p>
           </div>
         </div>
 
