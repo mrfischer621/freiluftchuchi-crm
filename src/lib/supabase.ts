@@ -23,6 +23,8 @@ export interface UserCompany {
 export interface Company {
   id: string;
   name: string;
+  alternativ_name: string | null; // Alternative company name / "Doing Business As"
+  rechnungsname: string | null; // Display name for invoices and quotes
   logo_url: string | null;
   street: string | null;
   house_number: string | null;
@@ -38,6 +40,7 @@ export interface Company {
   vat_enabled: boolean; // VAT calculation enabled for invoices
   default_vat_rate: number; // Default VAT rate (e.g., 8.1 for Swiss standard rate)
   sender_contact_name: string | null; // Optional contact/owner name for invoice sender (Phase 3.3)
+  product_categories: string[]; // Array of product category names (Phase 3.2)
   created_at: string;
   // Text templates for invoices and quotes
   invoice_intro_text: string | null;

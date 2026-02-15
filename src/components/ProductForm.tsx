@@ -121,18 +121,28 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
           {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
         </div>
 
-        {/* Category */}
+        {/* Category - Dropdown (Phase 3.2) */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Kategorie
           </label>
-          <input
-            type="text"
+          <select
             value={formData.category}
             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
-            placeholder="z.B. Dienstleistung, Material"
-          />
+          >
+            <option value="">Keine Kategorie</option>
+            {selectedCompany?.product_categories?.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+          {(!selectedCompany?.product_categories || selectedCompany.product_categories.length === 0) && (
+            <p className="text-xs text-gray-500 mt-1">
+              Keine Kategorien verfügbar. Definieren Sie Kategorien in den Einstellungen.
+            </p>
+          )}
         </div>
 
         {/* Price */}

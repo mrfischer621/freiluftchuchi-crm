@@ -454,6 +454,7 @@ export default function Auswertungen() {
                   type="date"
                   value={customRange.from.toISOString().split('T')[0]}
                   onChange={(e) => {
+                    e.preventDefault();
                     if (e.target.value) {
                       applyCustomRange(e.target.value, customRange.to.toISOString().split('T')[0]);
                     }
@@ -467,6 +468,7 @@ export default function Auswertungen() {
                   type="date"
                   value={customRange.to.toISOString().split('T')[0]}
                   onChange={(e) => {
+                    e.preventDefault();
                     if (e.target.value) {
                       applyCustomRange(customRange.from.toISOString().split('T')[0], e.target.value);
                     }

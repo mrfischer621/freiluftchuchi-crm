@@ -3,10 +3,12 @@ import { supabase } from '../lib/supabase';
 import type { PipelineStage, Category, CategoryType } from '../lib/supabase';
 import { useCompany } from '../context/CompanyContext';
 import { useAuth } from '../context/AuthProvider';
-import { Building2, Save, AlertCircle, CheckCircle, TrendingUp, Edit2, Check, X, Trash2, Plus, User, FileText, Tags, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import { Building2, Save, AlertCircle, CheckCircle, TrendingUp, Edit2, Check, X, Trash2, Plus, User, FileText, Tags, ArrowDownCircle, ArrowUpCircle, Package } from 'lucide-react';
 
 interface CompanyFormData {
   name: string;
+  alternativ_name: string; // Alternative company name / "Doing Business As"
+  rechnungsname: string; // Display name for invoices and quotes
   street: string;
   house_number: string;
   zip_code: string;
@@ -27,7 +29,7 @@ interface Toast {
   message: string;
 }
 
-type TabType = 'company' | 'profile' | 'templates' | 'pipeline' | 'categories';
+type TabType = 'company' | 'profile' | 'templates' | 'pipeline' | 'categories' | 'product_categories';
 
 export default function Settings() {
   const { selectedCompany, refreshCompanies } = useCompany();
@@ -37,6 +39,8 @@ export default function Settings() {
   // Company settings state
   const [companyFormData, setCompanyFormData] = useState<CompanyFormData>({
     name: '',
+    alternativ_name: '',
+    rechnungsname: '',
     street: '',
     house_number: '',
     zip_code: '',
@@ -87,11 +91,19 @@ export default function Settings() {
   const [editCategoryTaxRelevant, setEditCategoryTaxRelevant] = useState(true);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
+  // Product Categories state (Phase 3.2)
+  const [productCategories, setProductCategories] = useState<string[]>([]);
+  const [newProductCategory, setNewProductCategory] = useState('');
+  const [editingProductCategoryIndex, setEditingProductCategoryIndex] = useState<number | null>(null);
+  const [editProductCategoryValue, setEditProductCategoryValue] = useState('');
+
   // Load company data
   useEffect(() => {
     if (selectedCompany) {
       setCompanyFormData({
         name: selectedCompany.name || '',
+        alternativ_name: selectedCompany.alternativ_name || '',
+        rechnungsname: selectedCompany.rechnungsname || '',
         street: selectedCompany.street || '',
         house_number: selectedCompany.house_number || '',
         zip_code: selectedCompany.zip_code || '',
@@ -111,6 +123,8 @@ export default function Settings() {
       setInvoiceFooter(selectedCompany.invoice_footer_text || '');
       setQuoteIntro(selectedCompany.quote_intro_text || '');
       setQuoteFooter(selectedCompany.quote_footer_text || '');
+      // Load product categories (Phase 3.2)
+      setProductCategories(selectedCompany.product_categories || []);
     }
   }, [selectedCompany]);
 
@@ -561,11 +575,133 @@ export default function Settings() {
     }
   };
 
+  // Product Categories handlers (Phase 3.2)
+  const handleAddProductCategory = async () => {
+    if (!newProductCategory.trim() || !selectedCompany) return;
+
+    const trimmed = newProductCategory.trim();
+    if (productCategories.includes(trimmed)) {
+      showToast('error', 'Diese Kategorie existiert bereits.');
+      return;
+    }
+
+    try {
+      const updatedCategories = [...productCategories, trimmed];
+      console.log('[ProductCategories] Adding category:', trimmed);
+      console.log('[ProductCategories] Current categories:', productCategories);
+      console.log('[ProductCategories] Updated categories:', updatedCategories);
+      console.log('[ProductCategories] Company ID:', selectedCompany.id);
+
+      const { data, error } = await supabase
+        .from('companies')
+        .update({ product_categories: updatedCategories })
+        .eq('id', selectedCompany.id)
+        .select();
+
+      console.log('[ProductCategories] Update response:', { data, error });
+
+      if (error) throw error;
+
+      setProductCategories(updatedCategories);
+      setNewProductCategory('');
+
+      // Refresh company data to reflect changes
+      await refreshCompanies();
+
+      showToast('success', 'Produktkategorie hinzugefügt.');
+    } catch (err) {
+      console.error('[ProductCategories] Error adding category:', err);
+      showToast('error', 'Fehler beim Hinzufügen der Produktkategorie.');
+    }
+  };
+
+  const handleUpdateProductCategory = async (index: number) => {
+    if (!editProductCategoryValue.trim()) return;
+
+    const trimmed = editProductCategoryValue.trim();
+    if (productCategories.includes(trimmed) && productCategories[index] !== trimmed) {
+      showToast('error', 'Diese Kategorie existiert bereits.');
+      return;
+    }
+
+    try {
+      const updatedCategories = [...productCategories];
+      updatedCategories[index] = trimmed;
+
+      console.log('[ProductCategories] Updating category at index', index);
+      console.log('[ProductCategories] Updated categories:', updatedCategories);
+
+      const { data, error } = await supabase
+        .from('companies')
+        .update({ product_categories: updatedCategories })
+        .eq('id', selectedCompany!.id)
+        .select();
+
+      console.log('[ProductCategories] Update response:', { data, error });
+
+      if (error) throw error;
+
+      setProductCategories(updatedCategories);
+      setEditingProductCategoryIndex(null);
+      setEditProductCategoryValue('');
+
+      // Refresh company data to reflect changes
+      await refreshCompanies();
+
+      showToast('success', 'Produktkategorie aktualisiert.');
+    } catch (err) {
+      console.error('[ProductCategories] Error updating category:', err);
+      showToast('error', 'Fehler beim Aktualisieren der Produktkategorie.');
+    }
+  };
+
+  const handleDeleteProductCategory = async (index: number) => {
+    if (!confirm('Möchten Sie diese Produktkategorie wirklich löschen?')) return;
+
+    try {
+      const updatedCategories = productCategories.filter((_, i) => i !== index);
+
+      console.log('[ProductCategories] Deleting category at index', index);
+      console.log('[ProductCategories] Updated categories after delete:', updatedCategories);
+
+      const { data, error } = await supabase
+        .from('companies')
+        .update({ product_categories: updatedCategories })
+        .eq('id', selectedCompany!.id)
+        .select();
+
+      console.log('[ProductCategories] Delete response:', { data, error });
+
+      if (error) throw error;
+
+      setProductCategories(updatedCategories);
+
+      // Refresh company data to reflect changes
+      await refreshCompanies();
+
+      showToast('success', 'Produktkategorie gelöscht.');
+    } catch (err) {
+      console.error('[ProductCategories] Error deleting category:', err);
+      showToast('error', 'Fehler beim Löschen der Produktkategorie.');
+    }
+  };
+
+  const startEditProductCategory = (index: number) => {
+    setEditingProductCategoryIndex(index);
+    setEditProductCategoryValue(productCategories[index]);
+  };
+
+  const cancelEditProductCategory = () => {
+    setEditingProductCategoryIndex(null);
+    setEditProductCategoryValue('');
+  };
+
   const tabs = [
     { id: 'company' as TabType, label: 'Firmenprofil', icon: Building2 },
     { id: 'profile' as TabType, label: 'Benutzerprofil', icon: User },
     { id: 'templates' as TabType, label: 'Textvorlagen', icon: FileText },
     { id: 'categories' as TabType, label: 'Buchungskategorien', icon: Tags },
+    { id: 'product_categories' as TabType, label: 'Produktkategorien', icon: Package },
     { id: 'pipeline' as TabType, label: 'Sales Pipeline', icon: TrendingUp },
   ];
 
@@ -649,6 +785,42 @@ export default function Settings() {
                 placeholder="z.B. Muster AG"
               />
               {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name}</p>}
+            </div>
+
+            {/* Alternative Company Name */}
+            <div>
+              <label htmlFor="alternativ_name" className="block text-sm font-medium text-gray-700 mb-1">
+                Alternativer Firmenname <span className="text-xs font-normal text-gray-500">(optional)</span>
+              </label>
+              <input
+                type="text"
+                id="alternativ_name"
+                value={companyFormData.alternativ_name}
+                onChange={(e) => handleCompanyFieldChange('alternativ_name', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
+                placeholder="z.B. Handelsname oder Doing Business As"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Alternative Firmenbezeichnung (z.B. Geschäftsname unter dem Sie auftreten)
+              </p>
+            </div>
+
+            {/* Invoice Display Name */}
+            <div>
+              <label htmlFor="rechnungsname" className="block text-sm font-medium text-gray-700 mb-1">
+                Rechnungsname <span className="text-xs font-normal text-gray-500">(optional)</span>
+              </label>
+              <input
+                type="text"
+                id="rechnungsname"
+                value={companyFormData.rechnungsname}
+                onChange={(e) => handleCompanyFieldChange('rechnungsname', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
+                placeholder="z.B. spezieller Name für Rechnungen"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Name, der auf Rechnungen und Offerten erscheint (falls abweichend vom offiziellen Firmennamen)
+              </p>
             </div>
 
             {/* Sender Contact Name (Phase 3.3) */}
@@ -1092,6 +1264,121 @@ export default function Settings() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Tab Content: Product Categories (Phase 3.2) */}
+      {activeTab === 'product_categories' && (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Produktkategorien verwalten</h2>
+            <p className="text-sm text-gray-600">
+              Definieren Sie Kategorien für Produkte und Dienstleistungen. Diese erscheinen als Dropdown bei der Produkterfassung.
+            </p>
+          </div>
+
+          {/* Add New Product Category */}
+          <div className="flex gap-2 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <input
+              type="text"
+              value={newProductCategory}
+              onChange={(e) => setNewProductCategory(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddProductCategory();
+                }
+              }}
+              placeholder="Neue Produktkategorie..."
+              className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition bg-white"
+            />
+            <button
+              onClick={handleAddProductCategory}
+              disabled={!newProductCategory.trim()}
+              className="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Plus size={18} />
+              Hinzufügen
+            </button>
+          </div>
+
+          {/* Product Categories List */}
+          {productCategories.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Package size={48} className="mx-auto mb-4 opacity-50" />
+              <p>Keine Produktkategorien vorhanden.</p>
+              <p className="text-sm">Fügen Sie oben Ihre erste Kategorie hinzu.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {productCategories.map((category, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                >
+                  {editingProductCategoryIndex === index ? (
+                    <>
+                      <input
+                        type="text"
+                        value={editProductCategoryValue}
+                        onChange={(e) => setEditProductCategoryValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleUpdateProductCategory(index);
+                          } else if (e.key === 'Escape') {
+                            cancelEditProductCategory();
+                          }
+                        }}
+                        className="flex-1 px-3 py-1 border border-gray-300 rounded focus:border-brand focus:ring-1 focus:ring-brand/20 outline-none"
+                        autoFocus
+                      />
+                      <div className="flex items-center gap-1 ml-2">
+                        <button
+                          onClick={() => handleUpdateProductCategory(index)}
+                          className="p-2 hover:bg-green-100 rounded transition"
+                          title="Speichern"
+                        >
+                          <Check size={18} className="text-green-600" />
+                        </button>
+                        <button
+                          onClick={cancelEditProductCategory}
+                          className="p-2 hover:bg-red-100 rounded transition"
+                          title="Abbrechen"
+                        >
+                          <X size={18} className="text-red-600" />
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-medium text-gray-900">{category}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => startEditProductCategory(index)}
+                          className="p-2 hover:bg-gray-200 rounded transition"
+                          title="Bearbeiten"
+                        >
+                          <Edit2 size={18} className="text-gray-600" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProductCategory(index)}
+                          className="p-2 hover:bg-red-100 rounded transition"
+                          title="Löschen"
+                        >
+                          <Trash2 size={18} className="text-red-600" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="text-xs text-gray-500 mt-4">
+            Hinweis: Produktkategorien dienen zur Gruppierung im Produktkatalog und erscheinen als Dropdown bei der Produkterfassung.
+          </p>
         </div>
       )}
 
