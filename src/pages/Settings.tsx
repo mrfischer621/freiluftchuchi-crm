@@ -123,8 +123,8 @@ export default function Settings() {
       setInvoiceFooter(selectedCompany.invoice_footer_text || '');
       setQuoteIntro(selectedCompany.quote_intro_text || '');
       setQuoteFooter(selectedCompany.quote_footer_text || '');
-      // Load product categories (Phase 3.2)
-      setProductCategories(selectedCompany.product_categories || []);
+      // Load product categories (Phase 3.2) - with safety check
+      setProductCategories(selectedCompany?.product_categories || []);
     }
   }, [selectedCompany]);
 

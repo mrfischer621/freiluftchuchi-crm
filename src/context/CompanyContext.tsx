@@ -29,29 +29,39 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       setError(null);
 
+      console.log('[CompanyContext] Fetching user companies...');
+
       // Call get_user_companies RPC function
       // This now returns full company data, bypassing RLS restrictions
       const { data, error: rpcError } = await supabase.rpc('get_user_companies');
 
+      console.log('[CompanyContext] RPC Response:', { data, error: rpcError });
+
       if (rpcError) {
-        console.error('Error fetching user companies:', rpcError);
-        setError('Fehler beim Laden der Firmen');
+        console.error('[CompanyContext] RPC ERROR:', rpcError);
+        setError('Fehler beim Laden der Firmen: ' + rpcError.message);
         setCompanies([]);
         return;
       }
 
       if (!data || data.length === 0) {
-        console.warn('No companies found for user');
+        console.warn('[CompanyContext] No companies found - data:', data);
         setCompanies([]);
         setError('Keine Firmen gefunden. Bitte kontaktieren Sie Ihren Administrator.');
         return;
       }
 
+      console.log('[CompanyContext] Found', data.length, 'companies');
+
       // Transform RPC data to Company objects
       // The RPC now returns full company data, so no separate SELECT needed!
+      console.log('[CompanyContext] Mapping company data. First row:', data[0]);
+
       const companiesData: Company[] = data.map((row: any) => ({
         id: row.company_id,
         name: row.company_name,
+        alternativ_name: row.alternativ_name || null,
+        rechnungsname: row.rechnungsname || null,
         logo_url: row.logo_url,
         street: row.street,
         house_number: row.house_number,
@@ -59,22 +69,36 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         city: row.city,
         iban: row.iban,
         qr_iban: row.qr_iban,
+        qr_creditor_name: row.qr_creditor_name || null,
         bank_name: row.bank_name,
         uid_number: row.uid_number,
         vat_number: row.vat_number,
-        vat_registered: row.vat_registered,
+        vat_registered: row.vat_registered || false,
+        vat_enabled: row.vat_enabled || false,
+        default_vat_rate: row.default_vat_rate || 8.1,
+        sender_contact_name: row.sender_contact_name || null,
+        product_categories: row.product_categories || [],
         created_at: row.created_at,
-        // Text templates (Phase 3.6)
+        // Text templates
         invoice_intro_text: row.invoice_intro_text,
         invoice_footer_text: row.invoice_footer_text,
         quote_intro_text: row.quote_intro_text,
         quote_footer_text: row.quote_footer_text,
       }));
 
+      console.log('[CompanyContext] Mapped companies:', companiesData);
+
       setCompanies(companiesData);
 
+      // Create data array with is_active flag for selectInitialCompany
+      // Note: is_active is calculated client-side based on last_active_company_id
+      const dataWithActiveFlag = data.map((row: any) => ({
+        company_id: row.company_id,
+        is_active: profile?.last_active_company_id === row.company_id,
+      }));
+
       // Determine which company should be selected
-      await selectInitialCompany(companiesData, data);
+      await selectInitialCompany(companiesData, dataWithActiveFlag);
     } catch (err) {
       console.error('Unexpected error fetching companies:', err);
       setError('Unerwarteter Fehler beim Laden der Firmen');
