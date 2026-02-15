@@ -232,6 +232,7 @@ export interface Product {
   price: number;
   unit: string;
   description: string | null;
+  category: string | null; // Product category for grouping (Task 4.2)
   vat_rate: number | null; // Product-specific VAT rate (null = use company default)
   is_active: boolean;
   created_at: string;

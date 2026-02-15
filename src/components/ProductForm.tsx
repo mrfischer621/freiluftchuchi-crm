@@ -12,6 +12,7 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
   const { selectedCompany } = useCompany();
   const [formData, setFormData] = useState({
     name: '',
+    category: '',
     price: '',
     unit: 'Stück',
     description: '',
@@ -25,6 +26,7 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
     if (editingProduct) {
       setFormData({
         name: editingProduct.name,
+        category: editingProduct.category || '',
         price: editingProduct.price.toString(),
         unit: editingProduct.unit,
         description: editingProduct.description || '',
@@ -66,6 +68,7 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
       await onSubmit({
         company_id: selectedCompany!.id,
         name: formData.name.trim(),
+        category: formData.category.trim() || null,
         price: parseFloat(formData.price),
         unit: formData.unit.trim(),
         description: formData.description.trim() || null,
@@ -77,6 +80,7 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
       if (!editingProduct) {
         setFormData({
           name: '',
+          category: '',
           price: '',
           unit: 'Stück',
           description: '',
@@ -115,6 +119,20 @@ export default function ProductForm({ onSubmit, editingProduct, onCancel }: Prod
             placeholder="Produktname"
           />
           {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+        </div>
+
+        {/* Category */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Kategorie
+          </label>
+          <input
+            type="text"
+            value={formData.category}
+            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand focus:border-transparent"
+            placeholder="z.B. Dienstleistung, Material"
+          />
         </div>
 
         {/* Price */}

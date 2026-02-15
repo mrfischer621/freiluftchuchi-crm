@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Pencil, Archive, RotateCcw, Users, Trash2 } from 'lucide-react';
 import type { Customer } from '../lib/supabase';
 import type { CustomerWithStats } from '../pages/Kunden';
+import { getCustomerDisplayName } from '../utils/customerUtils';
 
 type CustomerTableProps = {
   customers: CustomerWithStats[];
@@ -82,7 +83,7 @@ export default function CustomerTable({ customers, onEdit, onRowClick, onArchive
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-600">{customer.contact_person || '-'}</div>
+                    <div className="text-sm text-gray-600">{getCustomerDisplayName(customer)}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-600">{customer.email || '-'}</div>

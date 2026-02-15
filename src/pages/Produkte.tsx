@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Product } from '../lib/supabase';
@@ -6,7 +6,7 @@ import ProductForm from '../components/ProductForm';
 import ProductTable from '../components/ProductTable';
 import Modal from '../components/Modal';
 import { useCompany } from '../context/CompanyContext';
-import { Plus } from 'lucide-react';
+import { Plus, Layers } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 type FilterType = 'alle' | 'aktiv' | 'archiviert';
@@ -20,6 +20,7 @@ export default function Produkte() {
   const [editingProduct, setEditingProduct] = useState<Product | undefined>();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filter, setFilter] = useState<FilterType>('aktiv');
+  const [groupByCategory, setGroupByCategory] = useState(false);
 
   useEffect(() => {
     if (selectedCompany) {
@@ -159,6 +160,30 @@ export default function Produkte() {
     setEditingProduct(undefined);
   };
 
+  // Group products by category
+  const groupedProducts = useMemo(() => {
+    if (!groupByCategory) return null;
+
+    const groups = new Map<string, Product[]>();
+
+    products.forEach(product => {
+      const category = product.category || 'Ohne Kategorie';
+      if (!groups.has(category)) {
+        groups.set(category, []);
+      }
+      groups.get(category)!.push(product);
+    });
+
+    // Sort categories alphabetically, but "Ohne Kategorie" always last
+    const sortedEntries = Array.from(groups.entries()).sort(([a], [b]) => {
+      if (a === 'Ohne Kategorie') return 1;
+      if (b === 'Ohne Kategorie') return -1;
+      return a.localeCompare(b);
+    });
+
+    return new Map(sortedEntries);
+  }, [products, groupByCategory]);
+
   if (!selectedCompany) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -184,37 +209,52 @@ export default function Produkte() {
         </button>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2">
+      {/* Filter Tabs & Group Toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setFilter('alle')}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              filter === 'alle'
+                ? 'bg-brand text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+            }`}
+          >
+            Alle
+          </button>
+          <button
+            onClick={() => setFilter('aktiv')}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              filter === 'aktiv'
+                ? 'bg-brand text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+            }`}
+          >
+            Aktiv
+          </button>
+          <button
+            onClick={() => setFilter('archiviert')}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              filter === 'archiviert'
+                ? 'bg-brand text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+            }`}
+          >
+            Archiviert
+          </button>
+        </div>
+
+        {/* Group by Category Toggle */}
         <button
-          onClick={() => setFilter('alle')}
-          className={`px-4 py-2 rounded-lg font-medium transition ${
-            filter === 'alle'
+          onClick={() => setGroupByCategory(!groupByCategory)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
+            groupByCategory
               ? 'bg-brand text-white'
               : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
           }`}
         >
-          Alle
-        </button>
-        <button
-          onClick={() => setFilter('aktiv')}
-          className={`px-4 py-2 rounded-lg font-medium transition ${
-            filter === 'aktiv'
-              ? 'bg-brand text-white'
-              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-          }`}
-        >
-          Aktiv
-        </button>
-        <button
-          onClick={() => setFilter('archiviert')}
-          className={`px-4 py-2 rounded-lg font-medium transition ${
-            filter === 'archiviert'
-              ? 'bg-brand text-white'
-              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-          }`}
-        >
-          Archiviert
+          <Layers size={18} />
+          Nach Kategorie gruppieren
         </button>
       </div>
 
@@ -230,7 +270,28 @@ export default function Produkte() {
         <div className="bg-white rounded-lg shadow-sm p-6">
           <p className="text-gray-500 text-center">Lädt Produkte...</p>
         </div>
+      ) : groupByCategory && groupedProducts ? (
+        /* Grouped View */
+        <div className="space-y-6">
+          {Array.from(groupedProducts.entries()).map(([category, categoryProducts]) => (
+            <div key={category} className="space-y-3">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-gray-900">{category}</h2>
+                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-sm rounded-full">
+                  {categoryProducts.length}
+                </span>
+              </div>
+              <ProductTable
+                products={categoryProducts}
+                onEdit={handleEdit}
+                onArchive={handleArchive}
+                onRestore={handleRestore}
+              />
+            </div>
+          ))}
+        </div>
       ) : (
+        /* Normal View */
         <ProductTable
           products={products}
           onEdit={handleEdit}
