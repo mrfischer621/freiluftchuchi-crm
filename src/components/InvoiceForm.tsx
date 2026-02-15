@@ -43,7 +43,6 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
   );
   const [dueDate, setDueDate] = useState(existingInvoice?.due_date || '');
   const [status, setStatus] = useState<Invoice['status']>(existingInvoice?.status || 'entwurf');
-  const [vatRate, setVatRate] = useState(existingInvoice?.vat_rate?.toString() || '7.7');
 
   // New fields for Phase 3.3
   const [title, setTitle] = useState(existingInvoice?.title || '');
@@ -292,7 +291,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
       const totals = calculateTotals();
 
       // Get effective VAT rate for each item (for database storage)
-      const getEffectiveVatRate = (item: ItemState, index: number) => {
+      const getEffectiveVatRate = (item: ItemState) => {
         if (!selectedCompany?.vat_enabled) return 0;
 
         const itemVatRate = parseFloat(item.vat_rate);
@@ -310,7 +309,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
           project_id: projectId || null,
           issue_date: issueDate,
           due_date: dueDate || null,
-          vat_rate: parseFloat(vatRate),
+          vat_rate: selectedCompany?.default_vat_rate || 0,
           status,
           paid_at: null,
           title: title || null,
@@ -327,7 +326,7 @@ export default function InvoiceForm({ onSubmit, customers, projects, nextInvoice
             quantity: parseFloat(item.quantity) || 1,
             unit_price: parseFloat(item.unit_price),
             discount_percent: parseFloat(item.discount_percent) || 0,
-            vat_rate: getEffectiveVatRate(item, index),
+            vat_rate: getEffectiveVatRate(item),
             vat_amount: totals.lineVatAmounts?.[index] || 0,
           })),
       };
