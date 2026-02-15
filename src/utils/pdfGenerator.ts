@@ -899,7 +899,8 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<Blob> {
     creditor: {
       account: sanitizeForQR(account), // Sanitize IBAN
       address: {
-        name: sanitizeForQR(company.name),
+        // Use qr_creditor_name if set (e.g., "Nicolas Fischer"), otherwise company name
+        name: sanitizeForQR(company.qr_creditor_name || company.name),
         street: sanitizeForQR(company.street),
         houseNumber: company.house_number ? sanitizeForQR(company.house_number) : undefined,
         postalCode: sanitizeForQR(company.zip_code),

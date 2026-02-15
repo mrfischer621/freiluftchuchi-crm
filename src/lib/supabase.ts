@@ -30,6 +30,7 @@ export interface Company {
   city: string | null;
   iban: string | null;
   qr_iban: string | null;
+  qr_creditor_name: string | null; // Personal name for QR-Bill creditor (e.g., "Nicolas Fischer")
   uid_number: string | null;
   bank_name: string | null;
   vat_number: string | null;

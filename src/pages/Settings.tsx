@@ -13,6 +13,7 @@ interface CompanyFormData {
   city: string;
   iban: string;
   qr_iban: string;
+  qr_creditor_name: string; // Personal name for QR-Bill creditor (e.g., "Nicolas Fischer")
   uid_number: string;
   bank_name: string;
   vat_number: string;
@@ -43,6 +44,7 @@ export default function Settings() {
     city: '',
     iban: '',
     qr_iban: '',
+    qr_creditor_name: '',
     uid_number: '',
     bank_name: '',
     vat_number: '',
@@ -98,6 +100,7 @@ export default function Settings() {
         city: selectedCompany.city || '',
         iban: selectedCompany.iban || '',
         qr_iban: selectedCompany.qr_iban || '',
+        qr_creditor_name: selectedCompany.qr_creditor_name || '',
         uid_number: selectedCompany.uid_number || '',
         bank_name: selectedCompany.bank_name || '',
         vat_number: selectedCompany.vat_number || '',
@@ -791,6 +794,24 @@ export default function Settings() {
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
                 placeholder="z.B. UBS AG"
               />
+            </div>
+
+            {/* QR-Bill Creditor Name */}
+            <div>
+              <label htmlFor="qr_creditor_name" className="block text-sm font-medium text-gray-700 mb-1">
+                QR-Rechnung Empfänger
+              </label>
+              <input
+                type="text"
+                id="qr_creditor_name"
+                value={companyFormData.qr_creditor_name}
+                onChange={(e) => handleCompanyFieldChange('qr_creditor_name', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
+                placeholder="z.B. Nicolas Fischer"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Persönlicher Name für den QR-Code (Zahlungsempfänger). Leer lassen um Firmennamen zu verwenden.
+              </p>
             </div>
 
             {/* Tax */}
