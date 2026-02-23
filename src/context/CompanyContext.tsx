@@ -62,28 +62,39 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         name: row.company_name,
         alternativ_name: row.alternativ_name || null,
         rechnungsname: row.rechnungsname || null,
-        logo_url: row.logo_url,
+        logo_url: row.logo_url || null,
+        sender_contact_name: row.sender_contact_name || null,
+        // Address
         street: row.street,
         house_number: row.house_number,
         zip_code: row.zip_code,
         city: row.city,
+        country: row.country || null,
+        // Banking
         iban: row.iban,
         qr_iban: row.qr_iban,
         qr_creditor_name: row.qr_creditor_name || null,
         bank_name: row.bank_name,
+        // Tax
         uid_number: row.uid_number,
         vat_number: row.vat_number,
         vat_registered: row.vat_registered || false,
         vat_enabled: row.vat_enabled || false,
         default_vat_rate: row.default_vat_rate || 8.1,
-        sender_contact_name: row.sender_contact_name || null,
+        // Contact (PDF footer)
+        phone: row.phone || null,
+        email: row.email || null,
+        website: row.website || null,
+        // Product categories
         product_categories: row.product_categories || [],
-        created_at: row.created_at,
         // Text templates
-        invoice_intro_text: row.invoice_intro_text,
-        invoice_footer_text: row.invoice_footer_text,
-        quote_intro_text: row.quote_intro_text,
-        quote_footer_text: row.quote_footer_text,
+        invoice_intro_text: row.invoice_intro_text || null,
+        invoice_footer_text: row.invoice_footer_text || null,
+        quote_intro_text: row.quote_intro_text || null,
+        quote_footer_text: row.quote_footer_text || null,
+        // Timestamps
+        created_at: row.created_at,
+        updated_at: row.updated_at || null,
       }));
 
       console.log('[CompanyContext] Mapped companies:', companiesData);

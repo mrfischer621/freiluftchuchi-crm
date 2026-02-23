@@ -5,6 +5,16 @@ import type { Quote, QuoteItem, Customer, Project, Product } from '../lib/supaba
 import { useCompany } from '../context/CompanyContext';
 import { shouldWarnOnEdit, getEditWarningMessage } from '../utils/quoteUtils';
 
+/** Round to nearest 5 Rappen */
+function swissRound(amount: number): number {
+  return Math.round(amount * 20) / 20;
+}
+
+/** Format CHF amount with apostrophe thousand separators */
+function formatChf(amount: number): string {
+  return amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+}
+
 type QuoteFormData = {
   quote: Omit<Quote, 'id' | 'created_at' | 'updated_at' | 'subtotal' | 'vat_amount' | 'total'>;
   items: Array<Omit<QuoteItem, 'id' | 'quote_id' | 'total'>>;
@@ -56,6 +66,10 @@ export default function QuoteForm({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
+
+  // Per-quote intro/outro text (overrides company-level templates when set)
+  const [introText, setIntroText] = useState(existingQuote?.intro_text || '');
+  const [outroText, setOutroText] = useState(existingQuote?.outro_text || '');
 
   // Discount System (Task 3.2)
   const [discountType, setDiscountType] = useState<'percent' | 'fixed'>(
@@ -217,6 +231,9 @@ export default function QuoteForm({
           // Discount system (Task 3.2)
           discount_type: discountType,
           discount_value: parseFloat(discountValue) || 0,
+          // Per-quote text overrides
+          intro_text: introText.trim() || null,
+          outro_text: outroText.trim() || null,
         },
         items: items
           .filter(item => item.description && item.unit_price)
@@ -362,6 +379,26 @@ export default function QuoteForm({
           </div>
         </div>
 
+        {/* Intro Text — shown above items in PDF */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Einleitungstext <span className="text-xs font-normal text-gray-400">(optional — überschreibt die Firmenvorlage für dieses Angebot)</span>
+          </label>
+          <textarea
+            value={introText}
+            onChange={(e) => setIntroText(e.target.value)}
+            onInput={(e) => {
+              const el = e.currentTarget;
+              el.style.height = 'auto';
+              el.style.height = `${el.scrollHeight}px`;
+            }}
+            placeholder={selectedCompany?.quote_intro_text || 'Einleitungstext für dieses Angebot…'}
+            rows={3}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm resize-none overflow-hidden"
+            style={{ minHeight: '72px' }}
+          />
+        </div>
+
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-900">Positionen</h3>
@@ -387,52 +424,56 @@ export default function QuoteForm({
 
           <div className="space-y-3">
             {items.map((item, index) => (
-              <div key={index} className="space-y-2">
-                <div className="grid grid-cols-12 gap-2 items-end">
-                  {/* Product Selector */}
+              <div key={index} className="border border-gray-100 rounded-lg p-3 bg-gray-50/50">
+                {/* Row 1: Product selector */}
+                <div className="mb-2">
+                  {index === 0 && (
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Produkt (optional)
+                    </label>
+                  )}
+                  <select
+                    value={item.product_id || ''}
+                    onChange={(e) => handleProductSelect(index, e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm bg-white"
+                  >
+                    <option value="">Freie Eingabe</option>
+                    {products.map((product) => (
+                      <option key={product.id} value={product.id}>
+                        {product.name} - CHF {product.price.toFixed(2)}/{product.unit}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Row 2: Description textarea */}
+                <div className="mb-2">
+                  {index === 0 && (
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Beschreibung <span className="font-normal text-gray-400">(1. Zeile = Titel fett im PDF)</span>
+                    </label>
+                  )}
+                  <textarea
+                    value={item.description}
+                    onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                    onInput={(e) => {
+                      const el = e.currentTarget;
+                      el.style.height = 'auto';
+                      el.style.height = `${el.scrollHeight}px`;
+                    }}
+                    placeholder={"Titel (wird fett im PDF)\nZusätzliche Beschreibung (optional)"}
+                    rows={2}
+                    required
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm resize-none overflow-hidden bg-white"
+                    style={{ minHeight: '56px' }}
+                  />
+                </div>
+
+                {/* Row 3: Menge, Einzelpreis, Total, Delete */}
+                <div className="grid grid-cols-12 gap-2 items-center">
                   <div className="col-span-3">
                     {index === 0 && (
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Produkt (optional)
-                      </label>
-                    )}
-                    <select
-                      value={item.product_id || ''}
-                      onChange={(e) => handleProductSelect(index, e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
-                    >
-                      <option value="">Freie Eingabe</option>
-                      {products.map((product) => (
-                        <option key={product.id} value={product.id}>
-                          {product.name} - CHF {product.price.toFixed(2)}/{product.unit}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Description */}
-                  <div className="col-span-4">
-                    {index === 0 && (
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Beschreibung
-                      </label>
-                    )}
-                    <input
-                      type="text"
-                      value={item.description}
-                      onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                      placeholder="Beschreibung"
-                      required
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
-                    />
-                  </div>
-
-                  {/* Quantity */}
-                  <div className="col-span-2">
-                    {index === 0 && (
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Menge
-                      </label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Menge</label>
                     )}
                     <input
                       type="number"
@@ -442,16 +483,13 @@ export default function QuoteForm({
                       step="0.01"
                       min="0"
                       required
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm bg-white"
                     />
                   </div>
 
-                  {/* Unit Price */}
-                  <div className="col-span-2">
+                  <div className="col-span-3">
                     {index === 0 && (
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Einzelpreis
-                      </label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Einzelpreis (CHF)</label>
                     )}
                     <input
                       type="number"
@@ -461,32 +499,26 @@ export default function QuoteForm({
                       step="0.01"
                       min="0"
                       required
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm bg-white"
                     />
                   </div>
 
-                  {/* Delete Button */}
+                  <div className="col-span-5 flex items-center justify-end">
+                    <span className="text-sm text-gray-500 mr-1">Total:</span>
+                    <span className="font-semibold text-gray-900 text-sm">
+                      CHF {formatChf((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0))}
+                    </span>
+                  </div>
+
                   <div className="col-span-1 flex justify-end">
-                    {index === 0 && (
-                      <div className="h-5 mb-1"></div>
-                    )}
                     <button
                       type="button"
                       onClick={() => handleRemoveItem(index)}
                       disabled={items.length === 1}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       <Trash2 size={16} />
                     </button>
-                  </div>
-                </div>
-
-                {/* Total for this line */}
-                <div className="flex justify-end pr-11">
-                  <div className="text-sm text-gray-600">
-                    Total: <span className="font-semibold text-gray-900">
-                      CHF {((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)).toFixed(2)}
-                    </span>
                   </div>
                 </div>
               </div>
@@ -496,17 +528,12 @@ export default function QuoteForm({
 
         <div className="border-t pt-4">
           <div className="max-w-sm ml-auto space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Zwischentotal:</span>
-              <span className="font-medium">CHF {totals.subtotal.toFixed(2)}</span>
-            </div>
 
-            {/* Total Discount (conditional) - NEW SYSTEM */}
+            {/* Discount input controls (collapsible) */}
             {showDiscounts && (
-              <div className="flex justify-between text-sm items-center gap-4">
-                <span className="text-gray-600">Gesamtrabatt:</span>
+              <div className="flex justify-between text-sm items-center gap-4 pb-1">
+                <span className="text-gray-600">Rabatt:</span>
                 <div className="flex items-center gap-2">
-                  {/* Toggle Button for Type */}
                   <div className="flex rounded-lg border border-gray-300 overflow-hidden">
                     <button
                       type="button"
@@ -531,14 +558,11 @@ export default function QuoteForm({
                       CHF
                     </button>
                   </div>
-
-                  {/* Value Input */}
                   <input
                     type="number"
                     value={discountValue}
                     onChange={(e) => {
                       const val = parseFloat(e.target.value) || 0;
-                      // Validation: percent max 100, fixed max subtotal
                       if (discountType === 'percent' && val > 100) return;
                       if (discountType === 'fixed' && val > totals.subtotal) return;
                       setDiscountValue(e.target.value);
@@ -549,21 +573,32 @@ export default function QuoteForm({
                     className="w-20 px-2 py-1 border border-gray-200 rounded text-sm text-right"
                     placeholder="0"
                   />
-
-                  {/* Discount Amount Display */}
-                  {totals.discountAmount > 0 && (
-                    <span className="font-medium text-green-600">
-                      -CHF {totals.discountAmount.toFixed(2)}
-                    </span>
-                  )}
                 </div>
+              </div>
+            )}
+
+            {/* Zwischensumme */}
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Zwischensumme</span>
+              <span className="font-medium tabular-nums">CHF {formatChf(totals.subtotal)}</span>
+            </div>
+
+            {/* Rabatt display row (shown whenever discount > 0) */}
+            {totals.discountAmount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">
+                  Rabatt{discountType === 'percent' ? ` (${discountValue}%)` : ''}
+                </span>
+                <span className="font-medium text-green-600 tabular-nums">
+                  - CHF {formatChf(totals.discountAmount)}
+                </span>
               </div>
             )}
 
             {/* VAT - only show if VAT enabled */}
             {selectedCompany?.vat_enabled && (
               <div className="flex justify-between text-sm items-center gap-4">
-                <span className="text-gray-600">MwSt ({vatRate}%):</span>
+                <span className="text-gray-500">MwSt ({vatRate}%):</span>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
@@ -574,24 +609,39 @@ export default function QuoteForm({
                     max="100"
                     className="w-20 px-2 py-1 border border-gray-200 rounded text-sm text-right"
                   />
-                  <span className="font-medium">CHF {totals.vat_amount.toFixed(2)}</span>
+                  <span className="font-medium tabular-nums">CHF {formatChf(totals.vat_amount)}</span>
                 </div>
               </div>
             )}
 
-            {/* Non-editable VAT display when disabled */}
-            {!selectedCompany?.vat_enabled && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">MwSt:</span>
-                <span className="font-medium text-gray-400">Nicht aktiv</span>
-              </div>
-            )}
-
-            <div className="flex justify-between text-lg font-bold text-brand border-t pt-2">
-              <span>Gesamttotal:</span>
-              <span>CHF {totals.total.toFixed(2)}</span>
+            {/* Total — Swiss-rounded */}
+            <div className="flex justify-between items-baseline border-t-2 border-gray-300 pt-2 mt-1">
+              <span className="text-base font-bold text-gray-900">Total</span>
+              <span className="text-lg font-bold text-gray-900 tabular-nums">
+                CHF {formatChf(swissRound(totals.total))}
+              </span>
             </div>
           </div>
+        </div>
+
+        {/* Outro Text — shown below items/totals in PDF */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Schlusstext <span className="text-xs font-normal text-gray-400">(optional — überschreibt die Firmenvorlage für dieses Angebot)</span>
+          </label>
+          <textarea
+            value={outroText}
+            onChange={(e) => setOutroText(e.target.value)}
+            onInput={(e) => {
+              const el = e.currentTarget;
+              el.style.height = 'auto';
+              el.style.height = `${el.scrollHeight}px`;
+            }}
+            placeholder={selectedCompany?.quote_footer_text || 'Schlusstext / Dank für dieses Angebot…'}
+            rows={3}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition text-sm resize-none overflow-hidden"
+            style={{ minHeight: '72px' }}
+          />
         </div>
 
         <div className="flex gap-3">

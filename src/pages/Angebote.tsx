@@ -53,6 +53,9 @@ export default function Angebote() {
     items: QuoteItem[];
     customer: Customer;
     company: Company;
+    logoBase64?: string | null;
+    introText?: string | null;
+    footerText?: string | null;
   } | null>(null);
 
   // Get URL params for Sales Pipeline integration
@@ -213,6 +216,9 @@ export default function Angebote() {
             // Discount system (Task 3.2)
             discount_type: data.quote.discount_type,
             discount_value: data.quote.discount_value,
+            // Per-quote text overrides
+            intro_text: data.quote.intro_text ?? null,
+            outro_text: data.quote.outro_text ?? null,
           })
           .eq('id', editingQuote.id);
 
@@ -398,11 +404,34 @@ export default function Angebote() {
       throw new Error(validation.errors.join(' • '));
     }
 
+    // Prefetch logo as base64 so the PDF generator doesn't need a second network call
+    let logoBase64: string | null = null;
+    if (freshCompanyData.logo_url) {
+      try {
+        const resp = await fetch(freshCompanyData.logo_url);
+        if (resp.ok) {
+          const blob = await resp.blob();
+          logoBase64 = await new Promise<string | null>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        }
+      } catch {
+        // Logo is optional — continue without it
+      }
+    }
+
     return {
       quote,
       items: items || [],
       customer,
       company: freshCompanyData,
+      logoBase64,
+      // Per-quote text overrides (null = fall back to company-level templates in PDF generator)
+      introText: quote.intro_text ?? undefined,
+      footerText: quote.outro_text ?? undefined,
     };
   };
 

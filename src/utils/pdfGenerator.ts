@@ -10,9 +10,14 @@
  */
 
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
 import { SwissQRBill } from './swissqr';
+import { setupPdfFonts } from './pdfFonts';
 import type { Invoice, InvoiceItem, Customer, Company, Quote, QuoteItem } from '../lib/supabase';
+
+// Active font family — set at the start of each PDF generation call
+let PDF_FONT = 'helvetica';
 
 // ============================================================================
 // TYPES
@@ -36,6 +41,8 @@ interface QuoteData {
   // Optional text templates (loaded from company settings)
   introText?: string | null;
   footerText?: string | null;
+  // Optional company logo as base64 data URL
+  logoBase64?: string | null;
 }
 
 // ============================================================================
@@ -250,7 +257,7 @@ function drawSwissCross(doc: jsPDF, x: number, y: number, size: number = 7): voi
  */
 function drawScissors(doc: jsPDF, x: number, y: number): void {
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('helvetica', 'normal'); // ✂ is in Dingbats, stay on helvetica
   doc.text('✂', x, y);
 }
 
@@ -270,10 +277,18 @@ function drawSeparatorLine(doc: jsPDF, y: number): void {
 }
 
 /**
- * Format amount with thousand separators
+ * Format amount with thousand separators (Swiss apostrophe style)
  */
 function formatAmount(amount: number): string {
   return amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+}
+
+/**
+ * Round to nearest 5 Rappen (Swiss rounding)
+ * Applied to grand totals only — line items and subtotals stay precise
+ */
+export function swissRound(amount: number): number {
+  return Math.round(amount * 20) / 20;
 }
 
 /**
@@ -340,18 +355,18 @@ function drawReceiptSection(
   let y = LAYOUT.QR_SECTION_Y + 5;
 
   // Title: "Empfangsschein"
-  doc.setFont('helvetica', FONTS.TITLE.style);
+  doc.setFont(PDF_FONT, FONTS.TITLE.style);
   doc.setFontSize(FONTS.TITLE.size);
   doc.text('Empfangsschein', x, y);
   y += 7;
 
   // Account / Payable to (Konto / Zahlbar an)
-  doc.setFont('helvetica', FONTS.LABEL.style);
+  doc.setFont(PDF_FONT, FONTS.LABEL.style);
   doc.setFontSize(FONTS.LABEL.size);
   doc.text('Konto / Zahlbar an', x, y);
   y += 3;
 
-  doc.setFont('helvetica', FONTS.CONTENT.style);
+  doc.setFont(PDF_FONT, FONTS.CONTENT.style);
   doc.setFontSize(FONTS.CONTENT.size);
   const iban = company.qr_iban || company.iban || '';
   doc.text(SwissQRBill.formatIBAN(sanitizeForPDF(iban)), x, y);
@@ -366,12 +381,12 @@ function drawReceiptSection(
 
   // Reference (only display if we have a QR reference)
   if (qrReference) {
-    doc.setFont('helvetica', FONTS.LABEL.style);
+    doc.setFont(PDF_FONT, FONTS.LABEL.style);
     doc.setFontSize(FONTS.LABEL.size);
     doc.text('Referenz', x, y);
     y += 3;
 
-    doc.setFont('helvetica', FONTS.CONTENT.style);
+    doc.setFont(PDF_FONT, FONTS.CONTENT.style);
     doc.setFontSize(FONTS.CONTENT_SMALL.size);
     // Format QR reference for display (groups of 5)
     const formattedRef = qrReference.match(/.{1,5}/g)?.join(' ') || qrReference;
@@ -380,12 +395,12 @@ function drawReceiptSection(
   }
 
   // Payable by (Zahlbar durch)
-  doc.setFont('helvetica', FONTS.LABEL.style);
+  doc.setFont(PDF_FONT, FONTS.LABEL.style);
   doc.setFontSize(FONTS.LABEL.size);
   doc.text('Zahlbar durch', x, y);
   y += 3;
 
-  doc.setFont('helvetica', FONTS.CONTENT.style);
+  doc.setFont(PDF_FONT, FONTS.CONTENT.style);
   doc.setFontSize(FONTS.CONTENT.size);
   doc.text(sanitizeForPDF(customer.name), x, y);
   y += 3;
@@ -400,7 +415,7 @@ function drawReceiptSection(
 
   // Acceptance point (Annahmestelle) - bottom right of receipt
   y = LAYOUT.QR_SECTION_Y + LAYOUT.QR_SECTION_HEIGHT - 5;
-  doc.setFont('helvetica', FONTS.LABEL.style);
+  doc.setFont(PDF_FONT, FONTS.LABEL.style);
   doc.setFontSize(FONTS.LABEL.size);
   doc.text('Annahmestelle', x + 30, y, { align: 'right' });
 }
@@ -421,7 +436,7 @@ async function drawPaymentSection(
   let y = LAYOUT.QR_SECTION_Y + 5;
 
   // Title: "Zahlteil"
-  doc.setFont('helvetica', FONTS.TITLE.style);
+  doc.setFont(PDF_FONT, FONTS.TITLE.style);
   doc.setFontSize(FONTS.TITLE.size);
   doc.text('Zahlteil', x, y);
 
@@ -445,31 +460,31 @@ async function drawPaymentSection(
   let infoY = LAYOUT.QR_Y;
 
   // Currency & Amount
-  doc.setFont('helvetica', FONTS.LABEL.style);
+  doc.setFont(PDF_FONT, FONTS.LABEL.style);
   doc.setFontSize(FONTS.LABEL.size);
   doc.text('Währung', infoX, infoY);
   y += 3;
 
-  doc.setFont('helvetica', FONTS.CONTENT.style);
+  doc.setFont(PDF_FONT, FONTS.CONTENT.style);
   doc.setFontSize(FONTS.CONTENT.size);
   doc.text('CHF', infoX, infoY + 3);
 
-  doc.setFont('helvetica', FONTS.LABEL.style);
+  doc.setFont(PDF_FONT, FONTS.LABEL.style);
   doc.setFontSize(FONTS.LABEL.size);
   doc.text('Betrag', infoX + 15, infoY);
 
-  doc.setFont('helvetica', FONTS.CONTENT.style);
+  doc.setFont(PDF_FONT, FONTS.CONTENT.style);
   doc.setFontSize(FONTS.CONTENT.size);
   doc.text(formatAmount(invoice.total), infoX + 15, infoY + 3);
   infoY += 10;
 
   // Account / Payable to
-  doc.setFont('helvetica', FONTS.LABEL.style);
+  doc.setFont(PDF_FONT, FONTS.LABEL.style);
   doc.setFontSize(FONTS.LABEL.size);
   doc.text('Konto / Zahlbar an', infoX, infoY);
   infoY += 3;
 
-  doc.setFont('helvetica', FONTS.CONTENT.style);
+  doc.setFont(PDF_FONT, FONTS.CONTENT.style);
   doc.setFontSize(FONTS.CONTENT.size);
   const iban = company.qr_iban || company.iban || '';
   doc.text(SwissQRBill.formatIBAN(sanitizeForPDF(iban)), infoX, infoY);
@@ -484,12 +499,12 @@ async function drawPaymentSection(
 
   // Reference (only display if we have a QR reference)
   if (qrReference) {
-    doc.setFont('helvetica', FONTS.LABEL.style);
+    doc.setFont(PDF_FONT, FONTS.LABEL.style);
     doc.setFontSize(FONTS.LABEL.size);
     doc.text('Referenz', infoX, infoY);
     infoY += 3;
 
-    doc.setFont('helvetica', FONTS.CONTENT.style);
+    doc.setFont(PDF_FONT, FONTS.CONTENT.style);
     doc.setFontSize(FONTS.CONTENT_SMALL.size);
     const formattedRef = qrReference.match(/.{1,5}/g)?.join(' ') || qrReference;
     doc.text(formattedRef, infoX, infoY, { maxWidth: 60 });
@@ -497,12 +512,12 @@ async function drawPaymentSection(
   }
 
   // Additional information
-  doc.setFont('helvetica', FONTS.LABEL.style);
+  doc.setFont(PDF_FONT, FONTS.LABEL.style);
   doc.setFontSize(FONTS.LABEL.size);
   doc.text('Zusätzliche Informationen', infoX, infoY);
   infoY += 3;
 
-  doc.setFont('helvetica', FONTS.CONTENT.style);
+  doc.setFont(PDF_FONT, FONTS.CONTENT.style);
   doc.setFontSize(FONTS.CONTENT.size);
   doc.text(sanitizeForPDF(`Rechnung ${invoice.invoice_number}`), infoX, infoY);
   infoY += 3;
@@ -514,12 +529,12 @@ async function drawPaymentSection(
   infoY += 7;
 
   // Payable by
-  doc.setFont('helvetica', FONTS.LABEL.style);
+  doc.setFont(PDF_FONT, FONTS.LABEL.style);
   doc.setFontSize(FONTS.LABEL.size);
   doc.text('Zahlbar durch', infoX, infoY);
   infoY += 3;
 
-  doc.setFont('helvetica', FONTS.CONTENT.style);
+  doc.setFont(PDF_FONT, FONTS.CONTENT.style);
   doc.setFontSize(FONTS.CONTENT.size);
   doc.text(sanitizeForPDF(customer.name), infoX, infoY);
   infoY += 3;
@@ -545,12 +560,12 @@ function drawInvoiceHeader(
   let y = 20;
 
   // Company logo placeholder or name (Phase 3.3: includes optional contact name)
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT, 'bold');
   doc.setFontSize(16);
   y = renderCompanySender(doc, company, 20, y, 16);
 
   // Company address
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT, 'normal');
   doc.setFontSize(9);
   y += 2; // Adjust spacing after sender name
   doc.text(sanitizeForPDF(formatAddress(company.street, company.house_number)), 20, y);
@@ -559,7 +574,7 @@ function drawInvoiceHeader(
   y += 8;
 
   // Invoice title
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT, 'bold');
   doc.setFontSize(20);
   doc.text('RECHNUNG', 20, y);
   y += 10;
@@ -568,7 +583,7 @@ function drawInvoiceHeader(
   const customerX = 120;
   let customerY = 40;
 
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT, 'normal');
   doc.setFontSize(10);
   doc.text(sanitizeForPDF(customer.name), customerX, customerY);
   customerY += 5;
@@ -602,31 +617,31 @@ function drawInvoiceHeader(
 
   // Invoice details
   y += 10;
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT, 'bold');
   doc.setFontSize(10);
   doc.text('Rechnungsnummer:', 20, y);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT, 'normal');
   doc.text(sanitizeForPDF(invoice.invoice_number), 70, y);
   y += 6;
 
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT, 'bold');
   doc.text('Datum:', 20, y);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT, 'normal');
   doc.text(formatDate(invoice.issue_date), 70, y);
   y += 6;
 
   if (invoice.due_date) {
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(PDF_FONT, 'bold');
     doc.text('Fälligkeitsdatum:', 20, y);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(PDF_FONT, 'normal');
     doc.text(formatDate(invoice.due_date), 70, y);
     y += 6;
   }
 
   if (company.uid_number) {
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(PDF_FONT, 'bold');
     doc.text('UID:', 20, y);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(PDF_FONT, 'normal');
     doc.text(sanitizeForPDF(company.uid_number), 70, y);
     y += 6;
   }
@@ -646,7 +661,7 @@ function drawIntroText(
   }
 
   let y = startY;
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT, 'normal');
   doc.setFontSize(10);
 
   const sanitizedText = sanitizeForPDF(introText);
@@ -675,15 +690,15 @@ function drawFooterText(
   }
 
   let y = startY + 8; // Spacing before footer
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  doc.setFont(PDF_FONT, 'normal');
+  doc.setFontSize(10); // Match intro text size
 
   const sanitizedText = sanitizeForPDF(footerText);
   const lines = doc.splitTextToSize(sanitizedText, 170);
 
   lines.forEach((line: string) => {
     doc.text(line, 20, y);
-    y += 4;
+    y += 5; // Match intro line height
   });
 
   return y;
@@ -706,7 +721,7 @@ function drawInvoiceItems(
   const hasTotalDiscount = (invoice.discount_value || 0) > 0;
 
   // Table header
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT, 'bold');
   doc.setFontSize(10);
   doc.text('Beschreibung', 20, y);
   doc.text('Menge', 110, y);
@@ -724,7 +739,7 @@ function drawInvoiceItems(
   y += 6;
 
   // Items
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT, 'normal');
   doc.setFontSize(9);
 
   items.forEach((item) => {
@@ -758,9 +773,9 @@ function drawInvoiceItems(
   const itemsSubtotal = items.reduce((sum, item) => sum + item.total, 0);
 
   // Subtotal (items total after line discounts)
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT, 'bold');
   doc.text('Zwischensumme:', 145, y);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT, 'normal');
   doc.text(`CHF ${formatAmount(itemsSubtotal)}`, 190, y, { align: 'right' });
   y += 6;
 
@@ -778,9 +793,9 @@ function drawInvoiceItems(
       discountLabel = `Rabatt (CHF ${formatAmount(invoice.discount_value)}):`;
     }
 
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(PDF_FONT, 'bold');
     doc.text(discountLabel, 145, y);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(PDF_FONT, 'normal');
     doc.setTextColor(0, 128, 0); // Green for discount
     doc.text(`-CHF ${formatAmount(totalDiscountAmount)}`, 190, y, { align: 'right' });
     doc.setTextColor(0, 0, 0); // Reset to black
@@ -789,9 +804,9 @@ function drawInvoiceItems(
 
   // VAT
   if (invoice.vat_amount > 0) {
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(PDF_FONT, 'bold');
     doc.text(`MWST (${invoice.vat_rate}%):`, 145, y);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont(PDF_FONT, 'normal');
     doc.text(`CHF ${formatAmount(invoice.vat_amount)}`, 190, y, { align: 'right' });
     y += 6;
   }
@@ -802,7 +817,7 @@ function drawInvoiceItems(
   y += 6;
 
   // Total
-  doc.setFont('helvetica', 'bold');
+  doc.setFont(PDF_FONT, 'bold');
   doc.setFontSize(11);
   doc.text('Gesamtbetrag:', 110, y);
   doc.text(`CHF ${formatAmount(invoice.total)}`, 190, y, { align: 'right' });
@@ -871,6 +886,9 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<Blob> {
     unit: 'mm',
     format: 'a4',
   });
+
+  // Load Montserrat font (falls back to helvetica if not available)
+  PDF_FONT = await setupPdfFonts(doc);
 
   // Determine which account to use
   const account = company.qr_iban || company.iban || '';
@@ -961,7 +979,7 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<Blob> {
   const maxFooterY = LAYOUT.SEPARATOR_Y - 25; // Leave space before separator
   let paymentInstructionsY = Math.min(endY + 10, maxFooterY);
 
-  doc.setFont('helvetica', 'normal');
+  doc.setFont(PDF_FONT, 'normal');
   doc.setFontSize(9);
   doc.text(
     'Bitte verwenden Sie für die Zahlung den untenstehenden Einzahlungsschein.',
@@ -1010,111 +1028,136 @@ export async function getInvoicePdfBlobUrl(data: InvoiceData): Promise<string> {
 }
 
 // ============================================================================
-// QUOTE PDF GENERATION (NO QR-Bill)
+// QUOTE PDF GENERATION — Swiss International Style
 // ============================================================================
 
 /**
- * Draw quote header (similar to invoice but with "ANGEBOT" title)
+ * Fetch a remote image as a base64 data URL for embedding in the PDF.
+ * Returns null on network or read errors (logo is optional).
  */
-function drawQuoteHeader(
-  doc: jsPDF,
-  company: Company,
-  customer: Customer,
-  quote: Quote
-): void {
-  let y = 20;
-
-  // Company logo placeholder or name (Phase 3.3: includes optional contact name)
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  y = renderCompanySender(doc, company, 20, y, 16);
-
-  // Company address
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  y += 2; // Adjust spacing after sender name
-  doc.text(sanitizeForPDF(formatAddress(company.street, company.house_number)), 20, y);
-  y += 4;
-  doc.text(sanitizeForPDF(`${company.zip_code} ${company.city}`), 20, y);
-  y += 8;
-
-  // Quote title
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.text('ANGEBOT', 20, y);
-  y += 10;
-
-  // Customer address (right side)
-  const customerX = 120;
-  let customerY = 40;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.text(sanitizeForPDF(customer.name), customerX, customerY);
-  customerY += 5;
-
-  if (customer.contact_person) {
-    doc.text(sanitizeForPDF(customer.contact_person), customerX, customerY);
-    customerY += 5;
-  }
-
-  if (customer.street) {
-    doc.text(sanitizeForPDF(formatAddress(customer.street, customer.house_number)), customerX, customerY);
-    customerY += 5;
-  }
-
-  if (customer.zip_code && customer.city) {
-    doc.text(sanitizeForPDF(`${customer.zip_code} ${customer.city}`), customerX, customerY);
-    customerY += 5;
-  }
-
-  // Display country only if different from Switzerland
-  const rawCountry = (customer.country || 'CH').trim();
-  const customerCountry = (rawCountry === 'Schweiz' || rawCountry === 'CH')
-    ? 'CH'
-    : rawCountry.substring(0, 2).toUpperCase();
-
-  if (customerCountry !== 'CH') {
-    doc.text(sanitizeForPDF(getCountryName(customerCountry)), customerX, customerY);
-    customerY += 5;
-  }
-
-  // Quote details
-  y += 10;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.text('Angebotsnummer:', 20, y);
-  doc.setFont('helvetica', 'normal');
-  doc.text(sanitizeForPDF(quote.quote_number), 70, y);
-  y += 6;
-
-  doc.setFont('helvetica', 'bold');
-  doc.text('Datum:', 20, y);
-  doc.setFont('helvetica', 'normal');
-  doc.text(formatDate(quote.issue_date), 70, y);
-  y += 6;
-
-  // Prominent validity date
-  doc.setFont('helvetica', 'bold');
-  doc.text('Gültig bis:', 20, y);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(180, 60, 60); // Slightly red to stand out
-  doc.text(formatDate(quote.valid_until), 70, y);
-  doc.setTextColor(0, 0, 0); // Reset to black
-  y += 6;
-
-  if (company.uid_number) {
-    doc.setFont('helvetica', 'bold');
-    doc.text('UID:', 20, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(sanitizeForPDF(company.uid_number), 70, y);
-    y += 6;
+async function fetchLogoAsBase64(logoUrl: string): Promise<string | null> {
+  try {
+    const response = await fetch(logoUrl);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
   }
 }
 
 /**
- * Draw quote items table
- * @returns The Y position after the items and totals
+ * Draw the Swiss-style quote header.
+ * Layout:
+ *   - Logo top-right (if available)
+ *   - Recipient address left (~window-envelope position, y≈55)
+ *   - "Angebot" title bold 14pt at y=85
+ *   - Metadata block (quote number, date, valid-until) starting at y=95
+ *
+ * @returns Y position directly after the last metadata line
+ */
+function drawQuoteHeader(
+  doc: jsPDF,
+  customer: Customer,
+  quote: Quote,
+  logoBase64?: string | null
+): number {
+  doc.setTextColor(0, 0, 0);
+
+  // ── Logo top-right ──────────────────────────────────────────────────────────
+  if (logoBase64) {
+    try {
+      doc.addImage(logoBase64, 'AUTO', 160, 15, 25, 25);
+    } catch {
+      // Logo is optional — skip silently on error
+    }
+  }
+
+  // ── Recipient address (left, window-envelope zone ≈ y=55) ──────────────────
+  let addrY = 55;
+  doc.setFont(PDF_FONT, 'normal');
+  doc.setFontSize(10);
+
+  doc.text(sanitizeForPDF(customer.name), 20, addrY);
+  addrY += 5;
+
+  if (customer.contact_person) {
+    doc.text(sanitizeForPDF(customer.contact_person), 20, addrY);
+    addrY += 5;
+  }
+
+  if (customer.street) {
+    doc.text(
+      sanitizeForPDF(formatAddress(customer.street, customer.house_number)),
+      20, addrY
+    );
+    addrY += 5;
+  }
+
+  if (customer.zip_code && customer.city) {
+    doc.text(sanitizeForPDF(`${customer.zip_code} ${customer.city}`), 20, addrY);
+    addrY += 5;
+  }
+
+  // Country only when not Switzerland
+  const rawCountry = (customer.country || 'CH').trim();
+  const customerCountry =
+    rawCountry === 'Schweiz' || rawCountry === 'CH'
+      ? 'CH'
+      : rawCountry.substring(0, 2).toUpperCase();
+
+  if (customerCountry !== 'CH') {
+    doc.text(sanitizeForPDF(getCountryName(customerCountry)), 20, addrY);
+    addrY += 5;
+  }
+
+  // ── Title ───────────────────────────────────────────────────────────────────
+  doc.setFont(PDF_FONT, 'bold');
+  doc.setFontSize(14);
+  doc.text('Angebot', 20, 85);
+
+  // ── Metadata block ──────────────────────────────────────────────────────────
+  const labelX = 20;
+  const valueX = 70;
+  let metaY = 95;
+
+  doc.setFont(PDF_FONT, 'normal');
+  doc.setFontSize(10);
+
+  doc.setFont(PDF_FONT, 'bold');
+  doc.text('Angebotsnummer:', labelX, metaY);
+  doc.setFont(PDF_FONT, 'normal');
+  doc.text(sanitizeForPDF(quote.quote_number), valueX, metaY);
+  metaY += 6;
+
+  doc.setFont(PDF_FONT, 'bold');
+  doc.text('Datum:', labelX, metaY);
+  doc.setFont(PDF_FONT, 'normal');
+  doc.text(formatDate(quote.issue_date), valueX, metaY);
+  metaY += 6;
+
+  doc.setFont(PDF_FONT, 'bold');
+  doc.text('Gültig bis:', labelX, metaY);
+  doc.setFont(PDF_FONT, 'normal');
+  doc.setTextColor(0, 0, 0); // Black — no red
+  doc.text(formatDate(quote.valid_until), valueX, metaY);
+  metaY += 6;
+
+  return metaY;
+}
+
+/**
+ * Draw quote items using jspdf-autotable (Swiss International Style).
+ * Header row: accent green #6b8a5e, white text.
+ * Description column: first line bold (title), subsequent lines normal.
+ * Totals section rendered manually below the table.
+ *
+ * @returns Y position directly after the totals block
  */
 function drawQuoteItems(
   doc: jsPDF,
@@ -1122,102 +1165,236 @@ function drawQuoteItems(
   quote: Quote,
   startY: number
 ): number {
-  let y = startY;
+  const ACCENT: [number, number, number] = [107, 138, 94];
+  const CELL_PAD = 3;
+  // Column widths sum to exactly 170mm (210 - 20 left - 20 right margin)
+  // Beschreibung:90 + Menge:20 + Einzelpreis:35 + Total:25 = 170mm
+  // Table right edge: x = 20 + 170 = 190mm
+  const DESC_TEXT_WIDTH = 84; // 90mm col - 2×3mm padding
 
-  // Table header
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.text('Beschreibung', 20, y);
-  doc.text('Menge', 120, y);
-  doc.text('Preis', 145, y);
-  doc.text('Total', 175, y, { align: 'right' });
-  y += 2;
+  const tableBody: string[][] = items.map((item) => [
+    sanitizeForPDF(item.description || ''),
+    item.quantity % 1 === 0
+      ? item.quantity.toString()
+      : item.quantity.toFixed(2),
+    formatAmount(item.unit_price),
+    formatAmount(item.total),
+  ]);
 
-  // Header line
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.5);
-  doc.line(20, y, 190, y);
-  y += 6;
+  autoTable(doc, {
+    startY,
+    margin: { left: 20, right: 20 },
+    theme: 'plain',
+    head: [['Beschreibung', 'Menge', 'Einzelpreis (CHF)', 'Total (CHF)']],
+    body: tableBody,
+    styles: {
+      font: PDF_FONT,
+      fontSize: 9,
+      cellPadding: CELL_PAD,
+      textColor: [0, 0, 0] as [number, number, number],
+      lineColor: [220, 220, 220] as [number, number, number],
+      lineWidth: 0.1,
+      valign: 'top',
+    },
+    headStyles: {
+      fillColor: ACCENT,
+      textColor: [255, 255, 255] as [number, number, number],
+      fontStyle: 'bold',
+      fontSize: 9,
+    },
+    columnStyles: {
+      0: { cellWidth: 90 },
+      1: { cellWidth: 20, halign: 'right' },
+      2: { cellWidth: 35, halign: 'right' },
+      3: { cellWidth: 25, halign: 'right' },
+    },
 
-  // Items
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-
-  items.forEach((item) => {
-    // Handle long descriptions - sanitize to prevent rendering glitches
-    const description = sanitizeForPDF(item.description || '');
-    const lines = doc.splitTextToSize(description, 95);
-
-    lines.forEach((line: string, index: number) => {
-      doc.text(line, 20, y);
-      if (index === 0) {
-        doc.text(item.quantity.toString(), 120, y);
-        doc.text(`CHF ${formatAmount(item.unit_price)}`, 145, y);
-        doc.text(`CHF ${formatAmount(item.total)}`, 190, y, { align: 'right' });
+    // Expand description cell.text so autotable computes the correct row height
+    didParseCell: (data) => {
+      if (data.section === 'body' && data.column.index === 0) {
+        const rawText = String(
+          Array.isArray(data.row.raw) ? (data.row.raw as string[])[0] ?? '' : ''
+        );
+        const expanded: string[] = [];
+        rawText.split('\n').forEach((line) => {
+          const wrapped = doc.splitTextToSize(sanitizeForPDF(line), DESC_TEXT_WIDTH);
+          expanded.push(...(wrapped as string[]));
+        });
+        if (expanded.length > 0) {
+          data.cell.text = expanded;
+        }
       }
-      y += 5;
-    });
+    },
+
+    // Prevent autotable from rendering description text (we do it in didDrawCell)
+    willDrawCell: (data) => {
+      if (data.section === 'body' && data.column.index === 0) {
+        data.cell.text = [];
+      }
+    },
+
+    // Manually render description: first line bold (title), rest normal
+    didDrawCell: (data) => {
+      if (data.section === 'body' && data.column.index === 0) {
+        const rawText = String(
+          Array.isArray(data.row.raw) ? (data.row.raw as string[])[0] ?? '' : ''
+        );
+        const [firstLine, ...restLines] = rawText.split('\n');
+
+        const x = data.cell.x + CELL_PAD;
+        const lineH = 4.5;
+        // Baseline offset: cell top + padding + approximate cap height for 9pt
+        let y = data.cell.y + CELL_PAD + 3;
+
+        // Title line — bold
+        if (firstLine && firstLine.trim()) {
+          doc.setFont(PDF_FONT, 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(0, 0, 0);
+          const wrappedTitle = doc.splitTextToSize(
+            sanitizeForPDF(firstLine),
+            DESC_TEXT_WIDTH
+          ) as string[];
+          wrappedTitle.forEach((l) => {
+            doc.text(l, x, y);
+            y += lineH;
+          });
+        }
+
+        // Body lines — normal, slightly smaller
+        const restText = restLines.join('\n').trim();
+        if (restText) {
+          doc.setFont(PDF_FONT, 'normal');
+          doc.setFontSize(8.5);
+          const wrappedRest = doc.splitTextToSize(
+            sanitizeForPDF(restText),
+            DESC_TEXT_WIDTH
+          ) as string[];
+          wrappedRest.forEach((l) => {
+            doc.text(l, x, y);
+            y += lineH;
+          });
+        }
+
+        // Reset font for subsequent cells
+        doc.setFont(PDF_FONT, 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(0, 0, 0);
+      }
+    },
   });
 
-  // Spacing
-  y += 5;
+  const finalY: number = (doc as any).lastAutoTable?.finalY ?? startY + 20;
+  let y = finalY + 8;
 
-  // Subtotal
-  doc.setFont('helvetica', 'bold');
-  doc.text('Zwischensumme:', 145, y);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`CHF ${formatAmount(quote.subtotal)}`, 190, y, { align: 'right' });
+  // ── Totals section — aligned with right portion of table (x=120…190) ────────
+  // Table right edge is x=190; labels start at x=120 (where numeric cols begin)
+  const TOTALS_LABEL_X = 120;
+  const TOTALS_VALUE_X = 190;
+
+  doc.setFont(PDF_FONT, 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(0, 0, 0);
+
+  // Zwischensumme
+  doc.text('Zwischensumme', TOTALS_LABEL_X, y);
+  doc.text(`CHF ${formatAmount(quote.subtotal)}`, TOTALS_VALUE_X, y, { align: 'right' });
   y += 6;
 
-  // Total Discount (if any) - NEW SYSTEM (percent or fixed)
+  // Rabatt (if any)
   const hasTotalDiscount = (quote.discount_value || 0) > 0;
   if (hasTotalDiscount) {
-    let totalDiscountAmount = 0;
-    let discountLabel = '';
+    let discountAmount: number;
+    let discountLabel: string;
 
     if (quote.discount_type === 'percent') {
-      totalDiscountAmount = quote.subtotal * (quote.discount_value / 100);
-      discountLabel = `Rabatt (${quote.discount_value}%):`;
+      discountAmount = quote.subtotal * (quote.discount_value / 100);
+      discountLabel = `Rabatt (${quote.discount_value}%)`;
     } else {
-      // Fixed discount (CHF)
-      totalDiscountAmount = Math.min(quote.discount_value, quote.subtotal);
-      discountLabel = `Rabatt (CHF ${formatAmount(quote.discount_value)}):`;
+      discountAmount = Math.min(quote.discount_value, quote.subtotal);
+      discountLabel = 'Rabatt';
     }
 
-    doc.setFont('helvetica', 'bold');
-    doc.text(discountLabel, 145, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 128, 0); // Green for discount
-    doc.text(`-CHF ${formatAmount(totalDiscountAmount)}`, 190, y, { align: 'right' });
-    doc.setTextColor(0, 0, 0); // Reset to black
+    doc.text(discountLabel, TOTALS_LABEL_X, y);
+    doc.setTextColor(0, 128, 0);
+    doc.text(`- CHF ${formatAmount(discountAmount)}`, TOTALS_VALUE_X, y, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
     y += 6;
   }
 
-  // VAT
+  // MwSt (if any)
   if (quote.vat_amount > 0) {
-    doc.setFont('helvetica', 'bold');
-    doc.text(`MWST (${quote.vat_rate}%):`, 145, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`CHF ${formatAmount(quote.vat_amount)}`, 190, y, { align: 'right' });
+    doc.text(`MWST (${quote.vat_rate}%)`, TOTALS_LABEL_X, y);
+    doc.text(`CHF ${formatAmount(quote.vat_amount)}`, TOTALS_VALUE_X, y, { align: 'right' });
     y += 6;
   }
 
-  // Total line
-  doc.setLineWidth(0.5);
-  doc.line(145, y, 190, y);
-  y += 6;
+  // Separator line
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.3);
+  doc.line(TOTALS_LABEL_X, y, TOTALS_VALUE_X, y);
+  y += 5;
 
-  // Total
-  doc.setFont('helvetica', 'bold');
+  // Total — bold, Swiss-rounded
+  doc.setFont(PDF_FONT, 'bold');
   doc.setFontSize(11);
-  doc.text('Gesamtbetrag:', 110, y);
-  doc.text(`CHF ${formatAmount(quote.total)}`, 190, y, { align: 'right' });
+  doc.text('Total', TOTALS_LABEL_X, y);
+  doc.text(`CHF ${formatAmount(swissRound(quote.total))}`, TOTALS_VALUE_X, y, { align: 'right' });
 
   return y;
 }
 
 /**
- * Generate quote PDF (NO QR-Bill section)
+ * Draw the company footer bar at the bottom of the quote page.
+ * Renders an accent-coloured horizontal rule followed by a 2-column
+ * contact block: address left | phone + email stacked right.
+ */
+function drawQuoteFooterBar(doc: jsPDF, company: Company): void {
+  const ACCENT: [number, number, number] = [107, 138, 94];
+  const BAR_Y = 260;
+
+  // Accent line
+  doc.setDrawColor(...ACCENT);
+  doc.setLineWidth(1.5);
+  doc.line(20, BAR_Y, 190, BAR_Y);
+
+  const textY = BAR_Y + 5.5;
+  doc.setFont(PDF_FONT, 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(80, 80, 80);
+
+  // Col 1 — Company name + address (x=20)
+  let nameBlock = sanitizeForPDF(company.name);
+  if (company.sender_contact_name && company.sender_contact_name.trim()) {
+    nameBlock = `${sanitizeForPDF(company.sender_contact_name)} c/o ${sanitizeForPDF(company.name)}`;
+  }
+  const streetLine = sanitizeForPDF(formatAddress(company.street, company.house_number));
+  const cityLine = sanitizeForPDF(`${company.zip_code ?? ''} ${company.city ?? ''}`.trim());
+
+  doc.text(nameBlock, 20, textY);
+  if (streetLine) doc.text(streetLine, 20, textY + 4);
+  if (cityLine)   doc.text(cityLine,  20, textY + 8);
+
+  // Col 2 — Phone, Email, Website stacked (x=120)
+  let contactY = textY;
+  if (company.phone) {
+    doc.text(sanitizeForPDF(company.phone), 120, contactY);
+    contactY += 4;
+  }
+  if (company.email) {
+    doc.text(sanitizeForPDF(company.email), 120, contactY);
+    contactY += 4;
+  }
+  if (company.website) {
+    doc.text(sanitizeForPDF(company.website), 120, contactY);
+  }
+
+  // Reset colour
+  doc.setTextColor(0, 0, 0);
+}
+
+/**
+ * Generate quote PDF (Swiss International Style, no QR-Bill).
  *
  * @param data - Quote data with all related entities
  * @returns Promise<Blob> - PDF file as blob
@@ -1225,21 +1402,19 @@ function drawQuoteItems(
 export async function generateQuotePDF(data: QuoteData): Promise<Blob> {
   const { quote, items, customer, company } = data;
 
-  // Safety checks - ensure required company data exists
+  // Safety checks — company address
   if (!company.street) {
     throw new Error(
       'Firmenadresse unvollständig: Strasse fehlt. ' +
       'Bitte vervollständigen Sie die Firmeneinstellungen.'
     );
   }
-
   if (!company.zip_code) {
     throw new Error(
       'Firmenadresse unvollständig: Postleitzahl fehlt. ' +
       'Bitte vervollständigen Sie die Firmeneinstellungen.'
     );
   }
-
   if (!company.city) {
     throw new Error(
       'Firmenadresse unvollständig: Ort fehlt. ' +
@@ -1247,17 +1422,22 @@ export async function generateQuotePDF(data: QuoteData): Promise<Blob> {
     );
   }
 
-  // Safety checks for customer
+  // Safety checks — customer address
   if (!customer.street) {
     throw new Error(
       `Kundenadresse unvollständig: Strasse fehlt für Kunde "${customer.name}".`
     );
   }
-
   if (!customer.zip_code || !customer.city) {
     throw new Error(
       `Kundenadresse unvollständig: PLZ/Ort fehlt für Kunde "${customer.name}".`
     );
+  }
+
+  // Resolve logo — prefer pre-fetched base64, fall back to live fetch
+  let logoBase64: string | null = data.logoBase64 ?? null;
+  if (!logoBase64 && company.logo_url) {
+    logoBase64 = await fetchLogoAsBase64(company.logo_url);
   }
 
   // Create PDF document
@@ -1267,55 +1447,32 @@ export async function generateQuotePDF(data: QuoteData): Promise<Blob> {
     format: 'a4',
   });
 
-  // Draw quote content
-  drawQuoteHeader(doc, company, customer, quote);
+  // Load Montserrat font (falls back to helvetica if not available)
+  PDF_FONT = await setupPdfFonts(doc);
 
-  // Determine intro/footer text - use passed values or fall back to company defaults
+  // Header — returns Y after last metadata line
+  const headerEndY = drawQuoteHeader(doc, customer, quote, logoBase64);
+
+  // Text priority: per-quote override (data.introText/footerText) → company template → nothing
+  // Callers pass `undefined` (not null) to fall through to company defaults.
   const introText = data.introText !== undefined ? data.introText : company.quote_intro_text;
   const footerText = data.footerText !== undefined ? data.footerText : company.quote_footer_text;
 
-  // Draw intro text (if any) - starts at Y=95 (after header)
-  const contentY = drawIntroText(doc, introText, 95);
+  // Intro text (if any) — starts just below header metadata
+  const introStartY = Math.max(headerEndY + 5, 120);
+  const contentY = drawIntroText(doc, introText, introStartY);
 
-  // Draw quote items - dynamic start based on intro text
-  const itemsStartY = contentY > 95 ? contentY : 100;
+  // Items table
+  const itemsStartY = contentY > introStartY ? contentY : introStartY + 5;
   let endY = drawQuoteItems(doc, items, quote, itemsStartY);
 
-  // Draw footer text (if any)
-  endY = drawFooterText(doc, footerText, endY);
+  // Dynamic footer text (from company settings — no hardcoded fallback)
+  drawFooterText(doc, footerText, endY);
 
-  // Add closing note (no payment instructions for quotes)
-  let closingY = endY + 15;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.text(
-    `Dieses Angebot ist gültig bis zum ${formatDate(quote.valid_until)}.`,
-    20,
-    closingY
-  );
-  closingY += 6;
-  doc.text(
-    'Bei Fragen stehen wir Ihnen gerne zur Verfügung.',
-    20,
-    closingY
-  );
-  closingY += 10;
-  doc.text(
-    'Freundliche Grüsse',
-    20,
-    closingY
-  );
-  closingY += 6;
-  doc.setFont('helvetica', 'bold');
-  doc.text(
-    sanitizeForPDF(company.name),
-    20,
-    closingY
-  );
+  // Company footer bar at bottom of page
+  drawQuoteFooterBar(doc, company);
 
-  // Convert to blob
-  const pdfBlob = doc.output('blob');
-  return pdfBlob;
+  return doc.output('blob');
 }
 
 /**
@@ -1336,7 +1493,7 @@ export async function downloadQuotePDF(data: QuoteData): Promise<void> {
 }
 
 /**
- * Get quote PDF as Blob URL for preview
+ * Get quote PDF as Blob URL for preview.
  * IMPORTANT: Caller must call URL.revokeObjectURL() when done!
  *
  * @param data - Quote data with all related entities

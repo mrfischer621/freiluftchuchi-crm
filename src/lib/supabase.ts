@@ -8,6 +8,8 @@ export interface Profile {
   last_active_company_id: string | null; // Last selected company
   created_at: string;
   updated_at: string;
+  // Per-user logo/avatar (migration: 20260223_quotes_intro_outro.sql)
+  logo_url?: string | null;
 }
 
 // User-Company Junction (many-to-many relationship)
@@ -47,11 +49,11 @@ export interface Company {
   invoice_footer_text: string | null;
   quote_intro_text: string | null;
   quote_footer_text: string | null;
-  // Optional fields that may not exist in DB yet:
-  country?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  website?: string | null;
+  // Contact fields (migration: 20260223_company_contact_fields.sql)
+  country: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
   updated_at?: string;
 }
 
@@ -190,6 +192,9 @@ export interface Quote {
   // Discount system (Task 3.2)
   discount_type: 'percent' | 'fixed';
   discount_value: number;
+  // Per-quote text overrides (migration: 20260223_quotes_intro_outro.sql)
+  intro_text?: string | null;
+  outro_text?: string | null;
 }
 
 export interface QuoteItem {

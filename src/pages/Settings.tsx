@@ -9,6 +9,10 @@ interface CompanyFormData {
   name: string;
   alternativ_name: string; // Alternative company name / "Doing Business As"
   rechnungsname: string; // Display name for invoices and quotes
+  logo_url: string; // Company logo URL for PDF header
+  phone: string; // Shown in PDF footer
+  email: string; // Shown in PDF footer
+  website: string; // Shown in PDF footer
   street: string;
   house_number: string;
   zip_code: string;
@@ -41,6 +45,10 @@ export default function Settings() {
     name: '',
     alternativ_name: '',
     rechnungsname: '',
+    logo_url: '',
+    phone: '',
+    email: '',
+    website: '',
     street: '',
     house_number: '',
     zip_code: '',
@@ -104,6 +112,10 @@ export default function Settings() {
         name: selectedCompany.name || '',
         alternativ_name: selectedCompany.alternativ_name || '',
         rechnungsname: selectedCompany.rechnungsname || '',
+        logo_url: selectedCompany.logo_url || '',
+        phone: selectedCompany.phone || '',
+        email: selectedCompany.email || '',
+        website: selectedCompany.website || '',
         street: selectedCompany.street || '',
         house_number: selectedCompany.house_number || '',
         zip_code: selectedCompany.zip_code || '',
@@ -823,6 +835,35 @@ export default function Settings() {
               </p>
             </div>
 
+            {/* Company Logo URL */}
+            <div>
+              <label htmlFor="logo_url" className="block text-sm font-medium text-gray-700 mb-1">
+                Firmenlogo-URL <span className="text-xs font-normal text-gray-500">(optional, erscheint oben rechts auf PDF-Offerten)</span>
+              </label>
+              <input
+                type="url"
+                id="logo_url"
+                value={companyFormData.logo_url}
+                onChange={(e) => handleCompanyFieldChange('logo_url', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
+                placeholder="https://beispiel.ch/logo.png"
+              />
+              {companyFormData.logo_url && (
+                <div className="mt-2 flex items-center gap-3">
+                  <img
+                    src={companyFormData.logo_url}
+                    alt="Firmenlogo Vorschau"
+                    className="h-12 w-auto object-contain border border-gray-200 rounded p-1 bg-white"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  />
+                  <span className="text-xs text-gray-500">Vorschau</span>
+                </div>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Direkter Link zu einem öffentlich erreichbaren Bild (PNG, JPG, SVG). Empfohlene Grösse: quadratisch, min. 200×200 px.
+              </p>
+            </div>
+
             {/* Sender Contact Name (Phase 3.3) */}
             <div>
               <label htmlFor="sender_contact_name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -914,6 +955,50 @@ export default function Settings() {
                 />
                 {errors.city && <p className="text-sm text-red-600 mt-1">{errors.city}</p>}
               </div>
+            </div>
+
+            {/* Contact Info (PDF footer) */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="company_phone" className="block text-sm font-medium text-gray-700 mb-1">
+                  Telefon <span className="text-xs font-normal text-gray-500">(optional, erscheint im PDF-Footer)</span>
+                </label>
+                <input
+                  type="tel"
+                  id="company_phone"
+                  value={companyFormData.phone}
+                  onChange={(e) => handleCompanyFieldChange('phone', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
+                  placeholder="+41 44 123 45 67"
+                />
+              </div>
+              <div>
+                <label htmlFor="company_email" className="block text-sm font-medium text-gray-700 mb-1">
+                  E-Mail <span className="text-xs font-normal text-gray-500">(optional, erscheint im PDF-Footer)</span>
+                </label>
+                <input
+                  type="email"
+                  id="company_email"
+                  value={companyFormData.email}
+                  onChange={(e) => handleCompanyFieldChange('email', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
+                  placeholder="info@firma.ch"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="company_website" className="block text-sm font-medium text-gray-700 mb-1">
+                Website <span className="text-xs font-normal text-gray-500">(optional, erscheint im PDF-Footer)</span>
+              </label>
+              <input
+                type="text"
+                id="company_website"
+                value={companyFormData.website}
+                onChange={(e) => handleCompanyFieldChange('website', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition"
+                placeholder="www.firma.ch"
+              />
             </div>
 
             {/* Banking */}
